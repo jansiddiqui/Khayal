@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import { errorStatus, linkPatient, listPatients } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 
@@ -55,7 +56,11 @@ export function CaregiverDashboard() {
               <tbody>
                 {patients.data.map((p) => (
                   <tr key={p.id} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2">{p.name}</td>
+                    <td className="py-2">
+                      <Link to={`/caregiver/patients/${p.id}`} className="text-brand-dark underline">
+                        {p.name}
+                      </Link>
+                    </td>
                     <td className="py-2 text-gray-700">{p.email}</td>
                   </tr>
                 ))}

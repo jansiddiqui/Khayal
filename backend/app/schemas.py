@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import Role
+from app.models import GameType, Role
+from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
 Email = Annotated[
@@ -55,3 +56,52 @@ class PatientOut(BaseModel):
     id: int
     name: str
     email: str
+
+
+class LevelOut(BaseModel):
+    game_type: GameType
+    level: int
+
+
+class RoundIn(BaseModel):
+    correct: bool
+    reaction_ms: Annotated[int, Field(ge=0, le=600_000)]
+    hint_used: bool = False
+
+
+class SessionIn(BaseModel):
+    game_type: GameType
+    started_at: datetime
+    ended_at: datetime
+    rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=BLOCK_SIZE)]
+
+    @model_validator(mode="after")
+    def _ended_after_started(self) -> "SessionIn":
+        if self.ended_at < self.started_at:
+            raise ValueError("ended_at must not be before started_at")
+        return self
+
+
+class SessionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    patient_id: int
+    game_type: GameType
+    level_start: int
+    level_end: int
+    started_at: datetime
+    ended_at: datetime
+    rounds_played: int
+    rounds_correct: int
+    avg_reaction_ms: float
+    hints_used: int
+
+
+LevelChange = Literal["up", "down", "same"]
+
+
+class SessionResultOut(BaseModel):
+    session: SessionOut
+    new_level: int
+    level_change: LevelChange

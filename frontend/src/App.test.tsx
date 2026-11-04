@@ -15,6 +15,7 @@ vi.mock("./api/client", async (importOriginal) => {
     register: vi.fn(),
     listPatients: vi.fn(),
     linkPatient: vi.fn(),
+    listSessions: vi.fn(),
   };
 });
 
@@ -142,6 +143,33 @@ describe("caregiver", () => {
     expect(await screen.findByText("Linked Rahim Khan.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("cell", { name: "Rahim Khan" })).toBeInTheDocument());
     expect(api.linkPatient.mock.calls[0]?.[0]).toBe("rahim@khayal.test");
+  });
+
+  it("sees a patient's levels and session history", async () => {
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test" }]);
+    api.listSessions.mockResolvedValue([
+      {
+        id: 9,
+        patient_id: 2,
+        game_type: "memory_match",
+        level_start: 2,
+        level_end: 3,
+        started_at: "2026-11-04T10:00:00Z",
+        ended_at: "2026-11-04T10:05:00Z",
+        rounds_played: 5,
+        rounds_correct: 5,
+        avg_reaction_ms: 2400,
+        hints_used: 0,
+      },
+    ]);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+    expect(await screen.findByRole("heading", { name: "Kamala Devi" })).toBeInTheDocument();
+    expect(screen.getByText("Level 3 / 10")).toBeInTheDocument(); // memory match, from latest session
+    expect(screen.getByText("Level 2 / 10")).toBeInTheDocument(); // sequence recall, not played yet
+    expect(screen.getByRole("cell", { name: "2 ↑ 3" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "5 / 5" })).toBeInTheDocument();
+    expect(api.listSessions).toHaveBeenCalledWith(2);
   });
 
   it("signs out back to the sign-in screen", async () => {

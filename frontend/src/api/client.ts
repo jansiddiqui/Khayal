@@ -93,6 +93,58 @@ export async function linkPatient(patientEmail: string): Promise<Patient> {
   return data;
 }
 
+export type GameType = "memory_match" | "sequence_recall";
+
+export interface RoundResult {
+  correct: boolean;
+  reaction_ms: number;
+  hint_used: boolean;
+}
+
+export interface SessionInput {
+  game_type: GameType;
+  started_at: string;
+  ended_at: string;
+  rounds: RoundResult[];
+}
+
+export interface GameSession {
+  id: number;
+  patient_id: number;
+  game_type: GameType;
+  level_start: number;
+  level_end: number;
+  started_at: string;
+  ended_at: string;
+  rounds_played: number;
+  rounds_correct: number;
+  avg_reaction_ms: number;
+  hints_used: number;
+}
+
+export type LevelChange = "up" | "down" | "same";
+
+export interface SessionResult {
+  session: GameSession;
+  new_level: number;
+  level_change: LevelChange;
+}
+
+export async function getLevel(gameType: GameType): Promise<number> {
+  const { data } = await api.get<{ game_type: GameType; level: number }>(`/games/${gameType}/level`);
+  return data.level;
+}
+
+export async function postSession(input: SessionInput): Promise<SessionResult> {
+  const { data } = await api.post<SessionResult>("/sessions", input);
+  return data;
+}
+
+export async function listSessions(patientId: number): Promise<GameSession[]> {
+  const { data } = await api.get<GameSession[]>(`/patients/${patientId}/sessions`);
+  return data;
+}
+
 /** HTTP status of a failed request, if any. */
 export function errorStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
