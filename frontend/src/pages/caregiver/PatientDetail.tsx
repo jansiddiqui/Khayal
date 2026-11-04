@@ -3,28 +3,25 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import {
   acknowledgeAlert,
+  getSignals,
+  getTrend,
   listAlerts,
   listPatients,
   listSessions,
   updatePatient,
   type GameSession,
   type GameType,
+  type Signals,
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { GAME_NAMES, GameTrendChart, IndexChart } from "../../components/caregiver/TrendCharts";
 
-const GAME_NAMES: Record<GameType, string> = {
-  memory_match: "Memory Match",
-  sequence_recall: "Sequence Recall",
-  word_recall: "Word Recall",
-  daily_orientation: "Daily Orientation",
-  reaction_tap: "Reaction Tap",
-};
-
-/** Daily Orientation has no difficulty levels. */
+/** About Today (Daily Orientation) has no difficulty levels. */
 const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"];
 
 const START_LEVEL = 2;
 const ROUNDS_PER_SESSION = 5;
+const SESSION_ROWS = 20;
 
 function levelCell(s: GameSession): string {
   if (!LEVELLED_GAMES.includes(s.game_type)) return "—";
@@ -90,6 +87,19 @@ const SEVERITY_STYLE = {
   critical: "border-red-500 bg-red-50",
 } as const;
 
+const ALERTS_SHOWN = 3;
+
+const ALERT_TYPE_LABEL = {
+  decline: "Decline",
+  missed_reminders: "Missed reminders",
+  speech_risk: "Speech",
+} as const;
+
+/** A decline alert explains each declining game in its own sentence ending "(z = …)."; show one per line. */
+export function alertLines(message: string): string[] {
+  return message.split(/(?<=\)\.)\s+/).filter(Boolean);
+}
+
 function AlertsPanel({ patientId }: { patientId: number }) {
   const queryClient = useQueryClient();
   const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
@@ -97,7 +107,9 @@ function AlertsPanel({ patientId }: { patientId: number }) {
     mutationFn: acknowledgeAlert,
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["alerts", patientId] }),
   });
+  const [showAll, setShowAll] = useState(false);
   const open = alerts.data?.filter((a) => !a.acknowledged) ?? [];
+  const shown = showAll ? open : open.slice(0, ALERTS_SHOWN);
   const past = alerts.data?.filter((a) => a.acknowledged) ?? [];
 
   return (
@@ -109,11 +121,19 @@ function AlertsPanel({ patientId }: { patientId: number }) {
       {alerts.isError && <p className="text-red-700">Could not load alerts.</p>}
       {alerts.isSuccess && alerts.data.length === 0 && <p className="text-gray-600">No alerts.</p>}
       <ul className="flex flex-col gap-2">
-        {open.map((a) => (
-          <li key={a.id} className={`flex flex-wrap items-center gap-3 rounded-md border-l-4 p-3 ${SEVERITY_STYLE[a.severity]}`}>
-            <span className="font-semibold capitalize">{a.severity}</span>
-            <span className="flex-1">{a.message}</span>
-            <span className="text-gray-600">{new Date(a.created_at).toLocaleString()}</span>
+        {shown.map((a) => (
+          <li key={a.id} className={`flex flex-wrap items-start gap-3 rounded-md border-l-4 p-3 ${SEVERITY_STYLE[a.severity]}`}>
+            <div className="min-w-0 flex-1">
+              <p className="mb-1">
+                <span className="font-semibold capitalize">{a.severity}</span>
+                <span className="text-gray-600"> · {ALERT_TYPE_LABEL[a.type]} · {new Date(a.created_at).toLocaleString()}</span>
+              </p>
+              <ul className="list-disc pl-5">
+                {alertLines(a.message).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
             <button
               type="button"
               onClick={() => ack.mutate(a.id)}
@@ -125,6 +145,11 @@ function AlertsPanel({ patientId }: { patientId: number }) {
           </li>
         ))}
       </ul>
+      {open.length > ALERTS_SHOWN && (
+        <button type="button" onClick={() => setShowAll(!showAll)} className="mt-2 text-brand-dark underline">
+          {showAll ? "Show newest only" : `Show ${open.length - ALERTS_SHOWN} more`}
+        </button>
+      )}
       {past.length > 0 && (
         <details className="mt-3">
           <summary className="cursor-pointer text-gray-700">Acknowledged ({past.length})</summary>
@@ -215,17 +240,55 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
   );
 }
 
+const percent = (x: number | null) => (x === null ? "—" : `${Math.round(x * 100)}%`);
+
+/** Secondary signals: shown for context, no alerts yet. */
+function SignalTiles({ signals }: { signals: Signals }) {
+  const a = signals.adherence;
+  const tiles = [
+    {
+      label: "Stopped early",
+      value: percent(signals.stopped_early_rate),
+      note: `of ${signals.sessions} sessions`,
+    },
+    { label: "Hints used", value: percent(signals.hint_rate), note: "of rounds played" },
+    {
+      label: "Reminder adherence",
+      value: percent(a.rate),
+      note: `marked by the patient (${a.done_by_patient} done, ${a.done_by_caregiver} by caregiver, ${a.missed} missed)`,
+    },
+  ];
+  return (
+    <section aria-labelledby="signals-heading" className="flex flex-col gap-3">
+      <h2 id="signals-heading" className="text-sm font-medium text-gray-600">
+        Last {signals.days} days · for context, no alerts
+      </h2>
+      {tiles.map((t) => (
+        <div key={t.label} className="rounded-lg border border-gray-200 bg-white p-4" role="group" aria-label={t.label}>
+          <p className="text-gray-600">{t.label}</p>
+          <p className="text-2xl font-semibold">{t.value}</p>
+          <p className="text-sm text-gray-500">{t.note}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function PatientDetail() {
   const patientId = Number(useParams().patientId);
   const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients });
   const sessions = useQuery({ queryKey: ["sessions", patientId], queryFn: () => listSessions(patientId) });
+  const trend = useQuery({ queryKey: ["trend", patientId], queryFn: () => getTrend(patientId) });
+  const signals = useQuery({ queryKey: ["signals", patientId], queryFn: () => getSignals(patientId) });
   const patient = patients.data?.find((p) => p.id === patientId);
+  const [allRows, setAllRows] = useState(false);
 
   // Sessions arrive newest first, so the first one per game holds the current level.
   const currentLevels = LEVELLED_GAMES.map((type) => {
     const latest = sessions.data?.find((s) => s.game_type === type);
     return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined };
   });
+  const rows = allRows ? sessions.data ?? [] : (sessions.data ?? []).slice(0, SESSION_ROWS);
 
   return (
     <CaregiverLayout title={patient?.name ?? "Patient"}>
@@ -243,10 +306,26 @@ export function PatientDetail() {
 
       <AlertsPanel patientId={patientId} />
 
-      {patient && (
-        <section className="mb-6 flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-4">
-          <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
-          <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
+      <section className="mb-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
+        {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-gray-600">Loading trends…</p>}
+        {signals.isSuccess && <SignalTiles signals={signals.data} />}
+      </section>
+      {trend.isError && <p className="mb-4 text-red-700">Could not load the trends.</p>}
+
+      {trend.isSuccess && (
+        <section aria-labelledby="games-heading" className="mb-6">
+          <h2 id="games-heading" className="mb-1 text-lg font-semibold">
+            Games
+          </h2>
+          <p className="mb-3 text-sm text-gray-600">
+            Composite score per completed session. Dashed line: baseline (first 10 sessions); shaded band: ±1.5 standard
+            deviations.
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {trend.data.games.map((g) => (
+              <GameTrendChart key={g.game_type} trend={g} />
+            ))}
+          </div>
         </section>
       )}
 
@@ -254,7 +333,7 @@ export function PatientDetail() {
       {sessions.isError && <p className="text-red-700">Could not load sessions for this patient.</p>}
 
       {sessions.isSuccess && (
-        <div className="flex flex-col gap-6">
+        <div className="mb-6 flex flex-col gap-6">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {currentLevels.map(({ type, level, played }) => (
               <div key={type} className="rounded-lg border border-gray-200 bg-white p-4">
@@ -270,39 +349,53 @@ export function PatientDetail() {
             {sessions.data.length === 0 ? (
               <p className="text-gray-600">No games played yet.</p>
             ) : (
-              <table className="w-full text-left">
-                <thead className="border-b border-gray-200 text-gray-600">
-                  <tr>
-                    <th className="py-2 pr-3 font-medium">Date</th>
-                    <th className="py-2 pr-3 font-medium">Game</th>
-                    <th className="py-2 pr-3 font-medium">Status</th>
-                    <th className="py-2 pr-3 font-medium">Level</th>
-                    <th className="py-2 pr-3 font-medium">Correct</th>
-                    <th className="py-2 pr-3 font-medium">Avg reaction</th>
-                    <th className="py-2 font-medium">Hints</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.data.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2 pr-3">{new Date(s.started_at).toLocaleString()}</td>
-                      <td className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
-                      <td className={`py-2 pr-3 ${s.completed ? "" : "text-amber-800"}`}>{statusCell(s)}</td>
-                      <td className="py-2 pr-3">{levelCell(s)}</td>
-                      <td className="py-2 pr-3">
-                        {s.rounds_correct} / {s.rounds_played}
-                      </td>
-                      <td className="py-2 pr-3">
-                        {s.avg_reaction_ms === null ? "—" : `${(s.avg_reaction_ms / 1000).toFixed(1)} s`}
-                      </td>
-                      <td className="py-2">{s.hints_used}</td>
+              <>
+                <table className="w-full text-left">
+                  <thead className="border-b border-gray-200 text-gray-600">
+                    <tr>
+                      <th className="py-2 pr-3 font-medium">Date</th>
+                      <th className="py-2 pr-3 font-medium">Game</th>
+                      <th className="py-2 pr-3 font-medium">Status</th>
+                      <th className="py-2 pr-3 font-medium">Level</th>
+                      <th className="py-2 pr-3 font-medium">Correct</th>
+                      <th className="py-2 pr-3 font-medium">Avg reaction</th>
+                      <th className="py-2 font-medium">Hints</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((s) => (
+                      <tr key={s.id} className="border-b border-gray-100 last:border-0">
+                        <td className="py-2 pr-3">{new Date(s.started_at).toLocaleString()}</td>
+                        <td className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
+                        <td className={`py-2 pr-3 ${s.completed ? "" : "text-amber-800"}`}>{statusCell(s)}</td>
+                        <td className="py-2 pr-3">{levelCell(s)}</td>
+                        <td className="py-2 pr-3">
+                          {s.rounds_correct} / {s.rounds_played}
+                        </td>
+                        <td className="py-2 pr-3">
+                          {s.avg_reaction_ms === null ? "—" : `${(s.avg_reaction_ms / 1000).toFixed(1)} s`}
+                        </td>
+                        <td className="py-2">{s.hints_used}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {sessions.data.length > SESSION_ROWS && (
+                  <button type="button" onClick={() => setAllRows(!allRows)} className="mt-3 text-brand-dark underline">
+                    {allRows ? "Show latest only" : `Show all ${sessions.data.length} sessions`}
+                  </button>
+                )}
+              </>
             )}
           </section>
         </div>
+      )}
+
+      {patient && (
+        <section className="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-4" aria-label="Settings">
+          <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
+          <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
+        </section>
       )}
     </CaregiverLayout>
   );

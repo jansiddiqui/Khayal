@@ -3,7 +3,7 @@
 AI-based cognitive gaming and memory assistance platform for elderly dementia patients.
 CSE471 Deep Learning — Satyam Kumar, Jan Mohammad.
 
-`CLAUDE.md` is the build spec. Current status: **Milestone 6 — Family + Who Is This?**.
+`CLAUDE.md` is the build spec. Current status: **Milestone 7 — Decline tracking + dashboard**.
 
 ## Layout
 
@@ -40,6 +40,12 @@ Load the demo accounts (safe to re-run):
 
 ```powershell
 python -m app.seed
+```
+
+Add 90 days of simulated play so the dashboard charts have data (Rahim = healthy, Kamala = MCI, Shanti = moderate; skipped for anyone who already has history before today):
+
+```powershell
+python -m app.seed --demo-history
 ```
 
 Run (from `backend/`, venv active):
@@ -81,10 +87,10 @@ Routes so far:
 - `/patient/reminders` — today's reminders with big Done buttons.
 - `/patient/who-is-this` — family photo grid with name + relation; tapping a photo shows it big and reads aloud who it is.
 - `/patient/voice` — placeholder for Milestone 8.
-- `/caregiver` — linked patients and a form to link a patient by account email (caregivers only).
+- `/caregiver` — linked patients with a status dot (Stable / Watch / Declining) from the overall cognitive index, and a form to link a patient by account email (caregivers only).
 - `/caregiver/patients/:id/family` — add, edit and delete people (name, relation, note) and their photos.
 - `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
-- `/caregiver/patients/:id` — alerts (with Acknowledge), the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
+- `/caregiver/patients/:id` — alerts with plain explanations (Acknowledge), the overall cognitive index chart, secondary-signal tiles, one composite-score chart per game (baseline dashed, ±1.5 std band), levels, session table, then the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
 
 ## API so far
 
@@ -96,6 +102,8 @@ Routes so far:
 - `GET /api/patients/{id}/reminders/adherence?days=7` — `{done_by_patient, done_by_caregiver, missed, rate}`.
 - `GET /api/me/reminders/today` (patient) — today's reminders with `status` (`pending`/`done`/`missed`) and `due`.
 - `GET /api/patients/{id}/alerts`, `POST /api/alerts/{id}/ack` (caregiver).
+- `GET /api/patients/{id}/trend?game_type=` — composite, rolling mean and z per completed session for each game, baselines, status and explanation, plus the overall cognitive index and its history. `GET /api/patients` includes `cognitive_index` and `cognitive_status`.
+- `GET /api/patients/{id}/signals` — last 14 days: stopped-early rate, hint rate, reminder adherence (patient-marked).
 - `GET/POST /api/patients/{id}/family`, `PUT/DELETE /api/patients/{id}/family/{member_id}` — people `{name, relation, note}` with `photos: [{id, url}]` (create/edit/delete: linked caregiver).
 - `POST /api/patients/{id}/family/{member_id}/photos` — the request **body is the image itself** with `Content-Type: image/jpeg` or `image/png` (no multipart form). `DELETE …/photos/{photo_id}`.
 - `GET /api/patients/{id}/family/{member_id}/photos/{photo_id}` — the photo, only for the patient and linked caregivers.
@@ -152,6 +160,19 @@ npm run typecheck # tsc strict
 - JPG or PNG only, at most 5 MB, at most 5 photos per person. The server checks the actual image (not just the file name), re-encodes it as JPEG at most 800 px on the long side, and drops EXIF data such as GPS location.
 - Stored under `data/uploads/family/{patient_id}/` (gitignored). These are private family photos: they are **never** served as static files. The only way to get one is the authenticated photo route, and the frontend shows them from in-memory blobs.
 - **Who is this?** is help, not a test: no scoring. About Today's last question becomes "Who is this?" (one photo, 3 names, a kind reply) once 3 or more people have photos; otherwise it asks the city, or the year if no city is set.
+
+## Decline tracking
+
+The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py` (it goes into the paper). In short: composite = accuracy (hinted correct rounds count half) × level/10 × reaction-time ratio against the patient's own baseline, per completed session. Each game's baseline is its first 10 completed sessions; z compares the mean of the last 5 sessions with it. z < −1.5 raises a warning, z < −2.5 critical, at most one decline alert per 7 days, and the alert lists every declining game in plain words. The overall cognitive index is the mean of the latest z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+
+Synthetic data (healthy / MCI / moderate, rounds played through the real adaptive engine):
+
+```powershell
+# from the repo root, backend venv active
+python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv
+```
+
+Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints, median_rt_ms, completed, composite` (composite is empty for stopped-early sessions).
 
 ## Known limitations (prototype)
 

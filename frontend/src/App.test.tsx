@@ -16,6 +16,8 @@ vi.mock("./api/client", async (importOriginal) => {
     listPatients: vi.fn(),
     linkPatient: vi.fn(),
     listSessions: vi.fn(),
+    getTrend: vi.fn(),
+    getSignals: vi.fn(),
     updatePatient: vi.fn(),
     getTodaysGames: vi.fn(),
     getTodayReminders: vi.fn(),
@@ -161,8 +163,8 @@ describe("caregiver", () => {
 
   it("lists linked patients and links a new one", async () => {
     const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test", city: null, pinned_games: null };
-    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }, rahim]);
+    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }, { ...rahim, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.linkPatient.mockResolvedValue(rahim);
 
     renderWithProviders(<App />, { route: "/caregiver" });
@@ -177,7 +179,7 @@ describe("caregiver", () => {
   });
 
   it("sees a patient's levels and session history", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 9,
@@ -205,7 +207,7 @@ describe("caregiver", () => {
   });
 
   it("shows stopped-early sessions and saves the patient's city", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 10,
@@ -235,7 +237,7 @@ describe("caregiver", () => {
 
   it("pins and unpins today's games for a patient", async () => {
     const base = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null };
-    api.listPatients.mockResolvedValue([{ ...base, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ ...base, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([]);
     api.updatePatient.mockResolvedValue({ ...base, pinned_games: ["reaction_tap", "word_recall"] });
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });

@@ -89,8 +89,17 @@ export async function getMe(): Promise<User> {
   return data;
 }
 
-export async function listPatients(): Promise<Patient[]> {
-  const { data } = await api.get<Patient[]>("/patients");
+export type IndexStatus = "insufficient" | "stable" | "watch" | "declining";
+export type DeclineStatus = "insufficient" | "stable" | "warning" | "critical";
+
+/** A linked patient with the overall cognitive index for the dashboard list. */
+export interface PatientSummary extends Patient {
+  cognitive_index: number | null;
+  cognitive_status: IndexStatus;
+}
+
+export async function listPatients(): Promise<PatientSummary[]> {
+  const { data } = await api.get<PatientSummary[]>("/patients");
   return data;
 }
 
@@ -350,6 +359,52 @@ export async function deleteFamilyPhoto(patientId: number, memberId: number, pho
 /** Private photos are never public URLs, so they are fetched with the token and shown as blobs. */
 export async function fetchPhotoBlob(url: string): Promise<Blob> {
   const { data } = await api.get<Blob>(url, { responseType: "blob" });
+  return data;
+}
+
+export interface TrendPoint {
+  session_id: number;
+  started_at: string;
+  composite: number;
+  rolling_mean: number | null;
+  z: number | null;
+}
+
+export interface GameTrend {
+  game_type: GameType;
+  status: DeclineStatus;
+  z: number | null;
+  score: number | null;
+  baseline_mean: number | null;
+  baseline_std: number | null;
+  sessions: number;
+  explanation: string;
+  points: TrendPoint[];
+}
+
+export interface Trend {
+  cognitive_index: number | null;
+  cognitive_status: IndexStatus;
+  index_history: { date: string; index: number }[];
+  games: GameTrend[];
+}
+
+export async function getTrend(patientId: number): Promise<Trend> {
+  const { data } = await api.get<Trend>(`/patients/${patientId}/trend`);
+  return data;
+}
+
+/** Secondary signals over the last `days` days (shown, no alerts yet). */
+export interface Signals {
+  days: number;
+  sessions: number;
+  stopped_early_rate: number | null;
+  hint_rate: number | null;
+  adherence: Adherence;
+}
+
+export async function getSignals(patientId: number): Promise<Signals> {
+  const { data } = await api.get<Signals>(`/patients/${patientId}/signals`);
   return data;
 }
 

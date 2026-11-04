@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { errorStatus, linkPatient, listPatients } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { formatZ, IndexStatusBadge } from "../../components/caregiver/Status";
 
 function linkErrorMessage(error: unknown): string {
   switch (errorStatus(error)) {
@@ -49,24 +50,34 @@ export function CaregiverDashboard() {
             <table className="w-full text-left">
               <thead className="border-b border-gray-200 text-gray-600">
                 <tr>
-                  <th className="py-2 font-medium">Name</th>
+                  <th className="py-2 pr-4 font-medium">Name</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Index</th>
                   <th className="py-2 font-medium">Email</th>
                 </tr>
               </thead>
               <tbody>
                 {patients.data.map((p) => (
                   <tr key={p.id} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2">
+                    <td className="py-2 pr-4">
                       <Link to={`/caregiver/patients/${p.id}`} className="text-brand-dark underline">
                         {p.name}
                       </Link>
                     </td>
+                    <td className="py-2 pr-4">
+                      <IndexStatusBadge status={p.cognitive_status} />
+                    </td>
+                    <td className="py-2 pr-4 tabular-nums">{p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}</td>
                     <td className="py-2 text-gray-700">{p.email}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          <p className="mt-3 text-sm text-gray-500">
+            Status comes from the overall cognitive index (mean z-score across games): Stable, Watch below −0.5, Declining
+            below −1.5.
+          </p>
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-4">

@@ -118,10 +118,26 @@ The caregiver UI can be a normal dense dashboard.
 - `z < −1.5` → `warning` alert. `z < −2.5` → `critical` alert. Do not raise the same alert type more than once per 7 days.
 - Interface: `assess(sessions: list[SessionSummary]) -> DeclineResult(score, z, status, explanation)`.
 
+**Composite score (decided, used in the paper).** Per *completed* session; stopped-early sessions are excluded.
+
+- `acc` = (correct rounds without hint + 0.5 × correct rounds with hint) / rounds
+- `lvl` = level_start / 10 (About Today: `lvl` = 1)
+- `rt` = clamp(patient's baseline median reaction time for this game / this session's median reaction time, 0.5, 1.5). The baseline is the median over the first 10 completed sessions; until those exist, `rt` = 1. About Today: `rt` = 1.
+- `composite = acc × lvl × rt`
+
+**Overall cognitive index** = mean of the latest z across the games that have a baseline. The caregiver patient list shows it as a status dot (Stable / Watch / Declining).
+
+**Secondary signals** (shown on the dashboard, no alerts yet): stopped-early rate and hint rate over the last 14 days, and reminder adherence (patient-marked only).
+
+Each decline alert carries a plain explanation, e.g. "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."
+
 ### Synthetic data (`ml/decline/simulator.py`)
 - Generate patients with profiles `healthy` (flat), `mci` (slow decline), `moderate` (faster decline + more variance) over 90 days.
 - Provide a CLI `python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv` and a seed script that loads 3 demo patients into the DB.
 - This data is also used later for training the LSTM, so keep the column names stable.
+- Rounds are generated and passed through the real adaptive engine (`next_level`), not made-up final scores.
+- Stable CSV columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints, median_rt_ms, completed, composite`.
+- `python -m app.seed --demo-history` loads 90 days for the 3 demo patients, one per profile.
 
 ### Speech (`ml/speech/stub.py`)
 - `score(audio_path) -> SpeechResult(transcript=None, risk_score=None, model_version="stub-0")`.
@@ -156,8 +172,10 @@ Each game is a self-contained component: it receives `level`, reports each round
 - `GET /games/{game_type}/level`, `POST /sessions` (session + rounds, returns the new level), `GET /patients/{id}/sessions`
 - `GET /patients/{id}/trend?game_type=` (scores + z-scores for charts)
 - `GET/POST/PUT/DELETE /patients/{id}/reminders`, `POST /reminders/{id}/log`, `GET /me/reminders/today`
-- `GET/POST/DELETE /patients/{id}/family` (multipart photo upload)
-- `POST /speech` (multipart audio), `GET /patients/{id}/speech`
+- `GET/POST/DELETE /patients/{id}/family` (photo upload: see below)
+- `POST /speech` (audio upload: see below), `GET /patients/{id}/speech`
+
+**File uploads (decided):** photos and audio are sent as the raw request body, one file per request, with the file's own `Content-Type` (e.g. `image/jpeg`, `audio/webm`). No multipart forms, so no `python-multipart` dependency.
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
 
 Every route checks the role and the care link. A patient can only see their own data; a caregiver can only see linked patients.

@@ -1,16 +1,26 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.deps import CurrentCaregiver, DbSession, ensure_patient_access
+from app.deps import CurrentCaregiver, DbSession, Now, ensure_patient_access
 from app.models import User
-from app.schemas import LinkPatientIn, PatientOut, PatientUpdateIn
-from app.services import auth, care
+from app.schemas import LinkPatientIn, PatientOut, PatientSummaryOut, PatientUpdateIn
+from app.services import auth, care, decline
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
 
-@router.get("", response_model=list[PatientOut])
-def list_patients(caregiver: CurrentCaregiver, db: DbSession) -> list[PatientOut]:
-    return [PatientOut.model_validate(p) for p in care.linked_patients(db, caregiver)]
+@router.get("", response_model=list[PatientSummaryOut])
+def list_patients(caregiver: CurrentCaregiver, db: DbSession, now: Now) -> list[PatientSummaryOut]:
+    out: list[PatientSummaryOut] = []
+    for p in care.linked_patients(db, caregiver):
+        result = decline.overview(db, p.id, until=now)
+        out.append(
+            PatientSummaryOut(
+                **PatientOut.model_validate(p).model_dump(),
+                cognitive_index=result.index,
+                cognitive_status=result.status,
+            )
+        )
+    return out
 
 
 @router.post("/link", response_model=PatientOut, status_code=status.HTTP_201_CREATED)

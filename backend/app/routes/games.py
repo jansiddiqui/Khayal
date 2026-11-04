@@ -3,7 +3,7 @@ from fastapi import APIRouter, status
 from app.deps import CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import GameType
 from app.schemas import LevelChange, LevelOut, SessionIn, SessionOut, SessionResultOut, TodayGameOut, TodayGamesOut
-from app.services import adaptive, today_games
+from app.services import adaptive, decline, today_games
 from app.services.clock import local
 from ml.adaptive.rule_based import Round
 
@@ -16,7 +16,7 @@ def get_level(game_type: GameType, patient: CurrentPatient, db: DbSession) -> Le
 
 
 @router.post("/sessions", response_model=SessionResultOut, status_code=status.HTTP_201_CREATED)
-def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession) -> SessionResultOut:
+def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession, now: Now) -> SessionResultOut:
     session = adaptive.record_session(
         db,
         patient,
@@ -26,6 +26,8 @@ def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession) -> S
         rounds=[Round(correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used) for r in body.rounds],
         completed=body.completed,
     )
+    if session.completed:
+        decline.evaluate_and_alert(db, patient, now)
     change: LevelChange = (
         "up" if session.level_end > session.level_start else "down" if session.level_end < session.level_start else "same"
     )

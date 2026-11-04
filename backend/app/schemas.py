@@ -1,4 +1,4 @@
-from datetime import datetime, time, timezone
+from datetime import date, datetime, time, timezone
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -236,3 +236,54 @@ class FamilyMemberOut(BaseModel):
     relation: str
     note: str | None
     photos: list[FamilyPhotoOut]
+
+
+DeclineStatus = Literal["insufficient", "stable", "warning", "critical"]
+IndexStatus = Literal["insufficient", "stable", "watch", "declining"]
+
+
+class PatientSummaryOut(PatientOut):
+    """A linked patient with their overall cognitive index for the dashboard list."""
+
+    cognitive_index: float | None
+    cognitive_status: IndexStatus
+
+
+class TrendPointOut(BaseModel):
+    session_id: int
+    started_at: datetime
+    composite: float
+    rolling_mean: float | None
+    z: float | None
+
+
+class GameTrendOut(BaseModel):
+    game_type: GameType
+    status: DeclineStatus
+    z: float | None
+    score: float | None
+    baseline_mean: float | None
+    baseline_std: float | None
+    sessions: int
+    explanation: str
+    points: list[TrendPointOut]
+
+
+class IndexPointOut(BaseModel):
+    date: date
+    index: float
+
+
+class TrendOut(BaseModel):
+    cognitive_index: float | None
+    cognitive_status: IndexStatus
+    index_history: list[IndexPointOut]
+    games: list[GameTrendOut]
+
+
+class SignalsOut(BaseModel):
+    days: int
+    sessions: int
+    stopped_early_rate: float | None
+    hint_rate: float | None
+    adherence: AdherenceOut

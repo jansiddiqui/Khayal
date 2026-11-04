@@ -1,9 +1,11 @@
 """Seed demo accounts: 1 caregiver linked to 3 patients, plus demo reminders and family for the first patient.
 
 Run from backend/ with the venv active, after `alembic upgrade head`:  python -m app.seed
+Add 90 days of simulated play (healthy / mci / moderate):              python -m app.seed --demo-history
 Safe to run repeatedly; existing accounts are reused.
 """
 
+import argparse
 import io
 from datetime import time
 
@@ -13,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, ensure_schema_current
+from app.demo_history import load_demo_history
 from app.models import FamilyMember, Reminder, ReminderType, Role, User
 from app.services import auth, care, family
 
@@ -80,14 +83,21 @@ def seed(db: Session) -> tuple[User, list[User]]:
     return caregiver, patients
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Seed the Khayal demo accounts.")
+    parser.add_argument("--demo-history", action="store_true", help="also load 90 days of simulated play")
+    args = parser.parse_args(argv)
+
     ensure_schema_current()
     with SessionLocal() as db:
         caregiver, patients = seed(db)
+        history = load_demo_history(db, patients) if args.demo_history else []
     print(f"Caregiver: {caregiver.email}")
     for p in patients:
         print(f"Patient:   {p.email}")
     print(f"Password for all demo accounts: {DEMO_PASSWORD}")
+    for line in history:
+        print(f"History:   {line}")
 
 
 if __name__ == "__main__":

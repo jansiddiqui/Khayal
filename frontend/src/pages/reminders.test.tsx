@@ -15,6 +15,8 @@ vi.mock("../api/client", async (importOriginal) => {
     markReminderDone: vi.fn(),
     listPatients: vi.fn(),
     listSessions: vi.fn(),
+    getTrend: vi.fn(),
+    getSignals: vi.fn(),
     listReminders: vi.fn(),
     getAdherence: vi.fn(),
     createReminder: vi.fn(),
@@ -154,7 +156,7 @@ describe("caregiver reminders and alerts", () => {
 
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listReminders.mockResolvedValue([reminder]);
     api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
   });

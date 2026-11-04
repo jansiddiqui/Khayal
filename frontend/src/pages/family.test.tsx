@@ -181,7 +181,7 @@ describe("patient Who is this?", () => {
 describe("caregiver family page", () => {
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listFamily.mockResolvedValue([rahul]);
   });
 

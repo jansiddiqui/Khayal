@@ -90,3 +90,23 @@ def test_caregiver_sets_patient_city(client: TestClient, register: Register) -> 
     assert client.patch(url, json={"city": ""}, headers=cg).json()["city"] is None
     assert client.patch(url, json={"city": "Pune"}, headers=stranger).status_code == 403
     assert client.patch(url, json={"city": "Pune"}, headers=patient).status_code == 403
+
+
+def test_demo_history_loads_once_per_patient(db: Session) -> None:
+    from sqlalchemy import func, select
+
+    from app.demo_history import load_demo_history
+    from app.models import Alert, GameSession, ReminderLog
+
+    _, patients = seed(db)
+    report = load_demo_history(db, patients)
+    assert [line.split(":")[0] for line in report] == [p.email for p in patients]
+    for p in patients:
+        assert db.scalar(select(func.count()).select_from(GameSession).where(GameSession.patient_id == p.id)) > 150
+    assert db.scalar(select(func.count()).select_from(ReminderLog)) > 0  # Kamala has reminders
+    # The moderate profile declines enough to raise decline alerts.
+    shanti = next(p for p in patients if p.email == "shanti@khayal.test")
+    assert db.scalar(select(func.count()).select_from(Alert).where(Alert.patient_id == shanti.id, Alert.type == "decline")) > 0
+
+    again = load_demo_history(db, patients)
+    assert all(line.endswith("already has history, skipped") for line in again)
