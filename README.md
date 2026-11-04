@@ -3,7 +3,7 @@
 AI-based cognitive gaming and memory assistance platform for elderly dementia patients.
 CSE471 Deep Learning — Satyam Kumar, Jan Mohammad.
 
-`CLAUDE.md` is the build spec. Current status: **Milestone 5 — Reminders**.
+`CLAUDE.md` is the build spec. Current status: **Milestone 6 — Family + Who Is This?**.
 
 ## Layout
 
@@ -53,7 +53,7 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 | Role | Email |
 |---|---|
 | Caregiver | `caregiver@khayal.test` (linked to all three patients) |
-| Patient | `kamala@khayal.test` (has demo reminders), `rahim@khayal.test`, `shanti@khayal.test` |
+| Patient | `kamala@khayal.test` (has demo reminders and 3 demo family members with placeholder pictures), `rahim@khayal.test`, `shanti@khayal.test` |
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
@@ -79,8 +79,10 @@ Routes so far:
 - `/patient` — patient Home: Next reminder card + Play a game / Today's reminders / Who is this? (patients only).
 - `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
 - `/patient/reminders` — today's reminders with big Done buttons.
-- `/patient/who-is-this`, `/patient/voice` — placeholders for later milestones.
+- `/patient/who-is-this` — family photo grid with name + relation; tapping a photo shows it big and reads aloud who it is.
+- `/patient/voice` — placeholder for Milestone 8.
 - `/caregiver` — linked patients and a form to link a patient by account email (caregivers only).
+- `/caregiver/patients/:id/family` — add, edit and delete people (name, relation, note) and their photos.
 - `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
 - `/caregiver/patients/:id` — alerts (with Acknowledge), the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
 
@@ -94,6 +96,9 @@ Routes so far:
 - `GET /api/patients/{id}/reminders/adherence?days=7` — `{done_by_patient, done_by_caregiver, missed, rate}`.
 - `GET /api/me/reminders/today` (patient) — today's reminders with `status` (`pending`/`done`/`missed`) and `due`.
 - `GET /api/patients/{id}/alerts`, `POST /api/alerts/{id}/ack` (caregiver).
+- `GET/POST /api/patients/{id}/family`, `PUT/DELETE /api/patients/{id}/family/{member_id}` — people `{name, relation, note}` with `photos: [{id, url}]` (create/edit/delete: linked caregiver).
+- `POST /api/patients/{id}/family/{member_id}/photos` — the request **body is the image itself** with `Content-Type: image/jpeg` or `image/png` (no multipart form). `DELETE …/photos/{photo_id}`.
+- `GET /api/patients/{id}/family/{member_id}/photos/{photo_id}` — the photo, only for the patient and linked caregivers.
 - `GET /api/games/{game_type}/level` (patient) — current level, 2 for a new player.
 - `POST /api/sessions` (patient) `{game_type, started_at, ended_at, rounds: [{correct, reaction_ms|null, hint_used}], completed}` → stored session, `new_level`, `level_change` (`up`/`down`/`same`). `completed` must be true with exactly 5 rounds and false with fewer.
 - `GET /api/patients/{id}/sessions?game_type=` — the patient themself or a linked caregiver.
@@ -141,6 +146,12 @@ npm run typecheck # tsc strict
 - **Alert:** when 3 or more reminders were missed in the last 48 hours, a `warning` alert is raised for the caregiver, at most once per 48 hours.
 - The patient Home "Next reminder" card shows something due now first, otherwise the next one later today.
 - **Who marked it done:** each log records `marked_by` (`patient` or `caregiver`). The caregiver page shows "Done (by caregiver)" and an adherence rate over the last 7 days that counts only reminders the patient marked done themself.
+
+## Family photos
+
+- JPG or PNG only, at most 5 MB, at most 5 photos per person. The server checks the actual image (not just the file name), re-encodes it as JPEG at most 800 px on the long side, and drops EXIF data such as GPS location.
+- Stored under `data/uploads/family/{patient_id}/` (gitignored). These are private family photos: they are **never** served as static files. The only way to get one is the authenticated photo route, and the frontend shows them from in-memory blobs.
+- **Who is this?** is help, not a test: no scoring. About Today's last question becomes "Who is this?" (one photo, 3 names, a kind reply) once 3 or more people have photos; otherwise it asks the city, or the year if no city is set.
 
 ## Known limitations (prototype)
 

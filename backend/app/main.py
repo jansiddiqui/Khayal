@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import config
 from app.background import start_background_tasks
 from app.db import ensure_schema_current
-from app.routes import alerts, auth, games, health, patients, reminders
+from app.routes import alerts, auth, family, games, health, patients, reminders
 
 
 def _setup_logging() -> None:
@@ -34,7 +34,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Khayal API", version="0.5.0", lifespan=lifespan)
+    app = FastAPI(title="Khayal API", version="0.6.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.CORS_ORIGINS,
@@ -42,7 +42,15 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for router in (health.router, auth.router, patients.router, games.router, reminders.router, alerts.router):
+    for router in (
+        health.router,
+        auth.router,
+        patients.router,
+        games.router,
+        reminders.router,
+        alerts.router,
+        family.router,
+    ):
         app.include_router(router, prefix="/api")
     return app
 

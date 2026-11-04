@@ -180,3 +180,19 @@ class Alert(Base):
     severity: Mapped[Severity] = mapped_column(SAEnum(Severity, native_enum=False, length=16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     acknowledged: Mapped[bool] = mapped_column(default=False)
+
+
+class FamilyMember(Base):
+    """A person in the patient's life, with private photos for "Who is this?"."""
+
+    __tablename__ = "family_members"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    # Son, Daughter, Grandson, ... or the caregiver's own word.
+    relation: Mapped[str] = mapped_column(String(40))
+    note: Mapped[str | None] = mapped_column(String(300), default=None)
+    # File names under data/uploads/family/{patient_id}/, in display order.
+    photo_paths: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

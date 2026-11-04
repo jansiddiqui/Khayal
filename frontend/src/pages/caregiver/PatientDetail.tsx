@@ -236,6 +236,9 @@ export function PatientDetail() {
         <Link to={`/caregiver/patients/${patientId}/reminders`} className="text-brand-dark underline">
           Reminders →
         </Link>
+        <Link to={`/caregiver/patients/${patientId}/family`} className="text-brand-dark underline">
+          Family photos →
+        </Link>
       </nav>
 
       <AlertsPanel patientId={patientId} />

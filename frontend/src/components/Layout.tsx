@@ -9,6 +9,8 @@ interface LayoutProps {
   title: string;
   /** Extra text read aloud after the title when read-aloud is on. */
   spokenIntro?: string;
+  /** Read this instead of the title (and intro) when the screen opens. */
+  spoken?: string;
   children: ReactNode;
 }
 
@@ -21,12 +23,12 @@ const topBarButton =
  * Accessible patient layout. The top bar (Home + Read aloud) is identical on every
  * patient screen and does not count toward the 3-button limit (CLAUDE.md section 4).
  */
-export function Layout({ title, spokenIntro, children }: LayoutProps) {
+export function Layout({ title, spokenIntro, spoken, children }: LayoutProps) {
   const { enabled, toggle, speak } = useReadAloud();
 
   useEffect(() => {
-    speak(spokenIntro ? `${title}. ${spokenIntro}` : title);
-  }, [speak, title, spokenIntro]);
+    speak(spoken ?? (spokenIntro ? `${title}. ${spokenIntro}` : title));
+  }, [speak, title, spokenIntro, spoken]);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-4 sm:px-8">

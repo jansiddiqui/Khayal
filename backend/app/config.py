@@ -5,6 +5,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.getenv("KHAYAL_DATA_DIR", REPO_ROOT / "data"))
+# Private files (family photos). Never served as static files; only through authenticated routes.
+UPLOAD_DIR = DATA_DIR / "uploads"
 
 # Switch to PostgreSQL by setting e.g. postgresql+psycopg://user:pass@host/khayal
 DATABASE_URL = os.getenv("KHAYAL_DATABASE_URL", f"sqlite:///{(DATA_DIR / 'khayal.db').as_posix()}")

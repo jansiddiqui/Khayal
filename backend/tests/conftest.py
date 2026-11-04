@@ -1,6 +1,7 @@
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,11 +9,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app import config
 from app import models  # noqa: F401  (register tables)
 from app.db import Base, get_db
 from app.deps import get_now
 from app.main import create_app
 from app.services.clock import utc_now
+
+
+@pytest.fixture(autouse=True)
+def upload_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Every test writes uploaded files to its own temporary folder, never to data/."""
+    monkeypatch.setattr(config, "UPLOAD_DIR", tmp_path / "uploads")
+    return tmp_path / "uploads"
 
 
 @pytest.fixture

@@ -294,7 +294,73 @@ export async function acknowledgeAlert(alertId: number): Promise<Alert> {
   return data;
 }
 
+export interface FamilyPhoto {
+  id: string;
+  /** Path under /api; fetch it with `fetchPhotoBlob` (needs the login token). */
+  url: string;
+}
+
+export interface FamilyMember {
+  id: number;
+  patient_id: number;
+  name: string;
+  relation: string;
+  note: string | null;
+  photos: FamilyPhoto[];
+}
+
+export interface FamilyMemberInput {
+  name: string;
+  relation: string;
+  note: string | null;
+}
+
+export async function listFamily(patientId: number): Promise<FamilyMember[]> {
+  const { data } = await api.get<FamilyMember[]>(`/patients/${patientId}/family`);
+  return data;
+}
+
+export async function createFamilyMember(patientId: number, input: FamilyMemberInput): Promise<FamilyMember> {
+  const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family`, input);
+  return data;
+}
+
+export async function updateFamilyMember(patientId: number, memberId: number, input: FamilyMemberInput): Promise<FamilyMember> {
+  const { data } = await api.put<FamilyMember>(`/patients/${patientId}/family/${memberId}`, input);
+  return data;
+}
+
+export async function deleteFamilyMember(patientId: number, memberId: number): Promise<void> {
+  await api.delete(`/patients/${patientId}/family/${memberId}`);
+}
+
+/** Sends the image file itself as the request body. */
+export async function uploadFamilyPhoto(patientId: number, memberId: number, file: File): Promise<FamilyMember> {
+  const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos`, file, {
+    headers: { "Content-Type": file.type },
+  });
+  return data;
+}
+
+export async function deleteFamilyPhoto(patientId: number, memberId: number, photoId: string): Promise<FamilyMember> {
+  const { data } = await api.delete<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos/${photoId}`);
+  return data;
+}
+
+/** Private photos are never public URLs, so they are fetched with the token and shown as blobs. */
+export async function fetchPhotoBlob(url: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(url, { responseType: "blob" });
+  return data;
+}
+
 /** HTTP status of a failed request, if any. */
 export function errorStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
+}
+
+/** The server's `detail` message of a failed request, if it sent one. */
+export function errorDetail(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) return undefined;
+  const detail: unknown = (error.response?.data as { detail?: unknown } | undefined)?.detail;
+  return typeof detail === "string" ? detail : undefined;
 }

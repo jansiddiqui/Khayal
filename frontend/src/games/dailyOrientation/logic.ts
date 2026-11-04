@@ -1,3 +1,4 @@
+import type { FamilyMember } from "../../api/client";
 import { copy } from "../../copy";
 import { shuffle, type Rng } from "../types";
 
@@ -26,6 +27,8 @@ export interface Question {
   answer: string;
   /** Kind reply that always states the right answer. */
   reply: string;
+  /** For "Who is this?": the family photo to show (path under /api). */
+  photoUrl?: string;
 }
 
 const OPTION_COUNT = 4;
@@ -38,12 +41,48 @@ function withDistractors(answer: string, pool: readonly string[], rng: Rng): str
   return shuffle([answer, ...others], rng);
 }
 
+/** "Who is this?" replaces the city question once this many people have photos. */
+export const WHO_IS_THIS_MIN_PEOPLE = 3;
+
+function peopleWithPhotos(family: readonly FamilyMember[]): FamilyMember[] {
+  return family.filter((m) => m.photos.length > 0);
+}
+
+/** Needs 3+ people with photos whose names differ, so the 3 choices are distinct. */
+export function canAskWhoIsThis(family: readonly FamilyMember[] | undefined): boolean {
+  if (!family) return false;
+  const names = new Set(peopleWithPhotos(family).map((m) => m.name.trim().toLowerCase()));
+  return names.size >= WHO_IS_THIS_MIN_PEOPLE;
+}
+
+/** One photo and 3 name choices; the reply is kind either way ("This is Rahul, your grandson."). */
+export function buildWhoIsThisQuestion(family: readonly FamilyMember[], rng: Rng): Question {
+  const people = peopleWithPhotos(family);
+  const person = people[Math.floor(rng() * people.length)]!;
+  const photo = person.photos[Math.floor(rng() * person.photos.length)]!;
+  const otherNames = [...new Set(people.map((m) => m.name))].filter((n) => n.trim().toLowerCase() !== person.name.trim().toLowerCase());
+  const options = shuffle([person.name, ...shuffle(otherNames, rng).slice(0, 2)], rng);
+  return {
+    prompt: copy.games.orientation.askWhoIsThis,
+    answer: person.name,
+    options,
+    reply: copy.whoIsThis.thisIs(person.name, person.relation),
+    photoUrl: photo.url,
+  };
+}
+
 /**
- * The 5 questions of a session, in order: day, month, season, time of day, city.
- * Without a city on file the last question asks for the year instead.
- * (After Milestone 6 the city question becomes "Who is this?" when family photos exist.)
+ * The 5 questions of a session, in order: day, month, season, time of day, then
+ * "Who is this?" when 3+ family members have photos, otherwise the city
+ * (or the year if no city is set).
  */
-export function buildQuestion(index: number, now: Date, city: string | null, rng: Rng): Question {
+export function buildQuestion(
+  index: number,
+  now: Date,
+  city: string | null,
+  rng: Rng,
+  family?: readonly FamilyMember[],
+): Question {
   const o = copy.games.orientation;
   switch (index) {
     case 0: {
@@ -63,6 +102,7 @@ export function buildQuestion(index: number, now: Date, city: string | null, rng
       return { prompt: o.askTimeOfDay, answer: time, options: shuffle(Object.values(copy.timesOfDay), rng), reply: o.replyTimeOfDay(time) };
     }
     default: {
+      if (family && canAskWhoIsThis(family)) return buildWhoIsThisQuestion(family, rng);
       if (city) {
         return { prompt: o.askCity, answer: city, options: withDistractors(city, copy.cities, rng), reply: o.replyCity(city) };
       }

@@ -215,3 +215,24 @@ class AdherenceOut(BaseModel):
     done_by_caregiver: int
     missed: int
     rate: float | None
+
+
+class FamilyMemberIn(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    relation: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+    note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] | None = None
+
+
+class FamilyPhotoOut(BaseModel):
+    id: str
+    # Path under /api; the request needs the usual Authorization header.
+    url: str
+
+
+class FamilyMemberOut(BaseModel):
+    id: int
+    patient_id: int
+    name: str
+    relation: str
+    note: str | None
+    photos: list[FamilyPhotoOut]

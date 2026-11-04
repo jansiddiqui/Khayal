@@ -1,5 +1,11 @@
 // All user-facing patient text lives here so it can be translated (e.g. to Hindi) later.
 
+/** "This is Rahul, your grandson." (just "This is Rahul." when the relation is "Other"). */
+function thisIs(name: string, relation: string): string {
+  const r = relation.trim().toLowerCase();
+  return r === "other" ? `This is ${name}.` : `This is ${name}, your ${r}.`;
+}
+
 export const copy = {
   appName: "Khayal",
   common: {
@@ -72,6 +78,7 @@ export const copy = {
       askTimeOfDay: "What time of day is it?",
       askCity: "Which city are you in?",
       askYear: "Which year is it?",
+      askWhoIsThis: "Who is this?",
       yes: "Yes! ",
       replyDay: (day: string) => `It's ${day} today.`,
       replyMonth: (month: string) => `It's ${month} now.`,
@@ -182,7 +189,14 @@ export const copy = {
   },
   whoIsThis: {
     title: "Who is this?",
-    comingSoon: "Family photos will appear here soon.",
+    intro: "Tap a photo to see who it is.",
+    empty: "Family photos will appear here soon.",
+    loadFailed: "We could not load the photos just now. Let's try again.",
+    back: "Back",
+    photoOf: (name: string) => `Photo of ${name}`,
+    /** "This is Rahul, your grandson. Lives in Pune, visits on Sundays." */
+    spoken: (name: string, relation: string, note: string | null) => [thisIs(name, relation), note].filter(Boolean).join(" "),
+    thisIs,
   },
   voiceTask: {
     title: "Tell me about a picture",
