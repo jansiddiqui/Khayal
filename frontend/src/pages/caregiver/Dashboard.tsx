@@ -1,20 +1,98 @@
-import { useQuery } from "@tanstack/react-query";
-import { getHealth } from "../../api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
+import { errorStatus, linkPatient, listPatients } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 
+function linkErrorMessage(error: unknown): string {
+  switch (errorStatus(error)) {
+    case 404:
+      return "No patient account uses that email.";
+    case 400:
+      return "That account is not a patient account.";
+    case 422:
+      return "Enter a valid email address.";
+    default:
+      return "Could not link the patient. Try again.";
+  }
+}
+
 export function CaregiverDashboard() {
-  const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
+  const queryClient = useQueryClient();
+  const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients });
+  const [email, setEmail] = useState("");
+
+  const link = useMutation({
+    mutationFn: linkPatient,
+    onSuccess: () => {
+      setEmail("");
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+    },
+  });
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    link.mutate(email);
+  }
 
   return (
     <CaregiverLayout title="Dashboard">
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-gray-700">
-          Backend status:{" "}
-          {health.isPending && <span>checking…</span>}
-          {health.isError && <span className="font-semibold text-red-700">unreachable</span>}
-          {health.isSuccess && <span className="font-semibold text-calm">{health.data.status}</span>}
-        </p>
-        <p className="mt-2 text-gray-600">Patients, trends and alerts will appear here in later milestones.</p>
+      <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <h2 className="mb-3 text-lg font-semibold">My patients</h2>
+          {patients.isPending && <p className="text-gray-600">Loading patients…</p>}
+          {patients.isError && <p className="text-red-700">Could not load patients.</p>}
+          {patients.isSuccess && patients.data.length === 0 && (
+            <p className="text-gray-600">No linked patients yet. Link one using their account email.</p>
+          )}
+          {patients.isSuccess && patients.data.length > 0 && (
+            <table className="w-full text-left">
+              <thead className="border-b border-gray-200 text-gray-600">
+                <tr>
+                  <th className="py-2 font-medium">Name</th>
+                  <th className="py-2 font-medium">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients.data.map((p) => (
+                  <tr key={p.id} className="border-b border-gray-100 last:border-0">
+                    <td className="py-2">{p.name}</td>
+                    <td className="py-2 text-gray-700">{p.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <h2 className="mb-3 text-lg font-semibold">Link a patient</h2>
+          <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            <label htmlFor="patient-email" className="text-gray-700">
+              Patient's account email
+            </label>
+            <input
+              id="patient-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-md border border-gray-400 px-3 py-2"
+            />
+            <button
+              type="submit"
+              disabled={link.isPending}
+              className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+            >
+              {link.isPending ? "Linking…" : "Link patient"}
+            </button>
+            {link.isError && (
+              <p role="alert" className="text-red-700">
+                {linkErrorMessage(link.error)}
+              </p>
+            )}
+            {link.isSuccess && <p className="text-calm">Linked {link.data.name}.</p>}
+          </form>
+        </section>
       </div>
     </CaregiverLayout>
   );

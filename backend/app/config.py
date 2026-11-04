@@ -9,4 +9,8 @@ DATA_DIR = Path(os.getenv("KHAYAL_DATA_DIR", REPO_ROOT / "data"))
 # Switch to PostgreSQL by setting e.g. postgresql+psycopg://user:pass@host/khayal
 DATABASE_URL = os.getenv("KHAYAL_DATABASE_URL", f"sqlite:///{(DATA_DIR / 'khayal.db').as_posix()}")
 
-CORS_ORIGINS = os.getenv("KHAYAL_CORS_ORIGINS", "http://localhost:5173").split(",")
+JWT_SECRET = os.getenv("KHAYAL_JWT_SECRET", "dev-only-insecure-secret-change-me")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("KHAYAL_TOKEN_MINUTES", str(60 * 24 * 7)))
+
+CORS_ORIGINS =os.getenv("KHAYAL_CORS_ORIGINS", "http://localhost:5173").split(",")

@@ -1,0 +1,70 @@
+import pytest
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.deps import ensure_patient_access
+from app.models import Role
+from app.services import auth
+from app.seed import DEMO_PASSWORD, PATIENTS, seed
+from tests.conftest import Register, bearer
+
+
+def test_caregiver_links_and_lists_patients(client: TestClient, register: Register) -> None:
+    cg = register("Priya", "priya@example.com", "caregiver")
+    register("Kamala", "kamala@example.com", "patient")
+    register("Rahim", "rahim@example.com", "patient")
+
+    assert client.get("/api/patients", headers=bearer(cg)).json() == []
+
+    for email in ("rahim@example.com", "kamala@example.com", "Kamala@example.com"):
+        response = client.post("/api/patients/link", json={"patient_email": email}, headers=bearer(cg))
+        assert response.status_code == 201
+
+    names = [p["name"] for p in client.get("/api/patients", headers=bearer(cg)).json()]
+    assert names == ["Kamala", "Rahim"]  # sorted, no duplicate link
+
+
+def test_link_errors(client: TestClient, register: Register) -> None:
+    cg = register("Priya", "priya@example.com", "caregiver")
+    register("Other", "other@example.com", "caregiver")
+
+    missing = client.post("/api/patients/link", json={"patient_email": "nobody@example.com"}, headers=bearer(cg))
+    assert missing.status_code == 404
+    not_patient = client.post("/api/patients/link", json={"patient_email": "other@example.com"}, headers=bearer(cg))
+    assert not_patient.status_code == 400
+
+
+def test_patient_cannot_use_caregiver_routes(client: TestClient, register: Register) -> None:
+    patient = register("Kamala", "kamala@example.com", "patient")
+    assert client.get("/api/patients", headers=bearer(patient)).status_code == 403
+    response = client.post("/api/patients/link", json={"patient_email": "kamala@example.com"}, headers=bearer(patient))
+    assert response.status_code == 403
+
+
+def test_patient_routes_require_auth(client: TestClient) -> None:
+    assert client.get("/api/patients").status_code == 401
+
+
+def test_access_rule(db: Session) -> None:
+    caregiver, (kamala, rahim, _) = seed(db)
+    stranger = auth.register_user(db, name="Stranger", email="s@example.com", password="password123", role=Role.caregiver)
+
+    ensure_patient_access(db, kamala, kamala.id)  # own data
+    ensure_patient_access(db, caregiver, rahim.id)  # linked
+    with pytest.raises(HTTPException) as exc:
+        ensure_patient_access(db, kamala, rahim.id)  # another patient
+    assert exc.value.status_code == 403
+    with pytest.raises(HTTPException):
+        ensure_patient_access(db, stranger, kamala.id)  # unlinked caregiver
+
+
+def test_seed_is_idempotent_and_loginable(client: TestClient, db: Session) -> None:
+    seed(db)
+    caregiver, patients = seed(db)
+    assert len(patients) == len(PATIENTS) == 3
+
+    login = client.post("/api/auth/login", json={"email": caregiver.email, "password": DEMO_PASSWORD})
+    assert login.status_code == 200
+    listed = client.get("/api/patients", headers=bearer(login.json())).json()
+    assert len(listed) == 3
