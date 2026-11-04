@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router";
 import { copy } from "./copy";
 import { CaregiverDashboard } from "./pages/caregiver/Dashboard";
 import { ComingSoon } from "./pages/patient/ComingSoon";

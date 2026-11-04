@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { copy } from "../copy";
 
 export const PATIENT_HOME = "/patient";

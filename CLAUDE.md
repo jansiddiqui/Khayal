@@ -30,10 +30,10 @@ Out of scope for the prototype: mobile app, MRI, real push notifications (use in
 
 ## 2. Tech stack (decided, do not change without asking)
 
-- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router, TanStack Query, Recharts for charts, Axios.
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2.0, Pydantic v2, SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose), Uvicorn.
+- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios.
+- **Backend:** Python 3.11+ (3.12 is fine), FastAPI, SQLAlchemy 2.0, Pydantic v2, SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose, with `bcrypt==4.0.1` pinned because passlib 1.7.4 breaks on newer bcrypt), Uvicorn.
 - **ML:** plain Python modules in `ml/` that the backend imports through `backend/app/services/`. NumPy/pandas only for now. No torch dependency until real models are added.
-- **Tests:** pytest (backend + ml), Vitest + React Testing Library (frontend).
+- **Tests:** pytest + httpx (FastAPI TestClient) for backend + ml; Vitest + React Testing Library + jsdom + `@testing-library/jest-dom` for frontend.
 - **Package managers:** npm for frontend, `uv` or `pip` + `requirements.txt` for backend.
 
 ## 3. Repo structure
@@ -79,6 +79,13 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - Simple icons + words together, never icons alone.
 - Every screen has a big "Home" button in the same place.
 - Optional text-to-speech (browser `speechSynthesis`) for instructions, toggled from Home.
+
+**Patient Home layout (decided):**
+
+- Top bar: the big "Home" button, and next to it a "Read aloud: On/Off" toggle (icon + words). The top bar is the same on every patient screen and does not count toward the 3-button limit.
+- Below it: a "Next reminder" info card (information only, not a button).
+- Then exactly 3 big buttons: "Play a game", "Today's reminders", "Who is this?".
+- The weekly voice task is not on Home. It appears inside the games list as "Tell me about a picture", and only when it is due.
 
 The caregiver UI can be a normal dense dashboard.
 

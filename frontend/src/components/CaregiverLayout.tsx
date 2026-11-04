@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 /** Caregiver UI is a normal, denser dashboard layout. */
 export function CaregiverLayout({ title, children }: { title: string; children: ReactNode }) {
