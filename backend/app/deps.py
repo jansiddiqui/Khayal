@@ -1,6 +1,7 @@
 """FastAPI dependencies: DB session, current user, role and care-link checks."""
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -10,8 +11,17 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Role, User
 from app.services import auth, care
+from app.services.clock import utc_now
 
 DbSession = Annotated[Session, Depends(get_db)]
+
+
+def get_now() -> datetime:
+    """The current time (UTC). A dependency so tests can pin the clock."""
+    return utc_now()
+
+
+Now = Annotated[datetime, Depends(get_now)]
 
 _bearer = HTTPBearer(auto_error=False)
 

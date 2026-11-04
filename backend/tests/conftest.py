@@ -1,4 +1,6 @@
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,7 +10,9 @@ from sqlalchemy.pool import StaticPool
 
 from app import models  # noqa: F401  (register tables)
 from app.db import Base, get_db
+from app.deps import get_now
 from app.main import create_app
+from app.services.clock import utc_now
 
 
 @pytest.fixture
@@ -25,9 +29,22 @@ def db(db_session_factory: sessionmaker[Session]) -> Iterator[Session]:
         yield session
 
 
+@dataclass
+class Clock:
+    """The time routes see as "now"; tests can set it."""
+
+    now: datetime = field(default_factory=utc_now)
+
+
 @pytest.fixture
-def client(db_session_factory: sessionmaker[Session]) -> TestClient:
+def clock() -> Clock:
+    return Clock()
+
+
+@pytest.fixture
+def client(db_session_factory: sessionmaker[Session], clock: Clock) -> TestClient:
     app = create_app()
+    app.dependency_overrides[get_now] = lambda: clock.now
 
     def override_get_db() -> Iterator[Session]:
         with db_session_factory() as session:

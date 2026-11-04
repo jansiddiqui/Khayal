@@ -189,6 +189,95 @@ export async function listSessions(patientId: number): Promise<GameSession[]> {
   return data;
 }
 
+export type ReminderType = "medicine" | "meal" | "appointment" | "other";
+export type ReminderStatus = "done" | "missed" | "pending";
+
+/** "HH:MM:SS" local wall-clock time from the server. */
+export type TimeOfDay = string;
+
+export interface TodayReminder {
+  id: number;
+  title: string;
+  type: ReminderType;
+  time_of_day: TimeOfDay;
+  status: ReminderStatus;
+  /** True once its time has come. */
+  due: boolean;
+}
+
+export interface Reminder {
+  id: number;
+  patient_id: number;
+  title: string;
+  type: ReminderType;
+  time_of_day: TimeOfDay;
+  /** 0 = Monday ... 6 = Sunday */
+  days_of_week: number[];
+  active: boolean;
+  /** Today's status, or null when not scheduled today. */
+  today_status: ReminderStatus | null;
+}
+
+export interface ReminderInput {
+  title: string;
+  type: ReminderType;
+  time_of_day: string;
+  days_of_week: number[];
+  active: boolean;
+}
+
+export async function getTodayReminders(): Promise<TodayReminder[]> {
+  const { data } = await api.get<TodayReminder[]>("/me/reminders/today");
+  return data;
+}
+
+export async function markReminderDone(reminderId: number): Promise<Reminder> {
+  const { data } = await api.post<Reminder>(`/reminders/${reminderId}/log`, { status: "done" });
+  return data;
+}
+
+export async function listReminders(patientId: number): Promise<Reminder[]> {
+  const { data } = await api.get<Reminder[]>(`/patients/${patientId}/reminders`);
+  return data;
+}
+
+export async function createReminder(patientId: number, input: ReminderInput): Promise<Reminder> {
+  const { data } = await api.post<Reminder>(`/patients/${patientId}/reminders`, input);
+  return data;
+}
+
+export async function updateReminder(patientId: number, reminderId: number, input: ReminderInput): Promise<Reminder> {
+  const { data } = await api.put<Reminder>(`/patients/${patientId}/reminders/${reminderId}`, input);
+  return data;
+}
+
+export async function deleteReminder(patientId: number, reminderId: number): Promise<void> {
+  await api.delete(`/patients/${patientId}/reminders/${reminderId}`);
+}
+
+export type AlertType = "decline" | "missed_reminders" | "speech_risk";
+export type Severity = "info" | "warning" | "critical";
+
+export interface Alert {
+  id: number;
+  patient_id: number;
+  type: AlertType;
+  message: string;
+  severity: Severity;
+  created_at: string;
+  acknowledged: boolean;
+}
+
+export async function listAlerts(patientId: number): Promise<Alert[]> {
+  const { data } = await api.get<Alert[]>(`/patients/${patientId}/alerts`);
+  return data;
+}
+
+export async function acknowledgeAlert(alertId: number): Promise<Alert> {
+  const { data } = await api.post<Alert>(`/alerts/${alertId}/ack`);
+  return data;
+}
+
 /** HTTP status of a failed request, if any. */
 export function errorStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;

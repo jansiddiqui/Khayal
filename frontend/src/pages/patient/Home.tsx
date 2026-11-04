@@ -1,14 +1,25 @@
+import { useQuery } from "@tanstack/react-query";
+import { getTodayReminders, type TodayReminder } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { BigButton } from "../../components/BigButton";
 import { Layout } from "../../components/Layout";
 import { copy } from "../../copy";
 
+/** Something due now and not done comes first; otherwise the next one later today. */
+function nextReminderText(reminders: TodayReminder[] | undefined): string {
+  const open = (reminders ?? []).filter((r) => r.status !== "done");
+  const dueNow = open.find((r) => r.due);
+  if (dueNow) return copy.patientHome.reminderNow(dueNow.title);
+  const upcoming = open.find((r) => !r.due);
+  if (upcoming) return copy.patientHome.nextReminder(copy.reminders.time(upcoming.time_of_day), upcoming.title);
+  return copy.patientHome.noReminder;
+}
+
 /** Patient Home layout is fixed by CLAUDE.md section 4: reminder card + exactly 3 buttons. */
 export function PatientHome() {
   const { state } = useAuth();
   const firstName = state.status === "authenticated" ? state.user.name.split(" ")[0] : "";
-  // Reminders arrive in Milestone 5; until then the card shows the empty message.
-  const nextReminder: string | null = null;
+  const reminders = useQuery({ queryKey: ["todayReminders"], queryFn: getTodayReminders, staleTime: 0 });
 
   return (
     <Layout title={copy.patientHome.greeting(firstName)}>
@@ -20,7 +31,9 @@ export function PatientHome() {
           <span aria-hidden="true">⏰</span>
           {copy.patientHome.nextReminderLabel}
         </h2>
-        <p className="mt-2 text-2xl">{nextReminder ?? copy.patientHome.noReminder}</p>
+        <p className="mt-2 text-2xl">
+          {reminders.isPending ? copy.common.loading : nextReminderText(reminders.data)}
+        </p>
       </section>
       <nav aria-label="Main actions" className="flex flex-col gap-5">
         <BigButton to="/patient/games" icon="🧩" label={copy.patientHome.playGames} />

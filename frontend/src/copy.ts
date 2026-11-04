@@ -14,6 +14,8 @@ export const copy = {
     greeting: (name: string) => `Hello, ${name}!`,
     nextReminderLabel: "Next reminder",
     noReminder: "Nothing planned right now. Enjoy your day.",
+    nextReminder: (time: string, title: string) => `${time} · ${title}`,
+    reminderNow: (title: string) => `Now · ${title}`,
     playGames: "Play a game",
     todaysReminders: "Today's reminders",
     whoIsThis: "Who is this?",
@@ -155,7 +157,28 @@ export const copy = {
   },
   reminders: {
     title: "Today's reminders",
-    comingSoon: "Your reminders will appear here soon.",
+    nowHeading: "Now",
+    laterHeading: "Later today",
+    doneHeading: "Done",
+    timeForThis: "It's time for this.",
+    letsDoItNow: "Let's do this now.",
+    done: "Done",
+    doneMark: "✓ Done",
+    thanks: "Thank you! That's done.",
+    allDone: "All done for today. Well done!",
+    nothingToday: "Nothing planned today. Enjoy your day.",
+    nothingNow: "Nothing to do right now. Enjoy the moment.",
+    loadFailed: "We could not load your reminders just now. Let's try again.",
+    saveFailed: "That didn't save just now. Let's try again.",
+    retry: "Try again",
+    types: { medicine: "Medicine", meal: "Meal", appointment: "Appointment", other: "Reminder" },
+    icons: { medicine: "💊", meal: "🍽️", appointment: "🩺", other: "📌" },
+    /** "13:05:00" -> "1:05 PM" */
+    time: (hhmmss: string) => {
+      const [h = 0, m = 0] = hhmmss.split(":").map(Number);
+      const suffix = h < 12 ? "AM" : "PM";
+      return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${suffix}`;
+    },
   },
   whoIsThis: {
     title: "Who is this?",

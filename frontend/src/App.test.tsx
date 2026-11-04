@@ -18,6 +18,8 @@ vi.mock("./api/client", async (importOriginal) => {
     listSessions: vi.fn(),
     updatePatient: vi.fn(),
     getTodaysGames: vi.fn(),
+    getTodayReminders: vi.fn(),
+    listAlerts: vi.fn(),
   };
 });
 
@@ -33,6 +35,8 @@ function signInAs(user: User) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  api.getTodayReminders.mockResolvedValue([]);
+  api.listAlerts.mockResolvedValue([]);
 });
 
 const patientRoutes = ["/patient", "/patient/games", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];

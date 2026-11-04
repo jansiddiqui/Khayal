@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
-import { listPatients, listSessions, updatePatient, type GameSession, type GameType } from "../../api/client";
+import {
+  acknowledgeAlert,
+  listAlerts,
+  listPatients,
+  listSessions,
+  updatePatient,
+  type GameSession,
+  type GameType,
+} from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 
 const GAME_NAMES: Record<GameType, string> = {
@@ -73,6 +81,63 @@ function CityForm({ patientId, city }: { patientId: number; city: string | null 
         <p className="w-full text-gray-600">No city set: Daily Orientation asks for the year instead.</p>
       )}
     </form>
+  );
+}
+
+const SEVERITY_STYLE = {
+  info: "border-blue-300 bg-blue-50",
+  warning: "border-amber-400 bg-amber-50",
+  critical: "border-red-500 bg-red-50",
+} as const;
+
+function AlertsPanel({ patientId }: { patientId: number }) {
+  const queryClient = useQueryClient();
+  const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
+  const ack = useMutation({
+    mutationFn: acknowledgeAlert,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["alerts", patientId] }),
+  });
+  const open = alerts.data?.filter((a) => !a.acknowledged) ?? [];
+  const past = alerts.data?.filter((a) => a.acknowledged) ?? [];
+
+  return (
+    <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4" aria-labelledby="alerts-heading">
+      <h2 id="alerts-heading" className="mb-3 text-lg font-semibold">
+        Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
+      </h2>
+      {alerts.isPending && <p className="text-gray-600">Loading alerts…</p>}
+      {alerts.isError && <p className="text-red-700">Could not load alerts.</p>}
+      {alerts.isSuccess && alerts.data.length === 0 && <p className="text-gray-600">No alerts.</p>}
+      <ul className="flex flex-col gap-2">
+        {open.map((a) => (
+          <li key={a.id} className={`flex flex-wrap items-center gap-3 rounded-md border-l-4 p-3 ${SEVERITY_STYLE[a.severity]}`}>
+            <span className="font-semibold capitalize">{a.severity}</span>
+            <span className="flex-1">{a.message}</span>
+            <span className="text-gray-600">{new Date(a.created_at).toLocaleString()}</span>
+            <button
+              type="button"
+              onClick={() => ack.mutate(a.id)}
+              disabled={ack.isPending}
+              className="rounded-md border border-gray-400 bg-white px-3 py-1 hover:bg-gray-100"
+            >
+              Acknowledge
+            </button>
+          </li>
+        ))}
+      </ul>
+      {past.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-gray-700">Acknowledged ({past.length})</summary>
+          <ul className="mt-2 flex flex-col gap-1 text-gray-600">
+            {past.map((a) => (
+              <li key={a.id}>
+                {new Date(a.created_at).toLocaleString()} · {a.message}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   );
 }
 
@@ -164,9 +229,16 @@ export function PatientDetail() {
 
   return (
     <CaregiverLayout title={patient?.name ?? "Patient"}>
-      <Link to="/caregiver" className="mb-4 inline-block text-brand-dark underline">
-        ← All patients
-      </Link>
+      <nav className="mb-4 flex gap-6">
+        <Link to="/caregiver" className="text-brand-dark underline">
+          ← All patients
+        </Link>
+        <Link to={`/caregiver/patients/${patientId}/reminders`} className="text-brand-dark underline">
+          Reminders →
+        </Link>
+      </nav>
+
+      <AlertsPanel patientId={patientId} />
 
       {patient && (
         <section className="mb-6 flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-4">

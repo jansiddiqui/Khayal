@@ -3,7 +3,7 @@
 AI-based cognitive gaming and memory assistance platform for elderly dementia patients.
 CSE471 Deep Learning — Satyam Kumar, Jan Mohammad.
 
-`CLAUDE.md` is the build spec. Current status: **Milestone 4 — Remaining games**.
+`CLAUDE.md` is the build spec. Current status: **Milestone 5 — Reminders**.
 
 ## Layout
 
@@ -47,7 +47,7 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 | Role | Email |
 |---|---|
 | Caregiver | `caregiver@khayal.test` (linked to all three patients) |
-| Patient | `kamala@khayal.test`, `rahim@khayal.test`, `shanti@khayal.test` |
+| Patient | `kamala@khayal.test` (has demo reminders), `rahim@khayal.test`, `shanti@khayal.test` |
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
@@ -70,15 +70,21 @@ Routes so far:
 - `/login`, `/register` — sign in or create an account; `/` sends you to your role's home.
 - `/patient` — patient Home: Next reminder card + Play a game / Today's reminders / Who is this? (patients only).
 - `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
-- `/patient/reminders`, `/patient/who-is-this`, `/patient/voice` — placeholders for later milestones.
+- `/patient/reminders` — today's reminders with big Done buttons.
+- `/patient/who-is-this`, `/patient/voice` — placeholders for later milestones.
 - `/caregiver` — linked patients and a form to link a patient by account email (caregivers only).
-- `/caregiver/patients/:id` — the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
+- `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
+- `/caregiver/patients/:id` — alerts (with Acknowledge), the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
 
 ## API so far
 
 - `POST /api/auth/register`, `POST /api/auth/login` → `{access_token, token_type, user}`; `GET /api/auth/me`. Send `Authorization: Bearer <token>`.
 - `GET /api/patients` (caregiver's linked patients), `POST /api/patients/link` `{patient_email}`, `PATCH /api/patients/{id}` `{city?, pinned_games?}` (caregiver only, linked patients).
 - `GET /api/me/games/today` (patient) — today's 3 games with `done_today`.
+- `GET/POST /api/patients/{id}/reminders`, `PUT/DELETE /api/patients/{id}/reminders/{reminder_id}` (create/edit/delete: linked caregiver) — `{title, type, time_of_day "HH:MM", days_of_week [0=Mon..6=Sun], active}`.
+- `POST /api/reminders/{id}/log` `{status: "done"}` — marks today's occurrence done (the patient or a linked caregiver).
+- `GET /api/me/reminders/today` (patient) — today's reminders with `status` (`pending`/`done`/`missed`) and `due`.
+- `GET /api/patients/{id}/alerts`, `POST /api/alerts/{id}/ack` (caregiver).
 - `GET /api/games/{game_type}/level` (patient) — current level, 2 for a new player.
 - `POST /api/sessions` (patient) `{game_type, started_at, ended_at, rounds: [{correct, reaction_ms|null, hint_used}], completed}` → stored session, `new_level`, `level_change` (`up`/`down`/`same`). `completed` must be true with exactly 5 rounds and false with fewer.
 - `GET /api/patients/{id}/sessions?game_type=` — the patient themself or a linked caregiver.
@@ -119,9 +125,17 @@ npm run typecheck # tsc strict
 - Patient-scoped backend routes must call `ensure_patient_access` (`backend/app/deps.py`).
 - Never commit `data/`, `.env`, uploads or model weights.
 
+## Reminders
+
+- A reminder repeats on chosen weekdays at a local time. The patient's Today screen shows a Done button for reminders whose time has come (at most 3 at once), lists later ones without buttons, and lists finished ones with ✓ Done. Wording stays positive: an overdue reminder says "Let's do this now."
+- **Missed:** there is no background job. Whenever reminders or alerts are read, any occurrence still not done 2 hours after its time is logged as missed. Occurrences from before a reminder was created are never counted. Marking a reminder done later the same day replaces "missed" with "done".
+- **Alert:** when 3 or more reminders were missed in the last 48 hours, a `warning` alert is raised for the caregiver, at most once per 48 hours.
+- The patient Home "Next reminder" card shows something due now first, otherwise the next one later today.
+
 ## Known limitations (prototype)
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.
+- **Missed reminders are only detected when someone opens the app** (no background job), so an alert can appear late.
 - **No database migrations:** tables are created with `create_all` on startup. After a model change, delete `data/khayal.db` and re-run the seed.

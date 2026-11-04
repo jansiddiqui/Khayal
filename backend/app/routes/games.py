@@ -1,10 +1,10 @@
 from fastapi import APIRouter, status
 
-from app.deps import CurrentPatient, CurrentUser, DbSession, ensure_patient_access
+from app.deps import CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import GameType
 from app.schemas import LevelChange, LevelOut, SessionIn, SessionOut, SessionResultOut, TodayGameOut, TodayGamesOut
 from app.services import adaptive, today_games
-from app.services.clock import local, utc_now
+from app.services.clock import local
 from ml.adaptive.rule_based import Round
 
 router = APIRouter(tags=["games"])
@@ -41,8 +41,8 @@ def list_sessions(
 
 
 @router.get("/me/games/today", response_model=TodayGamesOut)
-def get_todays_games(patient: CurrentPatient, db: DbSession) -> TodayGamesOut:
-    games = today_games.todays_games(db, patient, local(utc_now()).date())
+def get_todays_games(patient: CurrentPatient, db: DbSession, now: Now) -> TodayGamesOut:
+    games = today_games.todays_games(db, patient, local(now).date())
     return TodayGamesOut(
         games=[TodayGameOut(game_type=g.game_type, done_today=g.done_today) for g in games],
         pinned=today_games.pinned_games(patient) is not None,

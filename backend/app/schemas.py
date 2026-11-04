@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import LEVELLED_GAMES, GameType, Role
+from app.models import LEVELLED_GAMES, AlertType, GameType, ReminderType, Role, Severity
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -146,3 +146,62 @@ class TodayGameOut(BaseModel):
 class TodayGamesOut(BaseModel):
     games: list[TodayGameOut]
     pinned: bool
+
+
+Weekday = Annotated[int, Field(ge=0, le=6)]
+
+
+class ReminderIn(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    type: ReminderType
+    time_of_day: time
+    # 0 = Monday ... 6 = Sunday
+    days_of_week: Annotated[list[Weekday], Field(min_length=1, max_length=7)]
+    active: bool = True
+
+    @model_validator(mode="after")
+    def _normalise(self) -> "ReminderIn":
+        self.days_of_week = sorted(set(self.days_of_week))
+        self.time_of_day = self.time_of_day.replace(second=0, microsecond=0, tzinfo=None)
+        return self
+
+
+TodayStatus = Literal["done", "missed", "pending"]
+
+
+class ReminderOut(BaseModel):
+    id: int
+    patient_id: int
+    title: str
+    type: ReminderType
+    time_of_day: time
+    days_of_week: list[int]
+    active: bool
+    # Status of today's occurrence; null when it isn't scheduled today (or is inactive).
+    today_status: TodayStatus | None
+
+
+class TodayReminderOut(BaseModel):
+    id: int
+    title: str
+    type: ReminderType
+    time_of_day: time
+    status: TodayStatus
+    # True once its time has come.
+    due: bool
+
+
+class ReminderLogIn(BaseModel):
+    status: Literal["done"] = "done"
+
+
+class AlertOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    patient_id: int
+    type: AlertType
+    message: str
+    severity: Severity
+    created_at: datetime
+    acknowledged: bool

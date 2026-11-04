@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, String, Time, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -106,3 +106,70 @@ class PlayerLevel(Base):
     game_type: Mapped[GameType] = mapped_column(SAEnum(GameType, native_enum=False, length=32), primary_key=True)
     current_level: Mapped[int]
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ReminderType(str, Enum):
+    medicine = "medicine"
+    meal = "meal"
+    appointment = "appointment"
+    other = "other"
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    type: Mapped[ReminderType] = mapped_column(SAEnum(ReminderType, native_enum=False, length=16))
+    # Local wall-clock time (app clock), e.g. 09:00.
+    time_of_day: Mapped[time] = mapped_column(Time)
+    # Weekdays it repeats on, 0 = Monday ... 6 = Sunday.
+    days_of_week: Mapped[list[int]] = mapped_column(JSON)
+    active: Mapped[bool] = mapped_column(default=True)
+    # Occurrences before this are never counted as missed.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    logs: Mapped[list["ReminderLog"]] = relationship(back_populates="reminder", cascade="all, delete-orphan")
+
+
+class ReminderStatus(str, Enum):
+    done = "done"
+    missed = "missed"
+
+
+class ReminderLog(Base):
+    __tablename__ = "reminder_logs"
+    __table_args__ = (UniqueConstraint("reminder_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    reminder_id: Mapped[int] = mapped_column(ForeignKey("reminders.id", ondelete="CASCADE"), index=True)
+    date: Mapped[date] = mapped_column(Date)
+    status: Mapped[ReminderStatus] = mapped_column(SAEnum(ReminderStatus, native_enum=False, length=16))
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    reminder: Mapped[Reminder] = relationship(back_populates="logs")
+
+
+class AlertType(str, Enum):
+    decline = "decline"
+    missed_reminders = "missed_reminders"
+    speech_risk = "speech_risk"
+
+
+class Severity(str, Enum):
+    info = "info"
+    warning = "warning"
+    critical = "critical"
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    type: Mapped[AlertType] = mapped_column(SAEnum(AlertType, native_enum=False, length=32))
+    message: Mapped[str] = mapped_column(String(500))
+    severity: Mapped[Severity] = mapped_column(SAEnum(Severity, native_enum=False, length=16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    acknowledged: Mapped[bool] = mapped_column(default=False)
