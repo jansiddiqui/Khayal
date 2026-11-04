@@ -140,6 +140,15 @@ Each game is a self-contained component: it receives `level`, reports each round
 4. **Daily Orientation**: day, date, season, and "Which of these is your grandson?" using family photos. No difficulty levels; results go to the trend only.
 5. **Reaction Tap**: tap when the circle turns green. The only game with timing.
 
+**Today's games (decided):** the patient's games list shows exactly 3 games per day, chosen by the server (`GET /me/games/today`, logic in `backend/app/services/today_games.py`).
+
+- Slot 1 is always About Today (Daily Orientation), because daily orientation is our most important tracking signal.
+- Slots 2 and 3 are the 2 levelled games played least recently before today. Any session counts as played, including a stopped-early one. Ties are broken randomly with a seed based on the date, so the list stays the same all day.
+- When the weekly voice task is due (from Milestone 8), it replaces slot 3.
+- Once a game is finished today (a completed session), its button shows "✓ Done today", but the patient can still play it again.
+- On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
+- "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
+
 ## 8. API (prefix `/api`)
 
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`

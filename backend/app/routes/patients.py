@@ -33,5 +33,7 @@ def update_patient(patient_id: int, body: PatientUpdateIn, caregiver: CurrentCar
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     if "city" in body.model_fields_set:
         patient.city = body.city or None
+    if "pinned_games" in body.model_fields_set:
+        patient.pinned_games = [g.value for g in body.pinned_games] if body.pinned_games else None
     db.commit()
     return PatientOut.model_validate(patient)

@@ -39,6 +39,8 @@ export interface User {
   created_at: string;
   /** Patients only: home city used by Daily Orientation. */
   city: string | null;
+  /** Patients only: games a caregiver fixed in slots 2-3 of today's games. */
+  pinned_games: GameType[] | null;
 }
 
 export interface TokenResponse {
@@ -52,6 +54,7 @@ export interface Patient {
   name: string;
   email: string;
   city: string | null;
+  pinned_games: GameType[] | null;
 }
 
 export interface RegisterInput {
@@ -161,7 +164,22 @@ export function postSessionOnPageHide(input: SessionInput): void {
   }).catch(() => undefined);
 }
 
-export async function updatePatient(patientId: number, changes: { city: string | null }): Promise<Patient> {
+export interface TodaysGames {
+  games: { game_type: GameType; done_today: boolean }[];
+  pinned: boolean;
+}
+
+export async function getTodaysGames(): Promise<TodaysGames> {
+  const { data } = await api.get<TodaysGames>("/me/games/today");
+  return data;
+}
+
+export interface PatientChanges {
+  city?: string | null;
+  pinned_games?: GameType[] | null;
+}
+
+export async function updatePatient(patientId: number, changes: PatientChanges): Promise<Patient> {
   const { data } = await api.patch<Patient>(`/patients/${patientId}`, changes);
   return data;
 }

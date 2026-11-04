@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import GameType, Role
+from app.models import LEVELLED_GAMES, GameType, Role
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -39,6 +39,7 @@ class UserOut(BaseModel):
     role: Role
     created_at: datetime
     city: str | None = None
+    pinned_games: list[GameType] | None = None
 
 
 class TokenOut(BaseModel):
@@ -58,10 +59,22 @@ class PatientOut(BaseModel):
     name: str
     email: str
     city: str | None = None
+    pinned_games: list[GameType] | None = None
 
 
 class PatientUpdateIn(BaseModel):
+    """Only the fields sent are changed."""
+
     city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+    # Two different levelled games for slots 2-3 of "Today's games"; null = automatic.
+    pinned_games: list[GameType] | None = None
+
+    @model_validator(mode="after")
+    def _check_pins(self) -> "PatientUpdateIn":
+        pins = self.pinned_games
+        if pins is not None and (len(pins) != 2 or len(set(pins)) != 2 or not set(pins) <= set(LEVELLED_GAMES)):
+            raise ValueError("pinned_games must be two different games that have levels")
+        return self
 
 
 class LevelOut(BaseModel):
@@ -75,6 +88,10 @@ class RoundIn(BaseModel):
     hint_used: bool = False
 
 
+def _to_utc(dt: datetime) -> datetime:
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+
+
 class SessionIn(BaseModel):
     game_type: GameType
     started_at: datetime
@@ -85,6 +102,9 @@ class SessionIn(BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> "SessionIn":
+        # Store UTC (SQLite keeps no zone); a time without a zone is taken as UTC.
+        self.started_at = _to_utc(self.started_at)
+        self.ended_at = _to_utc(self.ended_at)
         if self.ended_at < self.started_at:
             raise ValueError("ended_at must not be before started_at")
         if self.completed != (len(self.rounds) == BLOCK_SIZE):
@@ -116,3 +136,13 @@ class SessionResultOut(BaseModel):
     session: SessionOut
     new_level: int
     level_change: LevelChange
+
+
+class TodayGameOut(BaseModel):
+    game_type: GameType
+    done_today: bool
+
+
+class TodayGamesOut(BaseModel):
+    games: list[TodayGameOut]
+    pinned: bool

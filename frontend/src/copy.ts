@@ -20,7 +20,9 @@ export const copy = {
   },
   games: {
     title: "Games",
-    intro: "Pick a game to play.",
+    intro: "Here are today's games. Pick one to play.",
+    doneToday: "✓ Done today",
+    listFailed: "We could not load today's games just now. Let's try again.",
     start: "Start",
     roundOf: (n: number, total: number) => `Round ${n} of ${total}`,
     roundWell: "Well done!",

@@ -17,17 +17,26 @@ interface CommonProps {
   label: string;
   icon?: ReactNode;
   variant?: Variant;
+  /** Small second line under the label, e.g. "✓ Done today". Part of the accessible name. */
+  note?: string;
 }
 
 type BigButtonProps = CommonProps &
   ({ to: string; onClick?: never; type?: never } | { to?: never; onClick?: () => void; type?: "button" | "submit" });
 
-export function BigButton({ label, icon, variant = "primary", ...rest }: BigButtonProps) {
+export function BigButton({ label, icon, variant = "primary", note, ...rest }: BigButtonProps) {
   const className = `${base} ${variants[variant]}`;
   const content = (
     <>
       {icon && <span aria-hidden="true">{icon}</span>}
-      <span>{label}</span>
+      {note ? (
+        <span className="flex flex-col items-center leading-tight">
+          <span>{label}</span>
+          <span className="mt-1 text-xl font-medium">{note}</span>
+        </span>
+      ) : (
+        <span>{label}</span>
+      )}
     </>
   );
 

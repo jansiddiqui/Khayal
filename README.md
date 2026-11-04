@@ -51,7 +51,7 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
-Config is read from environment variables (see `backend/app/config.py`): `KHAYAL_DATABASE_URL` (SQLite by default; set a PostgreSQL URL to switch), `KHAYAL_DATA_DIR`, `KHAYAL_CORS_ORIGINS`, `KHAYAL_JWT_SECRET` (set this anywhere other than local dev), `KHAYAL_TOKEN_MINUTES`.
+Config is read from environment variables (see `backend/app/config.py`): `KHAYAL_DATABASE_URL` (SQLite by default; set a PostgreSQL URL to switch), `KHAYAL_DATA_DIR`, `KHAYAL_CORS_ORIGINS`, `KHAYAL_JWT_SECRET` (set this anywhere other than local dev), `KHAYAL_TOKEN_MINUTES`, `KHAYAL_UTC_OFFSET_MINUTES` (the app's local clock for "today"; default 330 = IST).
 
 Tables are created on startup (`create_all`); there are no migrations yet, so delete `data/khayal.db` and re-seed after a model change.
 
@@ -69,15 +69,16 @@ Routes so far:
 
 - `/login`, `/register` — sign in or create an account; `/` sends you to your role's home.
 - `/patient` — patient Home: Next reminder card + Play a game / Today's reminders / Who is this? (patients only).
-- `/patient/games` — games list; `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
+- `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
 - `/patient/reminders`, `/patient/who-is-this`, `/patient/voice` — placeholders for later milestones.
 - `/caregiver` — linked patients and a form to link a patient by account email (caregivers only).
-- `/caregiver/patients/:id` — the patient's home city (for Daily Orientation), current level per game, and session history including stopped-early sessions.
+- `/caregiver/patients/:id` — the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
 
 ## API so far
 
 - `POST /api/auth/register`, `POST /api/auth/login` → `{access_token, token_type, user}`; `GET /api/auth/me`. Send `Authorization: Bearer <token>`.
-- `GET /api/patients` (caregiver's linked patients), `POST /api/patients/link` `{patient_email}`, `PATCH /api/patients/{id}` `{city}` (caregiver only, linked patients).
+- `GET /api/patients` (caregiver's linked patients), `POST /api/patients/link` `{patient_email}`, `PATCH /api/patients/{id}` `{city?, pinned_games?}` (caregiver only, linked patients).
+- `GET /api/me/games/today` (patient) — today's 3 games with `done_today`.
 - `GET /api/games/{game_type}/level` (patient) — current level, 2 for a new player.
 - `POST /api/sessions` (patient) `{game_type, started_at, ended_at, rounds: [{correct, reaction_ms|null, hint_used}], completed}` → stored session, `new_level`, `level_change` (`up`/`down`/`same`). `completed` must be true with exactly 5 rounds and false with fewer.
 - `GET /api/patients/{id}/sessions?game_type=` — the patient themself or a linked caregiver.
@@ -122,4 +123,5 @@ npm run typecheck # tsc strict
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
+- **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.
 - **No database migrations:** tables are created with `create_all` on startup. After a model change, delete `data/khayal.db` and re-run the seed.

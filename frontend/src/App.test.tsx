@@ -17,13 +17,14 @@ vi.mock("./api/client", async (importOriginal) => {
     linkPatient: vi.fn(),
     listSessions: vi.fn(),
     updatePatient: vi.fn(),
+    getTodaysGames: vi.fn(),
   };
 });
 
 const api = vi.mocked(apiClient);
 
-const kamala: User = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", role: "patient", created_at: "", city: "Pune" };
-const priya: User = { id: 1, name: "Priya Sharma", email: "caregiver@khayal.test", role: "caregiver", created_at: "", city: null };
+const kamala: User = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", role: "patient", created_at: "", city: "Pune", pinned_games: null };
+const priya: User = { id: 1, name: "Priya Sharma", email: "caregiver@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null };
 
 function signInAs(user: User) {
   localStorage.setItem("khayal.token", "t");
@@ -34,8 +35,7 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-// The games list is a menu of all games and is checked separately below.
-const patientRoutes = ["/patient", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
+const patientRoutes = ["/patient", "/patient/games", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
 
 describe("signed out", () => {
   it.each(["/", "/patient", "/caregiver"])("%s redirects to sign in", async (route) => {
@@ -87,7 +87,10 @@ describe("signed out", () => {
 });
 
 describe("patient", () => {
-  beforeEach(() => signInAs(kamala));
+  beforeEach(() => {
+    signInAs(kamala);
+    api.getTodaysGames.mockResolvedValue({ pinned: false, games: [{ game_type: "daily_orientation", done_today: false }] });
+  });
 
   it("Home has the reminder card and exactly 3 main buttons", async () => {
     renderWithProviders(<App />, { route: "/patient" });
@@ -113,16 +116,26 @@ describe("patient", () => {
     expect([...main.queryAllByRole("link"), ...main.queryAllByRole("button")].length).toBeLessThanOrEqual(3);
   });
 
-  it("games list offers all five games", async () => {
+  it("games list shows today's 3 games from the server, with Done today", async () => {
+    api.getTodaysGames.mockResolvedValue({
+      pinned: false,
+      games: [
+        { game_type: "daily_orientation", done_today: true },
+        { game_type: "word_recall", done_today: false },
+        { game_type: "reaction_tap", done_today: false },
+      ],
+    });
     renderWithProviders(<App />, { route: "/patient/games" });
     const list = within(await screen.findByRole("navigation", { name: "Games" }));
-    expect(list.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
-      "/patient/games/memory_match",
-      "/patient/games/sequence_recall",
-      "/patient/games/word_recall",
+    const links = list.getAllByRole("link");
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
       "/patient/games/daily_orientation",
+      "/patient/games/word_recall",
       "/patient/games/reaction_tap",
     ]);
+    // Finished today: marked, but still playable.
+    expect(links[0]).toHaveAccessibleName(`${copy.games.orientation.title} ${copy.games.doneToday}`);
+    expect(links[1]).toHaveAccessibleName(copy.games.wordRecall.title);
   });
 
   it("Read aloud toggle switches on and is remembered", async () => {
@@ -143,9 +156,9 @@ describe("caregiver", () => {
   beforeEach(() => signInAs(priya));
 
   it("lists linked patients and links a new one", async () => {
-    const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test", city: null };
-    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }, rahim]);
+    const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test", city: null, pinned_games: null };
+    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }, rahim]);
     api.linkPatient.mockResolvedValue(rahim);
 
     renderWithProviders(<App />, { route: "/caregiver" });
@@ -160,7 +173,7 @@ describe("caregiver", () => {
   });
 
   it("sees a patient's levels and session history", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
     api.listSessions.mockResolvedValue([
       {
         id: 9,
@@ -188,7 +201,7 @@ describe("caregiver", () => {
   });
 
   it("shows stopped-early sessions and saves the patient's city", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null }]);
     api.listSessions.mockResolvedValue([
       {
         id: 10,
@@ -205,7 +218,7 @@ describe("caregiver", () => {
         completed: false,
       },
     ]);
-    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: "Pune" });
+    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: "Pune", pinned_games: null });
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByRole("cell", { name: "Stopped early (3/5 rounds)" })).toBeInTheDocument();
@@ -214,6 +227,26 @@ describe("caregiver", () => {
     fireEvent.change(screen.getByLabelText(/Home city/), { target: { value: " Pune " } });
     fireEvent.click(screen.getByRole("button", { name: "Save city" }));
     await waitFor(() => expect(api.updatePatient).toHaveBeenCalledWith(2, { city: "Pune" }));
+  });
+
+  it("pins and unpins today's games for a patient", async () => {
+    const base = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null };
+    api.listPatients.mockResolvedValue([{ ...base, pinned_games: null }]);
+    api.listSessions.mockResolvedValue([]);
+    api.updatePatient.mockResolvedValue({ ...base, pinned_games: ["reaction_tap", "word_recall"] });
+    renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+    expect(await screen.findByText(/Automatic: About Today plus the two games played least recently/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Slot 2"), { target: { value: "reaction_tap" } });
+    fireEvent.change(screen.getByLabelText("Slot 3"), { target: { value: "reaction_tap" } });
+    expect(screen.getByText("Choose two different games.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pin these games" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Slot 3"), { target: { value: "word_recall" } });
+    fireEvent.click(screen.getByRole("button", { name: "Pin these games" }));
+    await waitFor(() =>
+      expect(api.updatePatient).toHaveBeenCalledWith(2, { pinned_games: ["reaction_tap", "word_recall"] }),
+    );
   });
 
   it("signs out back to the sign-in screen", async () => {

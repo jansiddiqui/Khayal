@@ -29,6 +29,8 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     # Patients only: home city, set by a caregiver, used by Daily Orientation.
     city: Mapped[str | None] = mapped_column(String(80), default=None)
+    # Patients only: two game types a caregiver fixed in slots 2-3 of "Today's games", or None.
+    pinned_games: Mapped[list[str] | None] = mapped_column(JSON, default=None)
 
 
 class CareLink(Base):
@@ -50,6 +52,8 @@ class GameType(str, Enum):
 
 # Games without difficulty levels: stored at level 1, never adapted (results feed trends only).
 NON_ADAPTIVE_GAMES = frozenset({GameType.daily_orientation})
+# Games with levels; these fill slots 2-3 of "Today's games".
+LEVELLED_GAMES: tuple[GameType, ...] = tuple(g for g in GameType if g not in NON_ADAPTIVE_GAMES)
 
 
 class GameSession(Base):

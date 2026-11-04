@@ -13,4 +13,7 @@ JWT_SECRET = os.getenv("KHAYAL_JWT_SECRET", "dev-only-insecure-secret-change-me"
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("KHAYAL_TOKEN_MINUTES", str(60 * 24 * 7)))
 
-CORS_ORIGINS =os.getenv("KHAYAL_CORS_ORIGINS", "http://localhost:5173").split(",")
+# Everyone uses one local clock for "today" (reminders, today's games). Default: IST (UTC+5:30).
+APP_UTC_OFFSET_MINUTES = int(os.getenv("KHAYAL_UTC_OFFSET_MINUTES", "330"))
+
+CORS_ORIGINS = os.getenv("KHAYAL_CORS_ORIGINS", "http://localhost:5173").split(",")
