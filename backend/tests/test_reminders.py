@@ -192,3 +192,43 @@ def test_caregiver_acknowledges_alert(client: TestClient, register: Register, cl
     assert acked.status_code == 200
     assert acked.json()["acknowledged"] is True
     assert s.alerts()[0]["acknowledged"] is True
+
+
+def test_marked_by_and_adherence(client: TestClient, register: Register, clock: Clock) -> None:
+    clock.now = at(WED, 6)
+    s = Setup(client, register)
+    tablet = s.add("Blood pressure tablet", "09:00")
+    lunch = s.add("Lunch", "13:00", kind="meal")
+    s.add("Walk", "07:00", kind="other")
+
+    clock.now = at(WED, 14)
+    client.post(f"/api/reminders/{tablet}/log", json={}, headers=s.patient)
+    by_cg = client.post(f"/api/reminders/{lunch}/log", json={}, headers=s.cg).json()
+    assert (by_cg["today_status"], by_cg["today_marked_by"]) == ("done", "caregiver")
+    # The walk (07:00) was never marked, so it is missed by now.
+
+    listed = {r["title"]: r for r in client.get(f"/api/patients/{s.pid}/reminders", headers=s.cg).json()}
+    assert listed["Blood pressure tablet"]["today_marked_by"] == "patient"
+    assert listed["Lunch"]["today_marked_by"] == "caregiver"
+    assert (listed["Walk"]["today_status"], listed["Walk"]["today_marked_by"]) == ("missed", None)
+
+    adherence = client.get(f"/api/patients/{s.pid}/reminders/adherence", headers=s.cg).json()
+    assert adherence == {"days": 7, "done_by_patient": 1, "done_by_caregiver": 1, "missed": 1, "rate": 1 / 3}
+
+    # The patient still sees a caregiver-marked reminder as simply done.
+    assert {r["title"]: r["status"] for r in s.today()}["Lunch"] == "done"
+
+    # A patient's own Done later replaces the caregiver's mark.
+    client.post(f"/api/reminders/{lunch}/log", json={}, headers=s.patient)
+    assert client.get(f"/api/patients/{s.pid}/reminders/adherence", headers=s.cg).json()["done_by_patient"] == 2
+
+
+def test_adherence_with_nothing_finished_and_bad_days(client: TestClient, register: Register, clock: Clock) -> None:
+    clock.now = at(WED, 6)
+    s = Setup(client, register)
+    s.add("Lunch", "13:00", kind="meal")
+    url = f"/api/patients/{s.pid}/reminders/adherence"
+    assert client.get(url, headers=s.cg).json()["rate"] is None
+    assert client.get(url, params={"days": 0}, headers=s.cg).status_code == 422
+    stranger = bearer(register("Sam", "s@example.com", "caregiver"))
+    assert client.get(url, headers=stranger).status_code == 403

@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import LEVELLED_GAMES, AlertType, GameType, ReminderType, Role, Severity
+from app.models import LEVELLED_GAMES, AlertType, GameType, MarkedBy, ReminderType, Role, Severity
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -179,6 +179,8 @@ class ReminderOut(BaseModel):
     active: bool
     # Status of today's occurrence; null when it isn't scheduled today (or is inactive).
     today_status: TodayStatus | None
+    # Who marked today's occurrence done, if anyone.
+    today_marked_by: MarkedBy | None = None
 
 
 class TodayReminderOut(BaseModel):
@@ -205,3 +207,11 @@ class AlertOut(BaseModel):
     severity: Severity
     created_at: datetime
     acknowledged: bool
+
+
+class AdherenceOut(BaseModel):
+    days: int
+    done_by_patient: int
+    done_by_caregiver: int
+    missed: int
+    rate: float | None

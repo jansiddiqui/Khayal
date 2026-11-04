@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
-from app.models import Reminder, User
-from app.schemas import ReminderIn, ReminderLogIn, ReminderOut, TodayReminderOut
+from app.models import MarkedBy, Reminder, Role, User
+from app.schemas import AdherenceOut, ReminderIn, ReminderLogIn, ReminderOut, TodayReminderOut
 from app.services import reminders
 from app.services.clock import local
 
@@ -22,6 +22,7 @@ def _out(db: Session, reminder: Reminder, today: date) -> ReminderOut:
         days_of_week=reminder.days_of_week,
         active=reminder.active,
         today_status=reminders.today_status(db, reminder, today),
+        today_marked_by=reminders.today_marked_by(db, reminder, today),
     )
 
 
@@ -45,6 +46,23 @@ def list_reminders(patient_id: int, user: CurrentUser, db: DbSession, now: Now) 
     reminders.sweep(db, _patient(db, patient_id), now)
     today = local(now).date()
     return [_out(db, r, today) for r in reminders.reminders_for(db, patient_id)]
+
+
+@router.get("/patients/{patient_id}/reminders/adherence", response_model=AdherenceOut)
+def get_adherence(patient_id: int, user: CurrentUser, db: DbSession, now: Now, days: int = 7) -> AdherenceOut:
+    """Share of finished reminders the patient marked done themself over the last `days` days."""
+    ensure_patient_access(db, user, patient_id)
+    if not 1 <= days <= 90:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="days must be 1-90")
+    reminders.sweep(db, _patient(db, patient_id), now)
+    a = reminders.adherence(db, patient_id, now, days)
+    return AdherenceOut(
+        days=a.days,
+        done_by_patient=a.done_by_patient,
+        done_by_caregiver=a.done_by_caregiver,
+        missed=a.missed,
+        rate=a.rate,
+    )
 
 
 @router.post("/patients/{patient_id}/reminders", response_model=ReminderOut, status_code=status.HTTP_201_CREATED)
@@ -84,7 +102,8 @@ def log_reminder(reminder_id: int, body: ReminderLogIn, user: CurrentUser, db: D
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reminder not found")
     ensure_patient_access(db, user, reminder.patient_id)
     try:
-        reminders.mark_done(db, reminder, now)
+        by = MarkedBy.patient if user.role == Role.patient else MarkedBy.caregiver
+        reminders.mark_done(db, reminder, now, by)
     except reminders.NotScheduledTodayError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This reminder is not scheduled today")
     return _out(db, reminder, local(now).date())

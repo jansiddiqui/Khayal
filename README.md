@@ -30,6 +30,12 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+Create or update the database tables (run this after every `git pull`):
+
+```powershell
+alembic upgrade head
+```
+
 Load the demo accounts (safe to re-run):
 
 ```powershell
@@ -51,9 +57,11 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
-Config is read from environment variables (see `backend/app/config.py`): `KHAYAL_DATABASE_URL` (SQLite by default; set a PostgreSQL URL to switch), `KHAYAL_DATA_DIR`, `KHAYAL_CORS_ORIGINS`, `KHAYAL_JWT_SECRET` (set this anywhere other than local dev), `KHAYAL_TOKEN_MINUTES`, `KHAYAL_UTC_OFFSET_MINUTES` (the app's local clock for "today"; default 330 = IST).
+Config is read from environment variables (see `backend/app/config.py`): `KHAYAL_DATABASE_URL` (SQLite by default; set a PostgreSQL URL to switch), `KHAYAL_DATA_DIR`, `KHAYAL_CORS_ORIGINS`, `KHAYAL_JWT_SECRET` (set this anywhere other than local dev), `KHAYAL_TOKEN_MINUTES`, `KHAYAL_UTC_OFFSET_MINUTES` (the app's local clock for "today"; default 330 = IST), `KHAYAL_REMINDER_CHECK_MINUTES` (background missed-reminder check interval; default 15, 0 = off).
 
-Tables are created on startup (`create_all`); there are no migrations yet, so delete `data/khayal.db` and re-seed after a model change.
+The schema is managed by Alembic (`backend/migrations/`). The server refuses to start if the database is not at the latest migration and tells you to run `alembic upgrade head`. If you have a `data/khayal.db` created before Alembic was added (Milestone 5), run `alembic stamp 0001` once, then `alembic upgrade head`; your data is kept.
+
+Making a model change: edit `backend/app/models.py`, then from `backend/` run `alembic revision --autogenerate -m "what changed"`, review the generated file, and `alembic upgrade head`. `tests/test_migrations.py` fails if the migrations and models disagree.
 
 ## Frontend
 
@@ -82,7 +90,8 @@ Routes so far:
 - `GET /api/patients` (caregiver's linked patients), `POST /api/patients/link` `{patient_email}`, `PATCH /api/patients/{id}` `{city?, pinned_games?}` (caregiver only, linked patients).
 - `GET /api/me/games/today` (patient) — today's 3 games with `done_today`.
 - `GET/POST /api/patients/{id}/reminders`, `PUT/DELETE /api/patients/{id}/reminders/{reminder_id}` (create/edit/delete: linked caregiver) — `{title, type, time_of_day "HH:MM", days_of_week [0=Mon..6=Sun], active}`.
-- `POST /api/reminders/{id}/log` `{status: "done"}` — marks today's occurrence done (the patient or a linked caregiver).
+- `POST /api/reminders/{id}/log` `{status: "done"}` — marks today's occurrence done (the patient or a linked caregiver; recorded as `marked_by`).
+- `GET /api/patients/{id}/reminders/adherence?days=7` — `{done_by_patient, done_by_caregiver, missed, rate}`.
 - `GET /api/me/reminders/today` (patient) — today's reminders with `status` (`pending`/`done`/`missed`) and `due`.
 - `GET /api/patients/{id}/alerts`, `POST /api/alerts/{id}/ack` (caregiver).
 - `GET /api/games/{game_type}/level` (patient) — current level, 2 for a new player.
@@ -128,14 +137,13 @@ npm run typecheck # tsc strict
 ## Reminders
 
 - A reminder repeats on chosen weekdays at a local time. The patient's Today screen shows a Done button for reminders whose time has come (at most 3 at once), lists later ones without buttons, and lists finished ones with ✓ Done. Wording stays positive: an overdue reminder says "Let's do this now."
-- **Missed:** there is no background job. Whenever reminders or alerts are read, any occurrence still not done 2 hours after its time is logged as missed. Occurrences from before a reminder was created are never counted. Marking a reminder done later the same day replaces "missed" with "done".
+- **Missed:** a background task (started with the server) checks every patient every 15 minutes, and the same check also runs whenever reminders or alerts are opened. Any occurrence still not done 2 hours after its time is logged as missed. Occurrences from before a reminder was created are never counted. Marking a reminder done later the same day replaces "missed" with "done".
 - **Alert:** when 3 or more reminders were missed in the last 48 hours, a `warning` alert is raised for the caregiver, at most once per 48 hours.
 - The patient Home "Next reminder" card shows something due now first, otherwise the next one later today.
+- **Who marked it done:** each log records `marked_by` (`patient` or `caregiver`). The caregiver page shows "Done (by caregiver)" and an adherence rate over the last 7 days that counts only reminders the patient marked done themself.
 
 ## Known limitations (prototype)
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.
-- **Missed reminders are only detected when someone opens the app** (no background job), so an alert can appear late.
-- **No database migrations:** tables are created with `create_all` on startup. After a model change, delete `data/khayal.db` and re-run the seed.

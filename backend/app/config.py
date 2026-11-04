@@ -16,4 +16,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("KHAYAL_TOKEN_MINUTES", str(60 * 24 
 # Everyone uses one local clock for "today" (reminders, today's games). Default: IST (UTC+5:30).
 APP_UTC_OFFSET_MINUTES = int(os.getenv("KHAYAL_UTC_OFFSET_MINUTES", "330"))
 
+# How often the server checks every patient for missed reminders (0 turns the background check off).
+REMINDER_CHECK_MINUTES = float(os.getenv("KHAYAL_REMINDER_CHECK_MINUTES", "15"))
+
 CORS_ORIGINS = os.getenv("KHAYAL_CORS_ORIGINS", "http://localhost:5173").split(",")

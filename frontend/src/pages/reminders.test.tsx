@@ -16,6 +16,7 @@ vi.mock("../api/client", async (importOriginal) => {
     listPatients: vi.fn(),
     listSessions: vi.fn(),
     listReminders: vi.fn(),
+    getAdherence: vi.fn(),
     createReminder: vi.fn(),
     updateReminder: vi.fn(),
     deleteReminder: vi.fn(),
@@ -148,12 +149,28 @@ describe("caregiver reminders and alerts", () => {
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
     active: true,
     today_status: "missed",
+    today_marked_by: null,
   };
 
   beforeEach(() => {
     signInAs(priya);
     api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null }]);
     api.listReminders.mockResolvedValue([reminder]);
+    api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
+  });
+
+  it("shows adherence and caregiver-marked reminders", async () => {
+    api.listReminders.mockResolvedValue([
+      { ...reminder, id: 8, title: "Lunch", today_status: "done", today_marked_by: "caregiver" },
+      { ...reminder, id: 9, title: "Tea", today_status: "done", today_marked_by: "patient" },
+    ]);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const summary = within(await screen.findByRole("region", { name: "Adherence, last 7 days" }));
+    expect(summary.getByText("67%")).toBeInTheDocument();
+    expect(summary.getByText("4 done by Kamala · 1 done by caregiver · 1 missed")).toBeInTheDocument();
+    const row = (name: string) => within(screen.getByRole("cell", { name }).closest("tr")!);
+    expect(row("Lunch").getByRole("cell", { name: "Done (by caregiver)" })).toBeInTheDocument();
+    expect(row("Tea").getByRole("cell", { name: "Done" })).toBeInTheDocument();
   });
 
   it("lists reminders with today's status", async () => {

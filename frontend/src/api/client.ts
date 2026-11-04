@@ -216,6 +216,8 @@ export interface Reminder {
   active: boolean;
   /** Today's status, or null when not scheduled today. */
   today_status: ReminderStatus | null;
+  /** Who marked today's occurrence done, if anyone. */
+  today_marked_by: "patient" | "caregiver" | null;
 }
 
 export interface ReminderInput {
@@ -233,6 +235,20 @@ export async function getTodayReminders(): Promise<TodayReminder[]> {
 
 export async function markReminderDone(reminderId: number): Promise<Reminder> {
   const { data } = await api.post<Reminder>(`/reminders/${reminderId}/log`, { status: "done" });
+  return data;
+}
+
+/** Over the last `days` days; `rate` counts only reminders the patient marked done themself. */
+export interface Adherence {
+  days: number;
+  done_by_patient: number;
+  done_by_caregiver: number;
+  missed: number;
+  rate: number | null;
+}
+
+export async function getAdherence(patientId: number, days = 7): Promise<Adherence> {
+  const { data } = await api.get<Adherence>(`/patients/${patientId}/reminders/adherence`, { params: { days } });
   return data;
 }
 

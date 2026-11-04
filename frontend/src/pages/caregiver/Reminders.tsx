@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router";
 import {
   createReminder,
   deleteReminder,
+  getAdherence,
   listPatients,
   listReminders,
   updateReminder,
@@ -18,7 +19,29 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monda
 const TYPES: ReminderType[] = ["medicine", "meal", "appointment", "other"];
 const EMPTY: ReminderInput = { title: "", type: "medicine", time_of_day: "09:00", days_of_week: [0, 1, 2, 3, 4, 5, 6], active: true };
 
-const STATUS_LABEL = { done: "Done", missed: "Missed", pending: "Pending" } as const;
+function todayLabel(r: Reminder): string {
+  if (r.today_status === null) return "—";
+  if (r.today_status === "done") return r.today_marked_by === "caregiver" ? "Done (by caregiver)" : "Done";
+  return r.today_status === "missed" ? "Missed" : "Pending";
+}
+
+function AdherenceSummary({ patientId, patientName }: { patientId: number; patientName: string }) {
+  const adherence = useQuery({ queryKey: ["adherence", patientId], queryFn: () => getAdherence(patientId) });
+  if (!adherence.isSuccess) return null;
+  const a = adherence.data;
+  return (
+    <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4" aria-labelledby="adherence-heading">
+      <h2 id="adherence-heading" className="text-lg font-semibold">
+        Adherence, last {a.days} days
+      </h2>
+      <p className="text-3xl font-semibold">{a.rate === null ? "—" : `${Math.round(a.rate * 100)}%`}</p>
+      <p className="text-gray-700">
+        {a.done_by_patient} done by {patientName} · {a.done_by_caregiver} done by caregiver · {a.missed} missed
+      </p>
+      <p className="text-gray-500">Only reminders the patient marked done themself count toward the rate.</p>
+    </section>
+  );
+}
 
 function daysLabel(days: number[]): string {
   if (days.length === 7) return "Every day";
@@ -134,7 +157,10 @@ export function CaregiverReminders() {
   const [editing, setEditing] = useState<number | null>(null);
   const [formKey, setFormKey] = useState(0);
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["reminders", patientId] });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["reminders", patientId] });
+    void queryClient.invalidateQueries({ queryKey: ["adherence", patientId] });
+  };
   const create = useMutation({
     mutationFn: (input: ReminderInput) => createReminder(patientId, input),
     onSuccess: () => {
@@ -164,6 +190,8 @@ export function CaregiverReminders() {
           Could not save the change. Try again.
         </p>
       )}
+
+      <AdherenceSummary patientId={patientId} patientName={patient?.name.split(" ")[0] ?? "patient"} />
 
       <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">Add a reminder</h2>
@@ -211,7 +239,7 @@ export function CaregiverReminders() {
                     <td className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
                     <td className="py-2 pr-3">{daysLabel(r.days_of_week)}</td>
                     <td className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-amber-800" : ""}`}>
-                      {r.today_status ? STATUS_LABEL[r.today_status] : "—"}
+                      {todayLabel(r)}
                     </td>
                     <td className="flex gap-2 py-2">
                       <button type="button" onClick={() => setEditing(r.id)} className="text-brand-dark underline">

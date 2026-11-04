@@ -1,8 +1,9 @@
 """Reminders: today's list, done/missed logs, and the missed-reminders alert (CLAUDE.md section 6).
 
-There is no background job. `sweep` runs whenever reminders or alerts are read: any
-scheduled occurrence still not done GRACE after its time is logged as missed, and a
-warning alert is raised if MISSED_ALERT_COUNT or more were missed in the last 48 hours.
+`sweep` runs every REMINDER_CHECK_MINUTES in the background (app.background) and also
+whenever reminders or alerts are read: any scheduled occurrence still not done GRACE
+after its time is logged as missed, and a warning alert is raised if MISSED_ALERT_COUNT
+or more were missed in the last 48 hours.
 """
 
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Alert, AlertType, Reminder, ReminderLog, ReminderStatus, Severity, User
+from app.models import Alert, AlertType, MarkedBy, Reminder, ReminderLog, ReminderStatus, Role, Severity, User
 from app.services.clock import as_utc, at_local, local
 
 # How long after its time a reminder can still be marked done before it counts as missed.
@@ -107,6 +108,11 @@ class TodayReminder:
     due: bool
 
 
+def today_marked_by(db: Session, reminder: Reminder, day: date) -> MarkedBy | None:
+    log = _log_for(db, reminder.id, day)
+    return log.marked_by if log is not None else None
+
+
 def today_status(db: Session, reminder: Reminder, day: date) -> TodayStatus | None:
     """done / missed / pending for `day`, or None if the reminder isn't on that day."""
     if not reminder.active or not scheduled_on(reminder, day):
@@ -133,17 +139,65 @@ class NotScheduledTodayError(Exception):
     pass
 
 
-def mark_done(db: Session, reminder: Reminder, now: datetime) -> ReminderLog:
+def mark_done(db: Session, reminder: Reminder, now: datetime, by: MarkedBy) -> ReminderLog:
     """Mark today's occurrence done. A late "done" replaces an automatic "missed"."""
     today = local(now).date()
     if not reminder.active or not scheduled_on(reminder, today):
         raise NotScheduledTodayError(reminder.id)
     log = _log_for(db, reminder.id, today)
     if log is None:
-        log = ReminderLog(reminder_id=reminder.id, date=today, status=ReminderStatus.done, logged_at=now)
+        log = ReminderLog(
+            reminder_id=reminder.id, date=today, status=ReminderStatus.done, marked_by=by, logged_at=now
+        )
         db.add(log)
     else:
         log.status = ReminderStatus.done
+        log.marked_by = by
         log.logged_at = now
     db.commit()
     return log
+
+
+def sweep_all(db: Session, now: datetime) -> int:
+    """Run `sweep` for every patient that has an active reminder. Returns how many."""
+    with_reminders = select(Reminder.patient_id).where(Reminder.active.is_(True))
+    patients = list(
+        db.scalars(select(User).where(User.role == Role.patient, User.id.in_(with_reminders)).order_by(User.id))
+    )
+    for patient in patients:
+        sweep(db, patient, now)
+    return len(patients)
+
+
+@dataclass(frozen=True)
+class Adherence:
+    days: int
+    done_by_patient: int
+    done_by_caregiver: int
+    missed: int
+    # done_by_patient / all finished occurrences; None when there were none.
+    rate: float | None
+
+
+def adherence(db: Session, patient_id: int, now: datetime, days: int = 7) -> Adherence:
+    """Over the last `days` days (including today), only reminders the patient marked themself count."""
+    since = local(now).date() - timedelta(days=days - 1)
+    logs = list(
+        db.scalars(
+            select(ReminderLog)
+            .join(Reminder, Reminder.id == ReminderLog.reminder_id)
+            .where(Reminder.patient_id == patient_id, ReminderLog.date >= since)
+        )
+    )
+    done = [log for log in logs if log.status == ReminderStatus.done]
+    by_caregiver = sum(1 for log in done if log.marked_by == MarkedBy.caregiver)
+    by_patient = len(done) - by_caregiver
+    missed = len(logs) - len(done)
+    total = len(logs)
+    return Adherence(
+        days=days,
+        done_by_patient=by_patient,
+        done_by_caregiver=by_caregiver,
+        missed=missed,
+        rate=by_patient / total if total else None,
+    )

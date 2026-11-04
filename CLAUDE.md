@@ -31,7 +31,7 @@ Out of scope for the prototype: mobile app, MRI, real push notifications (use in
 ## 2. Tech stack (decided, do not change without asking)
 
 - **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios.
-- **Backend:** Python 3.11+ (3.12 is fine), FastAPI, SQLAlchemy 2.0, Pydantic v2, SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose, with `bcrypt==4.0.1` pinned because passlib 1.7.4 breaks on newer bcrypt), Uvicorn.
+- **Backend:** Python 3.11+ (3.12 is fine), FastAPI, SQLAlchemy 2.0 + Alembic migrations, Pydantic v2, Pillow (photo resizing), SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose, with `bcrypt==4.0.1` pinned because passlib 1.7.4 breaks on newer bcrypt), Uvicorn.
 - **ML:** plain Python modules in `ml/` that the backend imports through `backend/app/services/`. NumPy/pandas only for now. No torch dependency until real models are added.
 - **Tests:** pytest + httpx (FastAPI TestClient) for backend + ml; Vitest + React Testing Library + jsdom + `@testing-library/jest-dom` for frontend.
 - **Package managers:** npm for frontend, `uv` or `pip` + `requirements.txt` for backend.
@@ -181,6 +181,7 @@ Build one at a time. Each one ends with: app runs, tests pass, README updated, g
 - Type everything (TypeScript strict, Python type hints). No `any`.
 - Backend: routes are thin; logic goes in `services/` and `ml/`.
 - Never commit `data/`, `.env`, uploads or model weights.
+- Every model change ships with an Alembic migration (`backend/migrations/versions/`, autogenerate then review). Never wipe the dev database to change the schema.
 - Keep all user-facing patient text in one file (`frontend/src/copy.ts`) so it can be translated to Hindi later.
 - Ask before adding a new dependency that is not listed in section 2.
 - When unsure about a product decision, stop and ask; don't guess.

@@ -1,6 +1,6 @@
 """Seed demo accounts: 1 caregiver linked to 3 patients, plus demo reminders for the first patient.
 
-Run from backend/ with the venv active:  python -m app.seed
+Run from backend/ with the venv active, after `alembic upgrade head`:  python -m app.seed
 Safe to run repeatedly; existing accounts are reused.
 """
 
@@ -9,7 +9,7 @@ from datetime import time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal, init_db
+from app.db import SessionLocal, ensure_schema_current
 from app.models import Reminder, ReminderType, Role, User
 from app.services import auth, care
 
@@ -52,7 +52,7 @@ def seed(db: Session) -> tuple[User, list[User]]:
 
 
 def main() -> None:
-    init_db()
+    ensure_schema_current()
     with SessionLocal() as db:
         caregiver, patients = seed(db)
     print(f"Caregiver: {caregiver.email}")

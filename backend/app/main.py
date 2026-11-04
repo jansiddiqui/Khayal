@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -5,14 +7,30 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
-from app.db import init_db
+from app.background import start_background_tasks
+from app.db import ensure_schema_current
 from app.routes import alerts, auth, games, health, patients, reminders
+
+
+def _setup_logging() -> None:
+    """Show the app's own log lines (e.g. the background reminder check) next to uvicorn's."""
+    logger = logging.getLogger("khayal")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    init_db()
+    _setup_logging()
+    ensure_schema_current()
+    tasks = start_background_tasks()
     yield
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def create_app() -> FastAPI:

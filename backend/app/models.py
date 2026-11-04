@@ -138,6 +138,11 @@ class ReminderStatus(str, Enum):
     missed = "missed"
 
 
+class MarkedBy(str, Enum):
+    patient = "patient"
+    caregiver = "caregiver"
+
+
 class ReminderLog(Base):
     __tablename__ = "reminder_logs"
     __table_args__ = (UniqueConstraint("reminder_id", "date"),)
@@ -146,6 +151,8 @@ class ReminderLog(Base):
     reminder_id: Mapped[int] = mapped_column(ForeignKey("reminders.id", ondelete="CASCADE"), index=True)
     date: Mapped[date] = mapped_column(Date)
     status: Mapped[ReminderStatus] = mapped_column(SAEnum(ReminderStatus, native_enum=False, length=16))
+    # Who pressed Done; None for automatic "missed" logs. Only patient-marked ones count as adherence.
+    marked_by: Mapped[MarkedBy | None] = mapped_column(SAEnum(MarkedBy, native_enum=False, length=16), default=None)
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     reminder: Mapped[Reminder] = relationship(back_populates="logs")
