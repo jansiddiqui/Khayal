@@ -23,6 +23,7 @@ def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession) -> S
         started_at=body.started_at,
         ended_at=body.ended_at,
         rounds=[Round(correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used) for r in body.rounds],
+        completed=body.completed,
     )
     change: LevelChange = (
         "up" if session.level_end > session.level_start else "down" if session.level_end < session.level_start else "same"

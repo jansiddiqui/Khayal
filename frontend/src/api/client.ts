@@ -37,6 +37,8 @@ export interface User {
   email: string;
   role: Role;
   created_at: string;
+  /** Patients only: home city used by Daily Orientation. */
+  city: string | null;
 }
 
 export interface TokenResponse {
@@ -49,6 +51,7 @@ export interface Patient {
   id: number;
   name: string;
   email: string;
+  city: string | null;
 }
 
 export interface RegisterInput {
@@ -93,11 +96,12 @@ export async function linkPatient(patientEmail: string): Promise<Patient> {
   return data;
 }
 
-export type GameType = "memory_match" | "sequence_recall";
+export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap";
 
 export interface RoundResult {
   correct: boolean;
-  reaction_ms: number;
+  /** null when the round has no meaningful reaction time (e.g. a red circle correctly left alone). */
+  reaction_ms: number | null;
   hint_used: boolean;
 }
 
@@ -106,6 +110,8 @@ export interface SessionInput {
   started_at: string;
   ended_at: string;
   rounds: RoundResult[];
+  /** false when the patient left before the last round. */
+  completed: boolean;
 }
 
 export interface GameSession {
@@ -118,8 +124,9 @@ export interface GameSession {
   ended_at: string;
   rounds_played: number;
   rounds_correct: number;
-  avg_reaction_ms: number;
+  avg_reaction_ms: number | null;
   hints_used: number;
+  completed: boolean;
 }
 
 export type LevelChange = "up" | "down" | "same";
@@ -137,6 +144,25 @@ export async function getLevel(gameType: GameType): Promise<number> {
 
 export async function postSession(input: SessionInput): Promise<SessionResult> {
   const { data } = await api.post<SessionResult>("/sessions", input);
+  return data;
+}
+
+/**
+ * Save a session while the page is being closed. `keepalive` lets the request outlive
+ * the page; axios cannot do that.
+ */
+export function postSessionOnPageHide(input: SessionInput): void {
+  const token = tokenStore.get();
+  void fetch("/api/sessions", {
+    method: "POST",
+    keepalive: true,
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(input),
+  }).catch(() => undefined);
+}
+
+export async function updatePatient(patientId: number, changes: { city: string | null }): Promise<Patient> {
+  const { data } = await api.patch<Patient>(`/patients/${patientId}`, changes);
   return data;
 }
 

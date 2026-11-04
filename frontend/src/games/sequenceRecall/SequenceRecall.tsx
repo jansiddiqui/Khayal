@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copy } from "../../copy";
+import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps } from "../types";
 import { buildSequence, sequenceConfig, TILES, type TileId } from "./logic";
 
@@ -8,12 +9,14 @@ export const PLAYBACK_DELAY_MS = 800;
 
 /**
  * One round = one sequence. Correct when the whole sequence is repeated in order.
- * Reaction time = from the end of playback to the last tap.
+ * Reaction time = from the end of the latest playback to the last tap.
+ * Hint ("Show me again"): the sequence plays once more and the patient starts over.
  */
 export function SequenceRecallRound({ level, onComplete, rng = Math.random }: RoundProps) {
   const { length, litMs, gapMs } = sequenceConfig(level);
   const sequence = useMemo(() => buildSequence(length, rng), [length, rng]);
 
+  const [plays, setPlays] = useState(1);
   const [lit, setLit] = useState<TileId | null>(null);
   const [yourTurn, setYourTurn] = useState(false);
   const position = useRef(0);
@@ -21,6 +24,8 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
   const reported = useRef(false);
 
   useEffect(() => {
+    setYourTurn(false);
+    position.current = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
     let t = PLAYBACK_DELAY_MS;
     for (const tile of sequence) {
@@ -36,13 +41,13 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
       }, t),
     );
     return () => timers.forEach(clearTimeout);
-  }, [sequence, litMs, gapMs]);
+  }, [sequence, litMs, gapMs, plays]);
 
   function tap(tile: TileId) {
     if (!yourTurn || reported.current) return;
     const finish = (correct: boolean) => {
       reported.current = true;
-      onComplete({ correct, reaction_ms: Date.now() - playbackEnd.current, hint_used: false });
+      onComplete({ correct, reaction_ms: Date.now() - playbackEnd.current, hint_used: plays > 1 });
     };
     if (tile !== sequence[position.current]) {
       finish(false);
@@ -78,6 +83,7 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
           );
         })}
       </div>
+      <HintButton used={plays > 1} available={yourTurn} onUse={() => setPlays((n) => n + 1)} />
     </div>
   );
 }

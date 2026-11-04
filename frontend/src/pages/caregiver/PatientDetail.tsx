@@ -1,18 +1,79 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
-import { listPatients, listSessions, type GameSession, type GameType } from "../../api/client";
+import { listPatients, listSessions, updatePatient, type GameSession, type GameType } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 
 const GAME_NAMES: Record<GameType, string> = {
   memory_match: "Memory Match",
   sequence_recall: "Sequence Recall",
+  word_recall: "Word Recall",
+  daily_orientation: "Daily Orientation",
+  reaction_tap: "Reaction Tap",
 };
 
-const START_LEVEL = 2;
+/** Daily Orientation has no difficulty levels. */
+const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"];
 
-function levelCell(s: GameSession) {
+const START_LEVEL = 2;
+const ROUNDS_PER_SESSION = 5;
+
+function levelCell(s: GameSession): string {
+  if (!LEVELLED_GAMES.includes(s.game_type)) return "—";
   const arrow = s.level_end > s.level_start ? "↑" : s.level_end < s.level_start ? "↓" : "→";
   return `${s.level_start} ${arrow} ${s.level_end}`;
+}
+
+function statusCell(s: GameSession): string {
+  return s.completed ? "Completed" : `Stopped early (${s.rounds_played}/${ROUNDS_PER_SESSION} rounds)`;
+}
+
+function CityForm({ patientId, city }: { patientId: number; city: string | null }) {
+  const queryClient = useQueryClient();
+  const [value, setValue] = useState(city ?? "");
+  const save = useMutation({
+    mutationFn: () => updatePatient(patientId, { city: value.trim() || null }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["patients"] }),
+  });
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    save.mutate();
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-col gap-1">
+        <label htmlFor="patient-city" className="text-gray-700">
+          Home city (used in Daily Orientation)
+        </label>
+        <input
+          id="patient-city"
+          value={value}
+          maxLength={80}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g. Pune"
+          className="rounded-md border border-gray-400 px-3 py-2"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={save.isPending}
+        className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+      >
+        {save.isPending ? "Saving…" : "Save city"}
+      </button>
+      {save.isSuccess && <span className="text-calm">Saved.</span>}
+      {save.isError && (
+        <span role="alert" className="text-red-700">
+          Could not save the city.
+        </span>
+      )}
+      {!city && !save.isSuccess && (
+        <p className="w-full text-gray-600">No city set: Daily Orientation asks for the year instead.</p>
+      )}
+    </form>
+  );
 }
 
 export function PatientDetail() {
@@ -22,7 +83,7 @@ export function PatientDetail() {
   const patient = patients.data?.find((p) => p.id === patientId);
 
   // Sessions arrive newest first, so the first one per game holds the current level.
-  const currentLevels = (Object.keys(GAME_NAMES) as GameType[]).map((type) => {
+  const currentLevels = LEVELLED_GAMES.map((type) => {
     const latest = sessions.data?.find((s) => s.game_type === type);
     return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined };
   });
@@ -33,12 +94,18 @@ export function PatientDetail() {
         ← All patients
       </Link>
 
+      {patient && (
+        <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+          <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
+        </section>
+      )}
+
       {sessions.isPending && <p className="text-gray-600">Loading sessions…</p>}
       {sessions.isError && <p className="text-red-700">Could not load sessions for this patient.</p>}
 
       {sessions.isSuccess && (
         <div className="flex flex-col gap-6">
-          <section className="grid gap-4 sm:grid-cols-2">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {currentLevels.map(({ type, level, played }) => (
               <div key={type} className="rounded-lg border border-gray-200 bg-white p-4">
                 <p className="text-gray-600">{GAME_NAMES[type]}</p>
@@ -48,7 +115,7 @@ export function PatientDetail() {
             ))}
           </section>
 
-          <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <section className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4">
             <h2 className="mb-3 text-lg font-semibold">Session history</h2>
             {sessions.data.length === 0 ? (
               <p className="text-gray-600">No games played yet.</p>
@@ -56,24 +123,28 @@ export function PatientDetail() {
               <table className="w-full text-left">
                 <thead className="border-b border-gray-200 text-gray-600">
                   <tr>
-                    <th className="py-2 font-medium">Date</th>
-                    <th className="py-2 font-medium">Game</th>
-                    <th className="py-2 font-medium">Level</th>
-                    <th className="py-2 font-medium">Correct</th>
-                    <th className="py-2 font-medium">Avg reaction</th>
+                    <th className="py-2 pr-3 font-medium">Date</th>
+                    <th className="py-2 pr-3 font-medium">Game</th>
+                    <th className="py-2 pr-3 font-medium">Status</th>
+                    <th className="py-2 pr-3 font-medium">Level</th>
+                    <th className="py-2 pr-3 font-medium">Correct</th>
+                    <th className="py-2 pr-3 font-medium">Avg reaction</th>
                     <th className="py-2 font-medium">Hints</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sessions.data.map((s) => (
                     <tr key={s.id} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2">{new Date(s.started_at).toLocaleString()}</td>
-                      <td className="py-2">{GAME_NAMES[s.game_type]}</td>
-                      <td className="py-2">{levelCell(s)}</td>
-                      <td className="py-2">
+                      <td className="py-2 pr-3">{new Date(s.started_at).toLocaleString()}</td>
+                      <td className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
+                      <td className={`py-2 pr-3 ${s.completed ? "" : "text-amber-800"}`}>{statusCell(s)}</td>
+                      <td className="py-2 pr-3">{levelCell(s)}</td>
+                      <td className="py-2 pr-3">
                         {s.rounds_correct} / {s.rounds_played}
                       </td>
-                      <td className="py-2">{(s.avg_reaction_ms / 1000).toFixed(1)} s</td>
+                      <td className="py-2 pr-3">
+                        {s.avg_reaction_ms === null ? "—" : `${(s.avg_reaction_ms / 1000).toFixed(1)} s`}
+                      </td>
                       <td className="py-2">{s.hints_used}</td>
                     </tr>
                   ))}

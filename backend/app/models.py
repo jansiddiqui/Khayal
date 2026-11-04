@@ -27,6 +27,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(SAEnum(Role, native_enum=False, length=16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Patients only: home city, set by a caregiver, used by Daily Orientation.
+    city: Mapped[str | None] = mapped_column(String(80), default=None)
 
 
 class CareLink(Base):
@@ -41,6 +43,13 @@ class CareLink(Base):
 class GameType(str, Enum):
     memory_match = "memory_match"
     sequence_recall = "sequence_recall"
+    word_recall = "word_recall"
+    daily_orientation = "daily_orientation"
+    reaction_tap = "reaction_tap"
+
+
+# Games without difficulty levels: stored at level 1, never adapted (results feed trends only).
+NON_ADAPTIVE_GAMES = frozenset({GameType.daily_orientation})
 
 
 class GameSession(Base):
@@ -60,8 +69,11 @@ class GameSession(Base):
     ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     rounds_played: Mapped[int]
     rounds_correct: Mapped[int]
-    avg_reaction_ms: Mapped[float]
+    # Mean over rounds that have a reaction time; None when none do.
+    avg_reaction_ms: Mapped[float | None]
     hints_used: Mapped[int]
+    # False when the patient left before finishing all rounds. Never changes the level.
+    completed: Mapped[bool] = mapped_column(default=True)
     emotion_summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
 
     rounds: Mapped[list["GameRound"]] = relationship(
@@ -76,7 +88,8 @@ class GameRound(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey("game_sessions.id", ondelete="CASCADE"), index=True)
     level: Mapped[int]
     correct: Mapped[bool]
-    reaction_ms: Mapped[int]
+    # None when the round has no meaningful reaction (e.g. a correctly ignored red circle).
+    reaction_ms: Mapped[int | None]
     hint_used: Mapped[bool]
 
     session: Mapped[GameSession] = relationship(back_populates="rounds")

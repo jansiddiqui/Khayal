@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copy } from "../../copy";
+import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps } from "../types";
 import { buildDeck, emojiFor, isBoardCorrect, memoryMatchConfig } from "./logic";
 
@@ -8,26 +9,30 @@ export const MISMATCH_SHOW_MS = 1200;
 
 /**
  * One round = one full board. Correct when mistakes <= pairs.
- * Reaction time = average time per pair found, measured after the preview.
+ * Reaction time = average time per pair found, measured after the first preview.
+ * Hint ("Show me again"): every unmatched card is shown again for the preview time.
  */
 export function MemoryMatchRound({ level, onComplete, rng = Math.random }: RoundProps) {
   const { pairs, previewMs } = memoryMatchConfig(level);
   const deck = useMemo(() => buildDeck(pairs, rng), [pairs, rng]);
 
-  const [previewing, setPreviewing] = useState(true);
+  const [revealing, setRevealing] = useState(true);
   const [open, setOpen] = useState<number[]>([]); // indexes currently face up (max 2)
   const [matched, setMatched] = useState<ReadonlySet<number>>(new Set());
+  const [hintUsed, setHintUsed] = useState(false);
   const mistakes = useRef(0);
-  const playStart = useRef(0);
+  const playStart = useRef<number | null>(null);
   const reported = useRef(false);
 
+  // The opening preview, and the hint's reveal, both last `previewMs`.
   useEffect(() => {
+    if (!revealing) return;
     const t = setTimeout(() => {
-      setPreviewing(false);
-      playStart.current = Date.now();
+      setRevealing(false);
+      playStart.current ??= Date.now();
     }, previewMs);
     return () => clearTimeout(t);
-  }, [previewMs]);
+  }, [revealing, previewMs]);
 
   // Turn a non-matching pair back over after a short, calm pause.
   useEffect(() => {
@@ -41,14 +46,14 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
       reported.current = true;
       onComplete({
         correct: isBoardCorrect(mistakes.current, pairs),
-        reaction_ms: Math.round((Date.now() - playStart.current) / pairs),
-        hint_used: false,
+        reaction_ms: Math.round((Date.now() - (playStart.current ?? Date.now())) / pairs),
+        hint_used: hintUsed,
       });
     }
-  }, [matched, deck.length, pairs, onComplete]);
+  }, [matched, deck.length, pairs, hintUsed, onComplete]);
 
   function flip(index: number) {
-    if (previewing || open.length >= 2 || open.includes(index) || matched.has(index)) return;
+    if (revealing || open.length >= 2 || open.includes(index) || matched.has(index)) return;
     const next = [...open, index];
     if (next.length === 2) {
       const [a, b] = next as [number, number];
@@ -62,16 +67,22 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
     setOpen(next);
   }
 
+  function showAgain() {
+    setHintUsed(true);
+    setOpen([]);
+    setRevealing(true);
+  }
+
   const columns = deck.length <= 4 ? "grid-cols-2" : deck.length <= 12 ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-4 sm:grid-cols-5";
 
   return (
     <div className="flex flex-col gap-6">
       <p className="text-2xl" aria-live="polite">
-        {previewing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs}
+        {revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs}
       </p>
       <div className={`grid ${columns} gap-3`}>
         {deck.map((card, index) => {
-          const faceUp = previewing || open.includes(index) || matched.has(index);
+          const faceUp = revealing || open.includes(index) || matched.has(index);
           const label = copy.cards[card.face];
           return (
             <button
@@ -105,6 +116,7 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
           );
         })}
       </div>
+      <HintButton used={hintUsed} available={!revealing} onUse={showAgain} />
     </div>
   );
 }

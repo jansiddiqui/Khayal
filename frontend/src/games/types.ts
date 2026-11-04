@@ -6,10 +6,15 @@ export type { RoundResult };
 /** A random-number source in [0, 1); injectable so rounds are testable. */
 export type Rng = () => number;
 
-/** One round of a game. It reports exactly once, when the round is over. */
+/**
+ * One round of a game. It reports exactly once, when the round is over. `feedback`
+ * replaces the default "Well done!" / "Let's try another." message shown afterwards.
+ */
 export interface RoundProps {
   level: number;
-  onComplete: (result: RoundResult) => void;
+  /** 0-based position of this round in the session. */
+  roundIndex: number;
+  onComplete: (result: RoundResult, feedback?: string) => void;
   rng?: Rng;
 }
 

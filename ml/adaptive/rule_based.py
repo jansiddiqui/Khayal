@@ -26,7 +26,7 @@ LEVEL_DOWN_BELOW = 0.55
 @dataclass(frozen=True)
 class Round:
     correct: bool
-    reaction_ms: int
+    reaction_ms: int | None
     hint_used: bool = False
 
 

@@ -1,6 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { getLevel, postSession, type RoundResult, type SessionResult } from "../api/client";
+import { useEffect, useRef, useState } from "react";
+import {
+  getLevel,
+  postSession,
+  postSessionOnPageHide,
+  type RoundResult,
+  type SessionInput,
+  type SessionResult,
+} from "../api/client";
 import { BigButton } from "../components/BigButton";
 import { Card } from "../components/Card";
 import { copy } from "../copy";
@@ -13,8 +20,8 @@ export const ROUNDS_PER_SESSION = 5;
 type Phase =
   | { kind: "intro" }
   | { kind: "playing"; round: number }
-  | { kind: "between"; round: number; lastCorrect: boolean }
-  | { kind: "done" };
+  | { kind: "between"; round: number; feedback: string }
+  | { kind: "done"; lastFeedback?: string };
 
 interface GameSessionProps {
   game: GameDefinition;
@@ -24,6 +31,9 @@ interface GameSessionProps {
 /**
  * Runs one session of any game: intro, 5 rounds with gentle feedback in between,
  * then saves the session and ends on encouragement. The level is never shown.
+ *
+ * If the patient leaves part-way (Home button, closing the page), the rounds played
+ * so far are saved as a stopped-early session, which never changes the level.
  */
 export function GameSession({ game, rng }: GameSessionProps) {
   const { speak } = useReadAloud();
@@ -31,36 +41,70 @@ export function GameSession({ game, rng }: GameSessionProps) {
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const results = useRef<RoundResult[]>([]);
   const startedAt = useRef<string>("");
+  /** True once the current session has been handed to the server (or there is nothing to save). */
+  const submitted = useRef(true);
+
+  function sessionInput(): SessionInput {
+    return {
+      game_type: game.type,
+      started_at: startedAt.current,
+      ended_at: new Date().toISOString(),
+      rounds: results.current,
+      completed: results.current.length === ROUNDS_PER_SESSION,
+    };
+  }
 
   const save = useMutation({
-    mutationFn: () =>
-      postSession({
-        game_type: game.type,
-        started_at: startedAt.current,
-        ended_at: new Date().toISOString(),
-        rounds: results.current,
-      }),
+    mutationFn: () => postSession(sessionInput()),
     onSuccess: (result: SessionResult) => {
       void level.refetch();
       speak(endMessage(result));
     },
+    onError: () => {
+      // Not saved: let leaving the page try once more.
+      submitted.current = false;
+    },
   });
+
+  // Save unfinished work when the patient leaves the game or closes the page.
+  const sessionInputRef = useRef(sessionInput);
+  sessionInputRef.current = sessionInput;
+  useEffect(() => {
+    const leave = (send: (input: SessionInput) => void) => {
+      if (submitted.current || results.current.length === 0) return;
+      submitted.current = true;
+      send(sessionInputRef.current());
+    };
+    const onPageHide = () => leave(postSessionOnPageHide);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      leave((input) => void postSession(input).catch(() => undefined));
+    };
+  }, []);
 
   function start() {
     results.current = [];
+    submitted.current = false;
     startedAt.current = new Date().toISOString();
     save.reset();
     setPhase({ kind: "playing", round: 1 });
   }
 
-  function onRoundComplete(round: number, result: RoundResult) {
+  function submit() {
+    submitted.current = true;
+    save.mutate();
+  }
+
+  function onRoundComplete(round: number, result: RoundResult, feedback?: string) {
     results.current = [...results.current, result];
+    const message = feedback ?? (result.correct ? copy.games.roundWell : copy.games.roundTryAnother);
     if (round >= ROUNDS_PER_SESSION) {
-      setPhase({ kind: "done" });
-      save.mutate();
+      setPhase({ kind: "done", lastFeedback: feedback });
+      submit();
     } else {
-      setPhase({ kind: "between", round, lastCorrect: result.correct });
-      speak(result.correct ? copy.games.roundWell : copy.games.roundTryAnother);
+      setPhase({ kind: "between", round, feedback: message });
+      speak(message);
     }
   }
 
@@ -90,8 +134,9 @@ export function GameSession({ game, rng }: GameSessionProps) {
           <game.Round
             key={phase.round}
             level={level.data}
+            roundIndex={phase.round - 1}
             rng={rng}
-            onComplete={(result) => onRoundComplete(phase.round, result)}
+            onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
           />
         </>
       );
@@ -100,7 +145,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
       return (
         <Card>
           <p className="mb-6 text-3xl font-semibold" role="status">
-            {phase.lastCorrect ? copy.games.roundWell : copy.games.roundTryAnother}
+            {phase.feedback}
           </p>
           <BigButton
             label={copy.games.next}
@@ -115,7 +160,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
         return (
           <Card>
             <p className="mb-6 text-2xl">{copy.games.saveFailed}</p>
-            <BigButton label={copy.games.retry} icon="🔄" onClick={() => save.mutate()} />
+            <BigButton label={copy.games.retry} icon="🔄" onClick={submit} />
           </Card>
         );
       }
@@ -123,6 +168,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
       return (
         <>
           <Card>
+            {phase.lastFeedback && <p className="mb-4 text-2xl">{phase.lastFeedback}</p>}
             <p className="text-3xl font-semibold" role="status">
               <span aria-hidden="true">🌟 </span>
               {endMessage(save.data)}

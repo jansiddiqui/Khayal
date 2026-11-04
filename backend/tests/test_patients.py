@@ -68,3 +68,25 @@ def test_seed_is_idempotent_and_loginable(client: TestClient, db: Session) -> No
     assert login.status_code == 200
     listed = client.get("/api/patients", headers=bearer(login.json())).json()
     assert len(listed) == 3
+
+
+def test_caregiver_sets_patient_city(client: TestClient, register: Register) -> None:
+    cg = bearer(register("Priya", "priya@example.com", "caregiver"))
+    patient_payload = register("Kamala", "kamala@example.com", "patient")
+    patient = bearer(patient_payload)
+    patient_id = patient_payload["user"]["id"]  # type: ignore[index]
+    stranger = bearer(register("Sam", "sam@example.com", "caregiver"))
+    url = f"/api/patients/{patient_id}"
+
+    assert client.patch(url, json={"city": "Pune"}, headers=cg).status_code == 403  # not linked yet
+    client.post("/api/patients/link", json={"patient_email": "kamala@example.com"}, headers=cg)
+
+    updated = client.patch(url, json={"city": "  Pune  "}, headers=cg)
+    assert updated.status_code == 200
+    assert updated.json()["city"] == "Pune"
+    assert client.get("/api/auth/me", headers=patient).json()["city"] == "Pune"
+    assert client.get("/api/patients", headers=cg).json()[0]["city"] == "Pune"
+
+    assert client.patch(url, json={"city": ""}, headers=cg).json()["city"] is None
+    assert client.patch(url, json={"city": "Pune"}, headers=stranger).status_code == 403
+    assert client.patch(url, json={"city": "Pune"}, headers=patient).status_code == 403

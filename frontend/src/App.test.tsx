@@ -16,13 +16,14 @@ vi.mock("./api/client", async (importOriginal) => {
     listPatients: vi.fn(),
     linkPatient: vi.fn(),
     listSessions: vi.fn(),
+    updatePatient: vi.fn(),
   };
 });
 
 const api = vi.mocked(apiClient);
 
-const kamala: User = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", role: "patient", created_at: "" };
-const priya: User = { id: 1, name: "Priya Sharma", email: "caregiver@khayal.test", role: "caregiver", created_at: "" };
+const kamala: User = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", role: "patient", created_at: "", city: "Pune" };
+const priya: User = { id: 1, name: "Priya Sharma", email: "caregiver@khayal.test", role: "caregiver", created_at: "", city: null };
 
 function signInAs(user: User) {
   localStorage.setItem("khayal.token", "t");
@@ -33,7 +34,8 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-const patientRoutes = ["/patient", "/patient/games", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
+// The games list is a menu of all games and is checked separately below.
+const patientRoutes = ["/patient", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
 
 describe("signed out", () => {
   it.each(["/", "/patient", "/caregiver"])("%s redirects to sign in", async (route) => {
@@ -111,6 +113,18 @@ describe("patient", () => {
     expect([...main.queryAllByRole("link"), ...main.queryAllByRole("button")].length).toBeLessThanOrEqual(3);
   });
 
+  it("games list offers all five games", async () => {
+    renderWithProviders(<App />, { route: "/patient/games" });
+    const list = within(await screen.findByRole("navigation", { name: "Games" }));
+    expect(list.getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
+      "/patient/games/memory_match",
+      "/patient/games/sequence_recall",
+      "/patient/games/word_recall",
+      "/patient/games/daily_orientation",
+      "/patient/games/reaction_tap",
+    ]);
+  });
+
   it("Read aloud toggle switches on and is remembered", async () => {
     renderWithProviders(<App />, { route: "/patient" });
     fireEvent.click(await screen.findByRole("button", { name: copy.nav.readAloudOff }));
@@ -129,9 +143,9 @@ describe("caregiver", () => {
   beforeEach(() => signInAs(priya));
 
   it("lists linked patients and links a new one", async () => {
-    const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test" };
-    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test" }]);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test" }, rahim]);
+    const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test", city: null };
+    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }, rahim]);
     api.linkPatient.mockResolvedValue(rahim);
 
     renderWithProviders(<App />, { route: "/caregiver" });
@@ -146,7 +160,7 @@ describe("caregiver", () => {
   });
 
   it("sees a patient's levels and session history", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test" }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
     api.listSessions.mockResolvedValue([
       {
         id: 9,
@@ -160,16 +174,46 @@ describe("caregiver", () => {
         rounds_correct: 5,
         avg_reaction_ms: 2400,
         hints_used: 0,
+        completed: true,
       },
     ]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByRole("heading", { name: "Kamala Devi" })).toBeInTheDocument();
     expect(screen.getByText("Level 3 / 10")).toBeInTheDocument(); // memory match, from latest session
-    expect(screen.getByText("Level 2 / 10")).toBeInTheDocument(); // sequence recall, not played yet
+    expect(screen.getAllByText("Level 2 / 10")).toHaveLength(3); // the three games not played yet
     expect(screen.getByRole("cell", { name: "2 ↑ 3" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "5 / 5" })).toBeInTheDocument();
     expect(api.listSessions).toHaveBeenCalledWith(2);
+  });
+
+  it("shows stopped-early sessions and saves the patient's city", async () => {
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null }]);
+    api.listSessions.mockResolvedValue([
+      {
+        id: 10,
+        patient_id: 2,
+        game_type: "daily_orientation",
+        level_start: 1,
+        level_end: 1,
+        started_at: "2026-11-04T10:00:00Z",
+        ended_at: "2026-11-04T10:02:00Z",
+        rounds_played: 3,
+        rounds_correct: 2,
+        avg_reaction_ms: null,
+        hints_used: 0,
+        completed: false,
+      },
+    ]);
+    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: "Pune" });
+    renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+    expect(await screen.findByRole("cell", { name: "Stopped early (3/5 rounds)" })).toBeInTheDocument();
+    expect(screen.getAllByRole("cell", { name: "—" })).toHaveLength(2); // no level, no reaction time
+
+    fireEvent.change(screen.getByLabelText(/Home city/), { target: { value: " Pune " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save city" }));
+    await waitFor(() => expect(api.updatePatient).toHaveBeenCalledWith(2, { city: "Pune" }));
   });
 
   it("signs out back to the sign-in screen", async () => {

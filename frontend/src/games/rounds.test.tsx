@@ -23,7 +23,7 @@ describe("MemoryMatchRound", () => {
 
   it("previews the cards, then lets the patient find pairs", () => {
     const onComplete = vi.fn();
-    render(<MemoryMatchRound level={1} onComplete={onComplete} rng={rng} />);
+    render(<MemoryMatchRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
 
     expect(screen.getByText(copy.games.memoryMatch.lookCarefully)).toBeInTheDocument();
     expect(cards()[0]).toHaveAccessibleName(copy.cards[deck[0]!.face]);
@@ -57,7 +57,7 @@ describe("MemoryMatchRound", () => {
 
   it("is not correct when mistakes exceed the number of pairs", () => {
     const onComplete = vi.fn();
-    render(<MemoryMatchRound level={1} onComplete={onComplete} rng={rng} />);
+    render(<MemoryMatchRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
     act(() => vi.advanceTimersByTime(previewMs));
 
     const [a1, a2] = indexesOf(deck[0]!.face) as [number, number];
@@ -81,7 +81,7 @@ describe("SequenceRecallRound", () => {
 
   it("plays the sequence, then accepts the same order as correct", () => {
     const onComplete = vi.fn();
-    render(<SequenceRecallRound level={1} onComplete={onComplete} rng={rng} />);
+    render(<SequenceRecallRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
 
     expect(screen.getByText(copy.games.sequenceRecall.watch)).toBeInTheDocument();
     expect(tile(sequence[0]!)).toBeDisabled();
@@ -100,7 +100,7 @@ describe("SequenceRecallRound", () => {
 
   it("ends the round gently on the first out-of-order tap", () => {
     const onComplete = vi.fn();
-    render(<SequenceRecallRound level={1} onComplete={onComplete} rng={rng} />);
+    render(<SequenceRecallRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
     act(() => vi.advanceTimersByTime(playbackMs));
 
     const wrong = ["red", "blue", "green", "yellow"].find((id) => id !== sequence[0])!;

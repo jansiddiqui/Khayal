@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     email: str
     role: Role
     created_at: datetime
+    city: str | None = None
 
 
 class TokenOut(BaseModel):
@@ -56,6 +57,11 @@ class PatientOut(BaseModel):
     id: int
     name: str
     email: str
+    city: str | None = None
+
+
+class PatientUpdateIn(BaseModel):
+    city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
 
 
 class LevelOut(BaseModel):
@@ -65,7 +71,7 @@ class LevelOut(BaseModel):
 
 class RoundIn(BaseModel):
     correct: bool
-    reaction_ms: Annotated[int, Field(ge=0, le=600_000)]
+    reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
     hint_used: bool = False
 
 
@@ -74,11 +80,15 @@ class SessionIn(BaseModel):
     started_at: datetime
     ended_at: datetime
     rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=BLOCK_SIZE)]
+    # A finished session has all BLOCK_SIZE rounds; a stopped-early one has fewer.
+    completed: bool = True
 
     @model_validator(mode="after")
-    def _ended_after_started(self) -> "SessionIn":
+    def _check(self) -> "SessionIn":
         if self.ended_at < self.started_at:
             raise ValueError("ended_at must not be before started_at")
+        if self.completed != (len(self.rounds) == BLOCK_SIZE):
+            raise ValueError(f"a completed session has exactly {BLOCK_SIZE} rounds; a stopped one has fewer")
         return self
 
 
@@ -94,8 +104,9 @@ class SessionOut(BaseModel):
     ended_at: datetime
     rounds_played: int
     rounds_correct: int
-    avg_reaction_ms: float
+    avg_reaction_ms: float | None
     hints_used: int
+    completed: bool
 
 
 LevelChange = Literal["up", "down", "same"]

@@ -9,7 +9,7 @@ import type { GameDefinition, RoundProps } from "./types";
 
 vi.mock("../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/client")>();
-  return { ...actual, getLevel: vi.fn(), postSession: vi.fn() };
+  return { ...actual, getLevel: vi.fn(), postSession: vi.fn(), postSessionOnPageHide: vi.fn() };
 });
 const api = vi.mocked(apiClient);
 
@@ -40,6 +40,7 @@ function result(change: SessionResult["level_change"]): SessionResult {
       rounds_correct: 5,
       avg_reaction_ms: 900,
       hints_used: 0,
+      completed: true,
     },
   };
 }
@@ -107,5 +108,72 @@ describe("GameSession", () => {
     fireEvent.click(await screen.findByRole("button", { name: copy.games.retry }));
     expect(await screen.findByText(copy.games.endKeep)).toBeInTheDocument();
     expect(api.postSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves the rounds played as stopped early when the patient leaves", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    const { unmount } = renderWithProviders(<GameSession game={fakeGame} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(screen.getByRole("button", { name: "Finish round" }));
+      fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
+    }
+    expect(api.postSession).not.toHaveBeenCalled();
+
+    unmount(); // e.g. the Home button
+    expect(api.postSession).toHaveBeenCalledOnce();
+    const body = api.postSession.mock.calls[0]![0];
+    expect(body.completed).toBe(false);
+    expect(body.rounds).toHaveLength(3);
+  });
+
+  it("saves stopped-early rounds when the page is closed, only once", async () => {
+    renderWithProviders(<GameSession game={fakeGame} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish round" }));
+
+    window.dispatchEvent(new Event("pagehide"));
+    window.dispatchEvent(new Event("pagehide"));
+    expect(api.postSessionOnPageHide).toHaveBeenCalledOnce();
+    expect(api.postSessionOnPageHide.mock.calls[0]![0]).toMatchObject({ completed: false, rounds: [expect.anything()] });
+  });
+
+  it("does not save anything when leaving before the first round ends", async () => {
+    const { unmount } = renderWithProviders(<GameSession game={fakeGame} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    unmount();
+    expect(api.postSession).not.toHaveBeenCalled();
+  });
+
+  it("does not save twice after a finished session", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    const { unmount } = renderWithProviders(<GameSession game={fakeGame} />);
+    await playFullSession();
+    await screen.findByText(copy.games.endKeep);
+    unmount();
+    expect(api.postSession).toHaveBeenCalledOnce();
+    expect(api.postSession.mock.calls[0]![0].completed).toBe(true);
+  });
+
+  it("shows a round's own feedback, including after the last round", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    function KindRound({ roundIndex, onComplete }: RoundProps) {
+      return (
+        <button type="button" onClick={() => onComplete({ correct: false, reaction_ms: 1, hint_used: false }, `Answer ${roundIndex}.`)}>
+          Answer
+        </button>
+      );
+    }
+    renderWithProviders(<GameSession game={{ ...fakeGame, Round: KindRound }} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    for (let i = 0; i < ROUNDS_PER_SESSION; i++) {
+      fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+      if (i < ROUNDS_PER_SESSION - 1) {
+        expect(screen.getByRole("status")).toHaveTextContent(`Answer ${i}.`);
+        fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
+      }
+    }
+    expect(await screen.findByText(`Answer ${ROUNDS_PER_SESSION - 1}.`)).toBeInTheDocument();
+    expect(screen.getByText(copy.games.endKeep)).toBeInTheDocument();
   });
 });
