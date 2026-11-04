@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Patient-first defaults (CLAUDE.md section 4): base text 20px, high contrast. */
+@theme {
+  --color-ink: #111827;
+  --color-paper: #fffdf7;
+  --color-brand: #1d4ed8;
+  --color-brand-dark: #1e3a8a;
+  --color-calm: #047857;
+}
+
+html {
+  font-size: 20px;
+}
+
+body {
+  @apply bg-paper text-ink antialiased;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 4px solid #f59e0b;
+  outline-offset: 3px;
+}
