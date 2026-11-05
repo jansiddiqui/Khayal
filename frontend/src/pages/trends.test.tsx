@@ -30,7 +30,9 @@ function game(game_type: GameTrend["game_type"], status: GameTrend["status"], z:
     score: z === null ? null : 0.41,
     baseline_mean: z === null ? null : 0.62,
     baseline_std: z === null ? null : 0.08,
-    sessions: 30,
+    sessions: z === null ? 8 : 30,
+    sessions_needed: 15,
+    z_raw: z,
     explanation,
     points: [
       { session_id: 1, started_at: "2026-09-01T05:00:00Z", composite: 0.6, rolling_mean: null, z: null },
@@ -49,7 +51,7 @@ const trend: Trend = {
   games: [
     game("memory_match", "critical", -2.7, "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."),
     game("word_recall", "stable", -1.1, "Word Recall average is 0.55 over the last 5 sessions, against a baseline of 0.62 (z = −1.1)."),
-    game("reaction_tap", "insufficient", null, "Reaction Tap: 4 of 10 sessions played; no baseline yet."),
+    game("reaction_tap", "insufficient", null, "Learning this patient's normal (8/15 sessions)"),
   ],
 };
 
@@ -96,7 +98,9 @@ it("patient page shows the index, game trends with explanations, and secondary s
   const memory = within(screen.getByRole("figure", { name: "Memory Match trend" }));
   expect(memory.getByText("Critical")).toBeInTheDocument();
   expect(memory.getByText(trend.games[0]!.explanation)).toBeInTheDocument();
-  expect(within(screen.getByRole("figure", { name: "Reaction Tap trend" })).getByText("No baseline yet")).toBeInTheDocument();
+  const reaction = within(screen.getByRole("figure", { name: "Reaction Tap trend" }));
+  expect(reaction.getByText("Learning")).toBeInTheDocument();
+  expect(reaction.getByText("Learning this patient's normal (8/15 sessions)")).toBeInTheDocument();
 
   expect(within(screen.getByRole("group", { name: "Stopped early" })).getByText("13%")).toBeInTheDocument();
   expect(within(screen.getByRole("group", { name: "Hints used" })).getByText("8%")).toBeInTheDocument();
@@ -109,10 +113,10 @@ it("splits a multi-game decline alert into one line per game", async () => {
   const { alertLines } = await import("./caregiver/PatientDetail");
   expect(
     alertLines(
-      "About Today average dropped from 0.98 to 0.72 over the last 5 sessions (z = −4.1). Memory Match average dropped from 0.36 to 0.06 over the last 5 sessions (z = −2.5).",
+      "About Today average dropped from 0.98 to 0.32 over the last 5 sessions (z ≤ −4.0). Memory Match average dropped from 0.36 to 0.06 over the last 5 sessions (z = −2.5).",
     ),
   ).toEqual([
-    "About Today average dropped from 0.98 to 0.72 over the last 5 sessions (z = −4.1).",
+    "About Today average dropped from 0.98 to 0.32 over the last 5 sessions (z ≤ −4.0).",
     "Memory Match average dropped from 0.36 to 0.06 over the last 5 sessions (z = −2.5).",
   ]);
   expect(alertLines("Kamala Devi missed 3 reminders in the last 48 hours.")).toEqual([

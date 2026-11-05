@@ -110,3 +110,21 @@ def test_demo_history_loads_once_per_patient(db: Session) -> None:
 
     again = load_demo_history(db, patients)
     assert all(line.endswith("already has history, skipped") for line in again)
+
+
+def test_demo_history_reset_and_reload(db: Session) -> None:
+    from sqlalchemy import func, select
+
+    from app.demo_history import load_demo_history, reset_demo_history
+    from app.models import Alert, GameSession, GameRound, PlayerLevel
+
+    _, patients = seed(db)
+    load_demo_history(db, patients)
+    before = db.scalar(select(func.count()).select_from(GameSession))
+    report = reset_demo_history(db, patients)
+    assert all("removed" in line for line in report)
+    for model in (GameSession, GameRound, PlayerLevel):
+        assert db.scalar(select(func.count()).select_from(model)) == 0
+    assert db.scalar(select(func.count()).select_from(Alert).where(Alert.type == "decline")) == 0
+    load_demo_history(db, patients)
+    assert db.scalar(select(func.count()).select_from(GameSession)) == before  # same seeds, same history

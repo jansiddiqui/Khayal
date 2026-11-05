@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, ensure_schema_current
-from app.demo_history import load_demo_history
+from app.demo_history import load_demo_history, reset_demo_history
 from app.models import FamilyMember, Reminder, ReminderType, Role, User
 from app.services import auth, care, family
 
@@ -86,16 +86,24 @@ def seed(db: Session) -> tuple[User, list[User]]:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Seed the Khayal demo accounts.")
     parser.add_argument("--demo-history", action="store_true", help="also load 90 days of simulated play")
+    parser.add_argument(
+        "--reset", action="store_true", help="with --demo-history: first remove the demo patients' play history"
+    )
     args = parser.parse_args(argv)
+    if args.reset and not args.demo_history:
+        parser.error("--reset only works with --demo-history")
 
     ensure_schema_current()
     with SessionLocal() as db:
         caregiver, patients = seed(db)
+        removed = reset_demo_history(db, patients) if args.reset else []
         history = load_demo_history(db, patients) if args.demo_history else []
     print(f"Caregiver: {caregiver.email}")
     for p in patients:
         print(f"Patient:   {p.email}")
     print(f"Password for all demo accounts: {DEMO_PASSWORD}")
+    for line in removed:
+        print(f"Reset:     {line}")
     for line in history:
         print(f"History:   {line}")
 

@@ -148,7 +148,7 @@ def completed_in_order(sessions: Iterable[SessionSummary]) -> list[SessionSummar
     return sorted((s for s in sessions if s.completed and s.rounds), key=lambda s: s.started_at)
 
 
-def _baseline_window(items: Sequence[object], config: DeclineConfig) -> slice:
+def _baseline_window(config: DeclineConfig) -> slice:
     return slice(config.warmup_sessions, config.sessions_needed)
 
 
@@ -156,7 +156,7 @@ def baseline_reaction_ms(completed: Sequence[SessionSummary], config: DeclineCon
     """Median of per-session median RTs over the baseline sessions, or None before they exist."""
     if len(completed) < config.sessions_needed:
         return None
-    window = completed[_baseline_window(completed, config)]
+    window = completed[_baseline_window(config)]
     medians = [m for s in window if (m := s.median_reaction_ms) is not None]
     return float(median(medians)) if medians else None
 
@@ -173,7 +173,7 @@ def composite(session: SessionSummary, baseline_rt_ms: float | None) -> float:
 
 def baseline_stats(scores: Sequence[float], config: DeclineConfig = DEFAULT) -> tuple[float, float]:
     """(mean, floored std) of the baseline window."""
-    window = list(scores[_baseline_window(scores, config)])
+    window = list(scores[_baseline_window(config)])
     m = mean(window)
     return m, max(stdev(window), config.std_floor, config.std_floor_relative * abs(m))
 

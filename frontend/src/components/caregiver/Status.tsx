@@ -22,7 +22,7 @@ const GAME_STATUS: Record<DeclineStatus, { label: string; color: string; icon: s
   stable: { label: "Stable", color: STATUS_COLORS.good, icon: "●" },
   warning: { label: "Warning", color: STATUS_COLORS.warning, icon: "▲" },
   critical: { label: "Critical", color: STATUS_COLORS.critical, icon: "▼" },
-  insufficient: { label: "No baseline yet", color: STATUS_COLORS.none, icon: "○" },
+  insufficient: { label: "Learning", color: STATUS_COLORS.none, icon: "○" },
 };
 
 function Badge({ label, color, icon }: { label: string; color: string; icon: string }) {
@@ -47,4 +47,10 @@ export function GameStatusBadge({ status }: { status: DeclineStatus }) {
 /** "−1.2" with a real minus sign. */
 export function formatZ(z: number): string {
   return z.toFixed(1).replace("-", "−");
+}
+
+/** "z = −1.2", or "z ≤ −4.0" when the server clipped it. */
+export function formatGameZ(z: number, zRaw: number | null): string {
+  const clipped = zRaw !== null && Math.abs(zRaw) > Math.abs(z);
+  return `z ${clipped ? (z < 0 ? "≤" : "≥") : "="} ${formatZ(z)}`;
 }

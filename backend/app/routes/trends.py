@@ -22,6 +22,8 @@ def get_trend(patient_id: int, user: CurrentUser, db: DbSession, now: Now, game_
             baseline_mean=r.baseline_mean,
             baseline_std=r.baseline_std,
             sessions=r.sessions,
+            sessions_needed=r.sessions_needed,
+            z_raw=r.z_raw,
             explanation=r.explanation,
             points=[
                 TrendPointOut(

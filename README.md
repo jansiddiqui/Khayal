@@ -48,6 +48,12 @@ Add 90 days of simulated play so the dashboard charts have data (Rahim = healthy
 python -m app.seed --demo-history
 ```
 
+To regenerate it (e.g. after changing the decline rule), add `--reset`. This removes the demo patients' game sessions, levels and decline alerts and their reminder logs before today, then reloads them. Back up `data/khayal.db` first:
+
+```powershell
+python -m app.seed --demo-history --reset
+```
+
 Run (from `backend/`, venv active):
 
 ```powershell
@@ -163,7 +169,23 @@ npm run typecheck # tsc strict
 
 ## Decline tracking
 
-The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py` (it goes into the paper). In short: composite = accuracy (hinted correct rounds count half) × level/10 × reaction-time ratio against the patient's own baseline, per completed session. Each game's baseline is its first 10 completed sessions; z compares the mean of the last 5 sessions with it. z < −1.5 raises a warning, z < −2.5 critical, at most one decline alert per 7 days, and the alert lists every declining game in plain words. The overall cognitive index is the mean of the latest z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py` (it goes into the paper). In short: composite = accuracy (hinted correct rounds count half) × level/10 × reaction-time ratio against the patient's own baseline, per completed session.
+
+- **Warm-up:** each game's first 5 completed sessions are ignored (levels are still climbing from 2).
+- **Baseline:** completed sessions 6–15 (also used for the reaction-time baseline). Std = max(sample std, 0.05, 0.15 × baseline mean), so a near-perfect game like About Today can't turn one bad session into an extreme z.
+- Until a game has 15 completed sessions it has no z and no alerts; the chart says "Learning this patient's normal (8/15 sessions)".
+- **z** = (mean of the last 5 sessions − baseline mean) / baseline std, clipped to [−4, 4] so one game can't dominate. z < −1.5 → warning, z < −2.5 → critical.
+- **Alerts:** each severity at most once per 7 days per patient; a critical may follow a warning within those 7 days (escalation). The alert lists every declining game in plain words.
+- **Overall cognitive index** = mean of the latest (clipped) z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+
+Evaluation for the paper (simulated patients; the current settings and the first version as an ablation):
+
+```powershell
+# from the repo root, backend venv active
+python -m ml.decline.evaluate --patients-per-profile 50 --seeds 5
+```
+
+It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients.
 
 Synthetic data (healthy / MCI / moderate, rounds played through the real adaptive engine):
 

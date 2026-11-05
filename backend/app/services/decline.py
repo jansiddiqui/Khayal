@@ -11,7 +11,6 @@ from app.services import reminders
 from app.services.clock import as_utc, local
 from ml.decline import zscore
 
-ALERT_COOLDOWN = timedelta(days=7)
 SIGNAL_WINDOW_DAYS = 14
 
 
@@ -59,7 +58,9 @@ def overview(db: Session, patient_id: int, until: datetime | None = None) -> Ove
 
 def _empty(game: GameType) -> zscore.DeclineResult:
     name = zscore.GAME_NAMES.get(game.value, game.value)
-    return zscore.DeclineResult(score=None, z=None, status="insufficient", explanation=f"{name}: not played yet.")
+    return zscore.DeclineResult(
+        score=None, z=None, status="insufficient", explanation=f"{name}: not played yet.", sessions=0
+    )
 
 
 def index_history(result: Overview) -> list[tuple[date, float]]:
@@ -83,26 +84,29 @@ _SEVERITY = {"warning": Severity.warning, "critical": Severity.critical}
 
 
 def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | None:
-    """Raise one decline alert (worst severity, every declining game explained) at most once per 7 days."""
+    """Raise one decline alert (worst severity, every declining game explained) when
+    `zscore.alert_decision` allows it: each severity at most once per 7 days, and a
+    critical alert may follow a warning inside that window."""
     result = overview(db, patient.id, until=now)
     declining = [r for r in result.games.values() if r.status in ("warning", "critical")]
-    if not declining:
-        return None
-    recent = db.scalar(
-        select(Alert.id).where(
+    recent = db.execute(
+        select(Alert.created_at, Alert.severity).where(
             Alert.patient_id == patient.id,
             Alert.type == AlertType.decline,
-            Alert.created_at > now - ALERT_COOLDOWN,
-            Alert.created_at <= now,
+            Alert.created_at > now - zscore.ALERT_COOLDOWN,
         )
+    ).all()
+    severity = zscore.alert_decision(
+        (r.status for r in result.games.values()),
+        [(as_utc(created), "critical" if sev == Severity.critical else "warning") for created, sev in recent if sev != Severity.info],
+        as_utc(now),
     )
-    if recent is not None:
+    if severity is None:
         return None
-    worst = "critical" if any(r.status == "critical" for r in declining) else "warning"
     alert = Alert(
         patient_id=patient.id,
         type=AlertType.decline,
-        severity=_SEVERITY[worst],
+        severity=_SEVERITY[severity],
         message=" ".join(r.explanation for r in sorted(declining, key=lambda r: r.z or 0.0)),
         created_at=now,
     )

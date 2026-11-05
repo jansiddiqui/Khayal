@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import type { GameTrend, Trend } from "../../api/client";
-import { formatZ, GameStatusBadge, IndexStatusBadge } from "./Status";
+import { formatGameZ, formatZ, GameStatusBadge, IndexStatusBadge } from "./Status";
 
 // Dataviz reference palette: one series hue, neutral reference marks, recessive grid/axes.
 const SERIES = "#2a78d6";
@@ -42,7 +42,7 @@ export function GameTrendChart({ trend }: { trend: GameTrend }) {
       <figcaption className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold">{name}</span>
         <span className="flex items-center gap-3 text-sm">
-          {trend.z !== null && <span className="text-gray-600">z = {formatZ(trend.z)}</span>}
+          {trend.z !== null && <span className="text-gray-600">{formatGameZ(trend.z, trend.z_raw)}</span>}
           <GameStatusBadge status={trend.status} />
         </span>
       </figcaption>

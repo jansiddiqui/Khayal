@@ -265,6 +265,8 @@ class GameTrendOut(BaseModel):
     baseline_mean: float | None
     baseline_std: float | None
     sessions: int
+    sessions_needed: int
+    z_raw: float | None
     explanation: str
     points: list[TrendPointOut]
 

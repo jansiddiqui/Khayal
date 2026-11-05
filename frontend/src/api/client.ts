@@ -378,6 +378,10 @@ export interface GameTrend {
   baseline_mean: number | null;
   baseline_std: number | null;
   sessions: number;
+  /** Completed sessions before z exists: 5 warm-up + 10 baseline. */
+  sessions_needed: number;
+  /** z before clipping to [−4, 4]. */
+  z_raw: number | null;
   explanation: string;
   points: TrendPoint[];
 }

@@ -318,7 +318,7 @@ export function PatientDetail() {
             Games
           </h2>
           <p className="mb-3 text-sm text-gray-600">
-            Composite score per completed session. Dashed line: baseline (first 10 sessions); shaded band: ±1.5 standard
+            Composite score per completed session. Dashed line: baseline (sessions 6–15; the first 5 are warm-up); shaded band: ±1.5 standard
             deviations.
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
