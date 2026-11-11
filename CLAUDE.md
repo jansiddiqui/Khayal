@@ -118,11 +118,19 @@ The caregiver UI can be a normal dense dashboard.
 - `z < −1.5` → `warning` alert. `z < −2.5` → `critical` alert. Do not raise the same alert type more than once per 7 days.
 - Interface: `assess(sessions: list[SessionSummary]) -> DeclineResult(score, z, status, explanation)`.
 
+**v2 changes (decided; these override the baseline and alert bullets above):**
+
+- **Warm-up:** ignore each game's first 5 completed sessions. The baseline = the next 10 completed sessions (sessions 6–15). No z and no alerts for a game until it has 15 completed sessions; until then the chart shows "Learning this patient's normal (8/15 sessions)".
+- **Std floor:** baseline std = max(sample std, 0.05, 0.15 × baseline mean).
+- **Clipping:** clip z to [−4, 4] before alerts and before the overall index, so one game can't dominate. The unclipped z is kept for reference.
+- **Escalation:** a `critical` alert may be raised within 7 days of a `warning` for the same patient. The same severity stays limited to once per 7 days.
+- The first version (floor 0.02, no clipping, no warm-up, no escalation) is kept as `zscore.LEGACY` for the ablation in `python -m ml.decline.evaluate`.
+
 **Composite score (decided, used in the paper).** Per *completed* session; stopped-early sessions are excluded.
 
 - `acc` = (correct rounds without hint + 0.5 × correct rounds with hint) / rounds
 - `lvl` = level_start / 10 (About Today: `lvl` = 1)
-- `rt` = clamp(patient's baseline median reaction time for this game / this session's median reaction time, 0.5, 1.5). The baseline is the median over the first 10 completed sessions; until those exist, `rt` = 1. About Today: `rt` = 1.
+- `rt` = clamp(patient's baseline median reaction time for this game / this session's median reaction time, 0.5, 1.5). The baseline is the median over the baseline sessions (6–15, after the warm-up); until those exist, `rt` = 1. About Today: `rt` = 1.
 - `composite = acc × lvl × rt`
 
 **Overall cognitive index** = mean of the latest z across the games that have a baseline. The caregiver patient list shows it as a status dot (Stable / Watch / Declining).
