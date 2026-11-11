@@ -96,8 +96,10 @@ def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | Non
             Alert.created_at > now - zscore.ALERT_COOLDOWN,
         )
     ).all()
+    z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in result.games.items()}
+    candidate = zscore.candidate_alert(z_history)
     severity = zscore.alert_decision(
-        (r.status for r in result.games.values()),
+        [candidate] if candidate is not None else [],
         [(as_utc(created), "critical" if sev == Severity.critical else "warning") for created, sev in recent if sev != Severity.info],
         as_utc(now),
     )

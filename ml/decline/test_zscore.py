@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pytest
@@ -7,7 +8,9 @@ from ml.decline.zscore import (
     LEGACY,
     RoundSummary,
     SessionSummary,
+    AlertRule,
     alert_decision,
+    candidate_alert,
     assess,
     baseline_reaction_ms,
     baseline_stats,
@@ -185,3 +188,41 @@ class TestAlertDecision:
 
     def test_future_alerts_are_ignored_when_replaying(self) -> None:
         assert alert_decision(["warning"], [(self.now + timedelta(days=1), "warning")], self.now) == "warning"
+
+
+class TestAlertRules:
+    @staticmethod
+    def check(rule: AlertRule, history: dict[str, list[float]]) -> str | None:
+        return candidate_alert(history, replace(DEFAULT, alert_rule=rule))
+
+    def test_any_game_is_the_default(self) -> None:
+        assert DEFAULT.alert_rule == "any"
+        assert self.check("any", {"memory_match": [0.0, -1.6], "word_recall": [0.2]}) == "warning"
+        assert self.check("any", {"memory_match": [-2.6]}) == "critical"
+        assert self.check("any", {"memory_match": [-1.4]}) is None
+
+    def test_persistence_needs_three_consecutive_sessions_of_one_game(self) -> None:
+        assert self.check("persistence", {"memory_match": [-1.6, -1.6]}) is None
+        assert self.check("persistence", {"memory_match": [-1.6, -1.4, -1.6, -1.6]}) is None
+        assert self.check("persistence", {"memory_match": [-1.6, -1.7, -1.6]}) == "warning"
+        assert self.check("persistence", {"memory_match": [-1.6, -1.7, -2.8]}) == "critical"
+        # Two games, two bad sessions each: not the same game three times.
+        assert self.check("persistence", {"memory_match": [-1.6, -1.6], "word_recall": [-1.6, -1.6]}) is None
+
+    def test_two_games_at_once(self) -> None:
+        assert self.check("two_games", {"memory_match": [-2.8], "word_recall": [-1.0]}) is None
+        assert self.check("two_games", {"memory_match": [-1.6], "word_recall": [-1.7]}) == "warning"
+        assert self.check("two_games", {"memory_match": [-2.8], "word_recall": [-1.7]}) == "critical"
+
+    def test_index_only(self) -> None:
+        assert self.check("index", {"memory_match": [-4.0], "word_recall": [0.0], "reaction_tap": [0.0]}) is None
+        assert self.check("index", {"memory_match": [-2.0], "word_recall": [-1.2]}) == "warning"
+        assert self.check("index", {"memory_match": [-3.0], "word_recall": [-2.6]}) == "critical"
+        assert self.check("index", {"memory_match": []}) is None
+
+    def test_persistence_or_index_takes_the_more_severe(self) -> None:
+        persistent = {"memory_match": [-1.6, -1.6, -1.6], "word_recall": [0.5]}  # index −0.55
+        assert self.check("persistence_or_index", persistent) == "warning"
+        index_only = {"memory_match": [-3.0], "word_recall": [-2.6]}
+        assert self.check("persistence_or_index", index_only) == "critical"
+        assert self.check("persistence_or_index", {"memory_match": [-1.6], "word_recall": [0.0]}) is None

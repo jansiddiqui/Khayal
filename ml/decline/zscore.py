@@ -26,9 +26,19 @@ Decline, per patient per game, over completed sessions in time order:
     z = (rolling mean − baseline mean) / baseline std, clipped to [−4, 4]
     z < −1.5 → warning, z < −2.5 → critical.
 
-Alerts (`alert_decision`): at most one decline alert per severity per 7 days per patient.
-A critical alert may still be raised within 7 days of a warning (escalation); a warning is
-not raised within 7 days of any decline alert.
+Alerts: `candidate_alert` turns each game's z history into the severity to raise now
+(the alert rule, below), and `alert_decision` throttles it: at most one decline alert per
+severity per 7 days per patient. A critical alert may still be raised within 7 days of a
+warning (escalation); a warning is not raised within 7 days of any decline alert.
+
+Alert rules (`DeclineConfig.alert_rule`; the app uses "any"):
+    any          A: any game's latest z < −1.5 (critical if < −2.5); the worst game decides.
+    persistence  B: the same game's z < −1.5 on its last 3 completed sessions; severity
+                    from that game's latest z.
+    two_games    C: at least 2 games with latest z < −1.5 at the same time; severity from
+                    the worst of them.
+    index        D: overall cognitive index < −1.5 (critical if < −2.5).
+    persistence_or_index  E: B or D; the more severe of the two.
 
 Overall cognitive index = mean of the latest (clipped) z across games that have a
 baseline. Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
@@ -39,7 +49,7 @@ per 7 days) for the ablation in ml.decline.evaluate. The interface
 LSTM/GRU model replaces this rule.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from statistics import mean, median, stdev
@@ -65,6 +75,7 @@ GAME_NAMES = {
 }
 
 Status = Literal["insufficient", "stable", "warning", "critical"]
+AlertRule = Literal["any", "persistence", "two_games", "index", "persistence_or_index"]
 IndexStatus = Literal["insufficient", "stable", "watch", "declining"]
 Severity = Literal["warning", "critical"]
 
@@ -78,6 +89,8 @@ class DeclineConfig:
     std_floor_relative: float = 0.15  # floor as a share of the baseline mean
     z_clip: float | None = 4.0
     escalation: bool = True  # critical may follow a warning within the cooldown
+    alert_rule: AlertRule = "any"
+    persistence_sessions: int = 3  # for the persistence rules
 
     @property
     def sessions_needed(self) -> int:
@@ -285,6 +298,64 @@ def index_status(index: float | None) -> IndexStatus:
     if index < WATCH_BELOW:
         return "watch"
     return "stable"
+
+
+def _severity(z: float) -> Severity | None:
+    if z < CRITICAL_Z:
+        return "critical"
+    if z < WARNING_Z:
+        return "warning"
+    return None
+
+
+def _worse(a: Severity | None, b: Severity | None) -> Severity | None:
+    if a == "critical" or b == "critical":
+        return "critical"
+    return a or b
+
+
+def candidate_alert(z_history: Mapping[str, Sequence[float]], config: DeclineConfig = DEFAULT) -> Severity | None:
+    """Severity the alert rule asks for now, before throttling (see the module docstring).
+
+    `z_history`: per game, the (clipped) z of each completed session that has one, in time
+    order, up to now.
+    """
+    latest = {g: zs[-1] for g, zs in z_history.items() if zs}
+    rule = config.alert_rule
+
+    def any_game() -> Severity | None:
+        worst: Severity | None = None
+        for z in latest.values():
+            worst = _worse(worst, _severity(z))
+        return worst
+
+    def persistence() -> Severity | None:
+        n = config.persistence_sessions
+        worst: Severity | None = None
+        for zs in z_history.values():
+            if len(zs) >= n and all(z < WARNING_Z for z in zs[-n:]):
+                worst = _worse(worst, _severity(zs[-1]))
+        return worst
+
+    def two_games() -> Severity | None:
+        flagged = [sev for z in latest.values() if (sev := _severity(z)) is not None]
+        if len(flagged) < 2:
+            return None
+        return "critical" if "critical" in flagged else "warning"
+
+    def index() -> Severity | None:
+        value = overall_index(latest.values())
+        return None if value is None else _severity(value)
+
+    if rule == "any":
+        return any_game()
+    if rule == "persistence":
+        return persistence()
+    if rule == "two_games":
+        return two_games()
+    if rule == "index":
+        return index()
+    return _worse(persistence(), index())
 
 
 def alert_decision(

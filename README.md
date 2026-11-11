@@ -185,7 +185,11 @@ Evaluation for the paper (simulated patients; the current settings and the first
 python -m ml.decline.evaluate --patients-per-profile 50 --seeds 5
 ```
 
-It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients.
+It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients. It also compares the alert rule variants A–E (`DeclineConfig.alert_rule`: any game, persistence over 3 sessions, two games at once, index only, persistence or index; the app uses A) and draws `ml/results/decline_tradeoff.png`. The chart needs matplotlib, which only the results use:
+
+```powershell
+pip install -r ml/requirements-results.txt
+```
 
 Synthetic data (healthy / MCI / moderate, rounds played through the real adaptive engine):
 

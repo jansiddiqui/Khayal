@@ -64,9 +64,12 @@ def test_nothing_before_the_baseline_exists() -> None:
 def test_run_is_deterministic_and_cli_writes_both_files(tmp_path: Path) -> None:
     a = run(patients_per_profile=2, seeds=1, days=40)
     b = run(patients_per_profile=2, seeds=1, days=40)
-    assert a == b and len(a["current"]) == len(a["legacy"]) == 6
+    assert a == b and all(len(outcomes) == 6 for outcomes in a.values())
+    assert set(a) == {"current", "legacy", "B", "C", "D", "E"}
     main(["--patients-per-profile", "2", "--seeds", "1", "--days", "40", "--out", str(tmp_path)])
     md = (tmp_path / "decline_eval.md").read_text(encoding="utf-8")
     assert "## Ablation" in md and "| current |" in md and "| legacy |" in md
+    assert "## Alert rule variants" in md and all(f"| {v} |" in md for v in "ABCDE")
+    assert (tmp_path / "decline_tradeoff.png").stat().st_size > 0
     header = (tmp_path / "decline_eval.csv").read_text(encoding="utf-8").splitlines()[0]
     assert header == "setting,metric,group,value"
