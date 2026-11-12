@@ -2,26 +2,30 @@
 
 Slot 1 is always Daily Orientation. Slots 2-3 are the caregiver's pinned games if set,
 otherwise the two levelled games played least recently before today; ties are broken
-by a shuffle seeded with the date, so the list stays the same all day.
+by a shuffle seeded with the date, so the list stays the same all day. When the weekly
+voice task is due (app/services/speech.py), it replaces slot 3.
 """
 
 import random
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import LEVELLED_GAMES, GameSession, GameType, User
+from app.services import speech
 from app.services.clock import as_utc, local_day_start
 
 ALWAYS_FIRST = GameType.daily_orientation
 FLEX_SLOTS = 2
+VOICE_TASK: Literal["voice_task"] = "voice_task"
 
 
 @dataclass(frozen=True)
 class TodayGame:
-    game_type: GameType
+    game_type: GameType | Literal["voice_task"]
     done_today: bool
 
 
@@ -67,6 +71,10 @@ def todays_games(db: Session, patient: User, today: date) -> list[TodayGame]:
         )
     )
 
-    # From Milestone 8 the weekly voice task, when due, replaces slot 3.
     slots = [ALWAYS_FIRST, *(pinned_games(patient) or least_recent(last_played, today))]
-    return [TodayGame(game_type=g, done_today=g in done_today) for g in slots]
+    games = [TodayGame(game_type=g, done_today=g in done_today) for g in slots]
+    # The weekly voice task, when due, replaces slot 3.
+    offered, recorded_today = speech.voice_task_status(db, patient, today)
+    if offered:
+        games[-1] = TodayGame(game_type=VOICE_TASK, done_today=recorded_today)
+    return games

@@ -220,7 +220,17 @@ export const copy = {
   },
   voiceTask: {
     title: "Tell me about a picture",
-    comingSoon: "This activity is coming soon.",
+    instruction: "Tell me everything you see happening.",
+    start: "Start",
+    stop: "Stop",
+    listening: "I'm listening",
+    soundLevel: "Sound level",
+    saving: "Saving…",
+    thanks: "Thank you, that was lovely.",
+    micProblem: "We could not use the microphone just now. Please ask your family member to help.",
+    saveFailed: "We could not save it just now. Let's try again.",
+    tryAgain: "Try again",
+    notOn: "This activity is not turned on yet. Your family member can turn it on.",
   },
   pair: {
     title: "Set up this device",

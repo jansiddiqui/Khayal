@@ -41,6 +41,10 @@ export interface User {
   city: string | null;
   /** Patients only: games a caregiver fixed in slots 2-3 of today's games. */
   pinned_games: GameType[] | null;
+  /** Patients only: the caregiver's consent for the weekly voice task. */
+  voice_task_enabled: boolean;
+  /** When the voice task was turned on; null while it is off. */
+  voice_consent_at: string | null;
 }
 
 export interface TokenResponse {
@@ -55,6 +59,8 @@ export interface Patient {
   email: string;
   city: string | null;
   pinned_games: GameType[] | null;
+  voice_task_enabled: boolean;
+  voice_consent_at: string | null;
 }
 
 export interface RegisterInput {
@@ -191,8 +197,11 @@ export function postSessionOnPageHide(input: SessionInput): void {
   }).catch(() => undefined);
 }
 
+/** The weekly "Tell me about a picture" task; replaces slot 3 of today's games when due. */
+export const VOICE_TASK = "voice_task";
+
 export interface TodaysGames {
-  games: { game_type: GameType; done_today: boolean }[];
+  games: { game_type: GameType | typeof VOICE_TASK; done_today: boolean }[];
   pinned: boolean;
 }
 
@@ -204,6 +213,7 @@ export async function getTodaysGames(): Promise<TodaysGames> {
 export interface PatientChanges {
   city?: string | null;
   pinned_games?: GameType[] | null;
+  voice_task_enabled?: boolean;
 }
 
 export async function updatePatient(patientId: number, changes: PatientChanges): Promise<Patient> {
@@ -443,4 +453,36 @@ export function errorDetail(error: unknown): string | undefined {
   if (!axios.isAxiosError(error)) return undefined;
   const detail: unknown = (error.response?.data as { detail?: unknown } | undefined)?.detail;
   return typeof detail === "string" ? detail : undefined;
+}
+
+/** A voice-task recording. transcript and risk_score stay null until a real model exists. */
+export interface SpeechSample {
+  id: number;
+  recorded_at: string;
+  duration_ms: number;
+  transcript: string | null;
+  risk_score: number | null;
+  model_version: string;
+  /** Path under /api; fetch it with `fetchAudioBlob` (needs the login token). */
+  audio_url: string;
+}
+
+/** The recording is the request body itself, with its own Content-Type (no multipart form). */
+export async function uploadRecording(audio: Blob, durationMs: number): Promise<SpeechSample> {
+  const { data } = await api.post<SpeechSample>("/speech", audio, {
+    params: { duration_ms: Math.max(1, Math.round(durationMs)) },
+    headers: { "Content-Type": audio.type || "audio/webm" },
+  });
+  return data;
+}
+
+export async function listRecordings(patientId: number): Promise<SpeechSample[]> {
+  const { data } = await api.get<SpeechSample[]>(`/patients/${patientId}/speech`);
+  return data;
+}
+
+/** Private recordings are never public URLs, so they are fetched with the token and played as blobs. */
+export async function fetchAudioBlob(url: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(url, { responseType: "blob" });
+  return data;
 }

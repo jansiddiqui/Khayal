@@ -24,12 +24,14 @@ vi.mock("../api/client", async (importOriginal) => {
     deleteReminder: vi.fn(),
     listAlerts: vi.fn(),
     acknowledgeAlert: vi.fn(),
+    listRecordings: vi.fn(),
+    getTodaysGames: vi.fn(),
   };
 });
 const api = vi.mocked(apiClient);
 
-const kamala: User = { id: 2, name: "Kamala Devi", email: "k@khayal.test", role: "patient", created_at: "", city: null, pinned_games: null };
-const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null };
+const kamala: User = { id: 2, name: "Kamala Devi", email: "k@khayal.test", role: "patient", created_at: "", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
+const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
 
 function signInAs(user: User) {
   localStorage.setItem("khayal.token", "t");
@@ -47,6 +49,8 @@ const today = (id: number, title: string, time: string, status: TodayReminder["s
 
 beforeEach(() => {
   vi.resetAllMocks();
+  api.listRecordings.mockResolvedValue([]);
+  api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
 });
 
 describe("time format", () => {
@@ -156,7 +160,7 @@ describe("caregiver reminders and alerts", () => {
 
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listReminders.mockResolvedValue([reminder]);
     api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
   });

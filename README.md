@@ -98,7 +98,7 @@ Routes so far:
 - `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
 - `/patient/reminders` — today's reminders with big Done buttons.
 - `/patient/who-is-this` — family photo grid with name + relation; tapping a photo shows it big and reads aloud who it is.
-- `/patient/voice` — placeholder for Milestone 8.
+- `/patient/voice` — "Tell me about a picture", the weekly voice task (see below).
 - `/caregiver` — linked patients with a status dot (Stable / Watch / Declining) from the overall cognitive index, and a form to link a patient by account email (caregivers only).
 - `/caregiver/patients/:id/family` — add, edit and delete people (name, relation, note) and their photos.
 - `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
@@ -223,6 +223,22 @@ python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv
 ```
 
 Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints, median_rt_ms, completed, composite` (composite is empty for stopped-early sessions).
+
+## Voice task (Milestone 8)
+
+The weekly picture description (rules in CLAUDE.md section 7):
+
+- **Turn it on:** on the caregiver patient page, open "Voice recordings" and tick "Voice task enabled". It is off by default; the consent date is saved. The demo seed turns it on for Kamala.
+- **When it appears:** if the patient has made no recording in the 6 days before today, "Tell me about a picture" replaces the third game on today's list.
+- **Patient:** the kitchen picture, "Tell me everything you see happening", Start → Stop with a sound-level bar. No countdown; it stops by itself after 3 minutes. The browser asks for the microphone the first time.
+- **Storage:** the recording (WebM/Opus, or Ogg in browsers without WebM) is sent as the raw request body, at most 10 MB, and saved under `data/uploads/speech/{patient_id}/` (gitignored). It is only served through the authenticated route below, to the patient and linked caregivers.
+- **Analysis:** `ml/speech/stub.py` runs on every recording and returns no transcript and no score (`model_version` "stub-0"). The caregiver page says "Analysis coming soon".
+- **API:**
+  - `POST /api/speech?duration_ms=` (patient) — body is the audio, `Content-Type: audio/webm` or `audio/ogg`.
+  - `GET /api/patients/{id}/speech` — the recordings, newest first.
+  - `GET /api/patients/{id}/speech/{sample_id}/audio` — the audio file.
+  - `PATCH /api/patients/{id}` `{voice_task_enabled}` (linked caregiver).
+- Screenshots: `docs/m8/`.
 
 ## Known limitations (prototype)
 
