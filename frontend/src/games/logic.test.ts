@@ -1,4 +1,4 @@
-import { buildDeck, CARD_FACES, isBoardCorrect, memoryMatchConfig } from "./memoryMatch/logic";
+import { boardColumns, buildDeck, CARD_FACES, isBoardCorrect, memoryMatchConfig } from "./memoryMatch/logic";
 import { buildSequence, sequenceConfig } from "./sequenceRecall/logic";
 import { shuffle } from "./types";
 
@@ -11,12 +11,20 @@ function seeded(seed: number) {
 }
 
 describe("memory match logic", () => {
-  it("scales pairs 2 -> 10 and shortens the preview with level", () => {
-    expect(memoryMatchConfig(1)).toEqual({ pairs: 2, previewMs: 6000 });
+  it("scales pairs 2 -> 10 with level; pairs are the only difficulty", () => {
+    expect(memoryMatchConfig(1)).toEqual({ pairs: 2 });
     expect(memoryMatchConfig(5).pairs).toBe(6);
     expect(memoryMatchConfig(9).pairs).toBe(10);
-    expect(memoryMatchConfig(10)).toEqual({ pairs: 10, previewMs: 2400 });
+    expect(memoryMatchConfig(10)).toEqual({ pairs: 10 });
     expect(memoryMatchConfig(99).pairs).toBe(10);
+  });
+
+  it("picks columns that keep the board on a phone screen", () => {
+    expect(boardColumns(4)).toBe(2);
+    expect(boardColumns(6)).toBe(3);
+    expect(boardColumns(14)).toBe(3);
+    expect(boardColumns(16)).toBe(4);
+    expect(boardColumns(20)).toBe(4);
   });
 
   it("has enough everyday faces for the hardest level", () => {

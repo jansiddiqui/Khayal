@@ -37,21 +37,10 @@ export function Register() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-4 py-8 sm:px-8">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-4 pt-8 pb-4 sm:px-8 sm:py-8">
       <h1 className="text-4xl font-bold">{copy.register.title}</h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
-        <TextField label={copy.register.name} autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
-        <TextField label={copy.register.email} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <TextField
-          label={copy.register.password}
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          maxLength={72}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        {/* Who the account is for comes first: it is the one choice that is easy to miss. */}
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-2 text-xl font-semibold">{copy.register.roleLegend}</legend>
           {roleOptions.map((option) => (
@@ -71,12 +60,27 @@ export function Register() {
             </label>
           ))}
         </fieldset>
+        <TextField label={copy.register.name} autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
+        <TextField label={copy.register.email} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <TextField
+          label={copy.register.password}
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          maxLength={72}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         {error && (
           <p role="alert" className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-xl">
             {error}
           </p>
         )}
-        <BigButton type="submit" label={submitting ? copy.register.submitting : copy.register.submit} icon="✅" />
+        {/* Pinned to the bottom of the screen so "Create account" is always visible on a phone. */}
+        <div className="sticky bottom-0 -mx-4 border-t-2 border-gray-300 bg-paper px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:p-0">
+          <BigButton type="submit" label={submitting ? copy.register.submitting : copy.register.submit} icon="✅" />
+        </div>
       </form>
       <Link to="/login" className="text-xl text-brand-dark underline">
         {copy.register.toLogin}

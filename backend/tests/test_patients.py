@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.deps import ensure_patient_access
 from app.models import Role
 from app.services import auth
-from app.seed import DEMO_PASSWORD, PATIENTS, seed
+from app.seed import DEMO_PASSWORD, PATIENTS, placeholder_photo, refresh_demo_photos, seed
 from tests.conftest import Register, bearer
 
 
@@ -68,6 +68,27 @@ def test_seed_is_idempotent_and_loginable(client: TestClient, db: Session) -> No
     assert login.status_code == 200
     listed = client.get("/api/patients", headers=bearer(login.json())).json()
     assert len(listed) == 3
+
+
+def test_demo_photos_are_plain_silhouettes_and_can_be_refreshed(db: Session) -> None:
+    import io
+
+    from PIL import Image
+
+    from app.services import family
+
+    _, patients = seed(db)
+    kamala = patients[0]
+    before = {m.name: family.photo_ids(m) for m in family.members_for(db, kamala.id)}
+    assert len(before) == 3 and all(len(ids) == 1 for ids in before.values())
+
+    # Two colours only (background and silhouette): no name or initial drawn on the photo.
+    colours = Image.open(io.BytesIO(placeholder_photo((37, 99, 235)))).getcolors(maxcolors=16)
+    assert colours is not None and len(colours) == 2
+
+    assert refresh_demo_photos(db, kamala) == 3
+    after = {m.name: family.photo_ids(m) for m in family.members_for(db, kamala.id)}
+    assert all(len(ids) == 1 and ids != before[name] for name, ids in after.items())
 
 
 def test_caregiver_sets_patient_city(client: TestClient, register: Register) -> None:

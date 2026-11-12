@@ -26,6 +26,8 @@ type Phase =
 interface GameSessionProps {
   game: GameDefinition;
   rng?: Rng;
+  /** True while a round is on screen, so the page can switch to play mode. */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 /**
@@ -35,7 +37,7 @@ interface GameSessionProps {
  * If the patient leaves part-way (Home button, closing the page), the rounds played
  * so far are saved as a stopped-early session, which never changes the level.
  */
-export function GameSession({ game, rng }: GameSessionProps) {
+export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const { speak } = useReadAloud();
   const level = useQuery({ queryKey: ["level", game.type], queryFn: () => getLevel(game.type), staleTime: 0 });
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
@@ -43,6 +45,11 @@ export function GameSession({ game, rng }: GameSessionProps) {
   const startedAt = useRef<string>("");
   /** True once the current session has been handed to the server (or there is nothing to save). */
   const submitted = useRef(true);
+
+  const playing = phase.kind === "playing";
+  useEffect(() => {
+    onPlayingChange?.(playing);
+  }, [playing, onPlayingChange]);
 
   function sessionInput(): SessionInput {
     return {
@@ -129,7 +136,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
 
     case "playing":
       return (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
           <p className="text-xl text-gray-800">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
           <game.Round
             key={phase.round}
@@ -138,7 +145,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
             rng={rng}
             onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
           />
-        </>
+        </div>
       );
 
     case "between":

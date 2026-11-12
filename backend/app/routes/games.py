@@ -23,7 +23,10 @@ def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession, now:
         game_type=body.game_type,
         started_at=body.started_at,
         ended_at=body.ended_at,
-        rounds=[Round(correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used) for r in body.rounds],
+        rounds=[
+            Round(correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used, study_ms=r.study_ms)
+            for r in body.rounds
+        ],
         completed=body.completed,
     )
     if session.completed:

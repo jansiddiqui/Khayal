@@ -95,6 +95,8 @@ class GameRound(Base):
     # None when the round has no meaningful reaction (e.g. a correctly ignored red circle).
     reaction_ms: Mapped[int | None]
     hint_used: Mapped[bool]
+    # How long the patient looked before playing (CLAUDE.md section 7); None for games without a study phase.
+    study_ms: Mapped[int | None]
 
     session: Mapped[GameSession] = relationship(back_populates="rounds")
 

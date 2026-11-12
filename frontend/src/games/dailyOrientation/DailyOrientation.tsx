@@ -51,18 +51,21 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-3xl font-semibold">{question.prompt}</p>
+      {/* The photo takes only the space left, so every answer stays on screen. */}
       {question.photoUrl && (
-        <AuthedImage
-          src={question.photoUrl}
-          alt={copy.games.orientation.askWhoIsThis}
-          className="mx-auto aspect-square h-[30vh] max-h-[400px] w-auto max-w-full rounded-2xl object-cover"
-        />
+        <div className="flex min-h-0 flex-1 justify-center">
+          <AuthedImage
+            src={question.photoUrl}
+            alt={copy.games.orientation.askWhoIsThis}
+            className="aspect-square h-full max-h-[400px] w-auto max-w-full rounded-2xl object-cover"
+          />
+        </div>
       )}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {question.options.map((option) => (
-          <BigButton key={option} label={option} icon="👉" variant="secondary" onClick={() => answer(option)} />
+          <BigButton key={option} label={option} icon="👉" variant="secondary" size="compact" onClick={() => answer(option)} />
         ))}
       </div>
     </div>

@@ -24,18 +24,20 @@ export function WhoIsThis() {
   if (open) {
     const { member, photo } = open;
     return (
-      <Layout title={member.name} spoken={w.spoken(member.name, member.relation, member.note)}>
-        {/* Height-capped so the words and the Back button stay on screen on a phone. */}
-        <AuthedImage
-          src={photo.url}
-          alt={w.photoOf(member.name)}
-          className="mx-auto aspect-square h-[30vh] max-h-[480px] w-auto max-w-full rounded-2xl object-cover"
-        />
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-3xl font-semibold">{w.thisIs(member.name, member.relation)}</p>
-            {member.note && <p className="text-2xl">{member.note}</p>}
-          </div>
+      <Layout title={member.name} spoken={w.spoken(member.name, member.relation, member.note)} compact>
+        {/* The photo is as wide as the screen allows; the words and Back always stay on screen. */}
+        <div className="flex min-h-0 shrink justify-center">
+          <AuthedImage
+            src={photo.url}
+            alt={w.photoOf(member.name)}
+            className="aspect-square max-h-full w-full max-w-[600px] rounded-2xl object-cover"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-3xl font-semibold">{w.thisIs(member.name, member.relation)}</p>
+          {member.note && <p className="text-2xl">{member.note}</p>}
+        </div>
+        <div className="mt-auto">
           <BigButton label={w.back} icon="⬅️" onClick={() => setOpen(null)} />
         </div>
       </Layout>

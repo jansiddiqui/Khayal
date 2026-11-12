@@ -3,12 +3,16 @@ import type { Rng } from "../types";
 
 export type TileId = keyof typeof copy.tiles;
 
-/** Each tile has a colour and a word, so colour is never the only cue. */
+/**
+ * Each tile has a colour and a word, so colour is never the only cue. A lit tile turns
+ * white with a thick border in its colour: the biggest possible change, and every text
+ * colour stays well above 4.5:1 (CLAUDE.md section 4).
+ */
 export const TILES: readonly { id: TileId; idle: string; lit: string }[] = [
-  { id: "red", idle: "bg-red-700 text-white", lit: "bg-red-500 text-white" },
-  { id: "blue", idle: "bg-blue-800 text-white", lit: "bg-blue-500 text-white" },
-  { id: "green", idle: "bg-green-800 text-white", lit: "bg-green-500 text-white" },
-  { id: "yellow", idle: "bg-yellow-400 text-ink", lit: "bg-yellow-200 text-ink" },
+  { id: "red", idle: "bg-red-700 text-white", lit: "bg-white text-red-800 border-red-700" },
+  { id: "blue", idle: "bg-blue-800 text-white", lit: "bg-white text-blue-800 border-blue-800" },
+  { id: "green", idle: "bg-green-800 text-white", lit: "bg-white text-green-800 border-green-800" },
+  { id: "yellow", idle: "bg-yellow-400 text-ink", lit: "bg-white text-ink border-yellow-500" },
 ];
 
 export interface SequenceConfig {

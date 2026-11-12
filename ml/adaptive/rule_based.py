@@ -28,6 +28,9 @@ class Round:
     correct: bool
     reaction_ms: int | None
     hint_used: bool = False
+    # How long the patient looked before playing (Memory Match preview, Word Recall words).
+    # Stored for the decline analysis; the adaptive rule ignores it.
+    study_ms: int | None = None
 
 
 def clamp_level(level: int) -> int:

@@ -9,7 +9,7 @@ import argparse
 import io
 from datetime import time
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -46,16 +46,33 @@ DEMO_FAMILY = [
 ]
 
 
-def placeholder_photo(name: str, colour: tuple[int, int, int]) -> bytes:
-    """A plain card with the person's initial. Demo data only: real photos come from caregivers."""
+def placeholder_photo(colour: tuple[int, int, int]) -> bytes:
+    """A plain coloured silhouette (head and shoulders), with no name or initial, so a demo
+    photo never gives away the answer (CLAUDE.md section 4). Real photos come from caregivers."""
     img = Image.new("RGB", (600, 600), colour)
     draw = ImageDraw.Draw(img)
-    draw.ellipse((150, 90, 450, 390), fill=(255, 255, 255))
-    draw.text((300, 240), name[0], fill=colour, anchor="mm", font=ImageFont.load_default(size=180))
-    draw.text((300, 480), name, fill=(255, 255, 255), anchor="mm", font=ImageFont.load_default(size=72))
+    shape = tuple(round(c + (255 - c) * 0.55) for c in colour)  # a lighter tint of the same colour
+    draw.ellipse((190, 110, 410, 330), fill=shape)  # head
+    draw.ellipse((90, 360, 510, 780), fill=shape)  # shoulders, running off the bottom edge
     out = io.BytesIO()
     img.save(out, format="PNG")
     return out.getvalue()
+
+
+def refresh_demo_photos(db: Session, patient: User) -> int:
+    """Replace the photos of the demo family members with the current placeholder.
+    Only members whose name and relation match DEMO_FAMILY are touched. Returns how many."""
+    demo = {(name, relation): colour for name, relation, _, colour in DEMO_FAMILY}
+    refreshed = 0
+    for member in family.members_for(db, patient.id):
+        colour = demo.get((member.name, member.relation))
+        if colour is None:
+            continue
+        for photo_id in family.photo_ids(member):
+            family.remove_photo(db, member, photo_id)
+        family.add_photo(db, member, placeholder_photo(colour))
+        refreshed += 1
+    return refreshed
 
 
 def _get_or_create(db: Session, name: str, email: str, role: Role) -> User:
@@ -79,7 +96,7 @@ def seed(db: Session) -> tuple[User, list[User]]:
             member = FamilyMember(patient_id=patients[0].id, name=name, relation=relation, note=note)
             db.add(member)
             db.commit()
-            family.add_photo(db, member, placeholder_photo(name, colour))
+            family.add_photo(db, member, placeholder_photo(colour))
     return caregiver, patients
 
 
@@ -88,6 +105,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--demo-history", action="store_true", help="also load 90 days of simulated play")
     parser.add_argument(
         "--reset", action="store_true", help="with --demo-history: first remove the demo patients' play history"
+    )
+    parser.add_argument(
+        "--refresh-demo-photos",
+        action="store_true",
+        help="replace the demo family's photos with the current placeholder silhouettes",
     )
     args = parser.parse_args(argv)
     if args.reset and not args.demo_history:
@@ -98,6 +120,7 @@ def main(argv: list[str] | None = None) -> None:
         caregiver, patients = seed(db)
         removed = reset_demo_history(db, patients) if args.reset else []
         history = load_demo_history(db, patients) if args.demo_history else []
+        photos = refresh_demo_photos(db, patients[0]) if args.refresh_demo_photos else None
     print(f"Caregiver: {caregiver.email}")
     for p in patients:
         print(f"Patient:   {p.email}")
@@ -106,6 +129,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Reset:     {line}")
     for line in history:
         print(f"History:   {line}")
+    if photos is not None:
+        print(f"Photos:    replaced {photos} demo family photos with silhouettes")
 
 
 if __name__ == "__main__":

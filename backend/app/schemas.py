@@ -86,6 +86,7 @@ class RoundIn(BaseModel):
     correct: bool
     reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
     hint_used: bool = False
+    study_ms: Annotated[int, Field(ge=0, le=3_600_000)] | None = None
 
 
 def _to_utc(dt: datetime) -> datetime:

@@ -5,23 +5,24 @@ import { HintButton } from "../HintButton";
 import { shuffle, type GameDefinition, type RoundProps } from "../types";
 import {
   buildWordRound,
-  DISTRACTION_MS,
   isRecallCorrect,
   missingFirstLetters,
   STAR_COUNT,
-  WORD_SHOW_MS,
+  STARS_DONE_PAUSE_MS,
   wordCount,
   type WordId,
 } from "./logic";
 
 type Step = { kind: "showing"; index: number } | { kind: "stars" } | { kind: "choosing" };
 
-/** Stars sit in some cells of a 4×3 grid; the rest stay empty so they look scattered. */
-const STAR_GRID_CELLS = 12;
+/** Stars sit in some cells of a 3×3 grid; the rest stay empty so they look scattered. */
+const STAR_GRID_CELLS = 9;
 
 /**
- * One round: words one at a time, a short star-tapping distraction, then pick the
- * words you saw from a list. Correct when (found − wrong) / shown ≥ 0.8.
+ * One round: words one at a time (the patient taps "Next word"), a short star-tapping
+ * distraction that ends once all 5 stars are tapped, then pick the words you saw from
+ * a list. Correct when (found − wrong) / shown ≥ 0.8.
+ * study_ms = time from the first word appearing to leaving the last word.
  * Reaction time = time from the list appearing to pressing Done.
  * Hint ("Show me again"): the first letter of each word not yet picked.
  */
@@ -36,25 +37,31 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
   const [tappedStars, setTappedStars] = useState<ReadonlySet<number>>(new Set());
   const [picked, setPicked] = useState<ReadonlySet<WordId>>(new Set());
   const [hintLetters, setHintLetters] = useState<string[] | null>(null);
+  const shownSince = useRef(Date.now());
+  const studyMs = useRef(0);
   const choosingSince = useRef(0);
   const reported = useRef(false);
 
+  const starsDone = tappedStars.size === STAR_COUNT;
   useEffect(() => {
-    if (step.kind === "showing") {
-      const t = setTimeout(() => {
-        const next = step.index + 1;
-        setStep(next < round.shown.length ? { kind: "showing", index: next } : { kind: "stars" });
-      }, WORD_SHOW_MS);
-      return () => clearTimeout(t);
+    if (step.kind !== "stars" || !starsDone) return;
+    const t = setTimeout(() => {
+      choosingSince.current = Date.now();
+      setStep({ kind: "choosing" });
+    }, STARS_DONE_PAUSE_MS);
+    return () => clearTimeout(t);
+  }, [step.kind, starsDone]);
+
+  function nextWord() {
+    if (step.kind !== "showing") return;
+    const next = step.index + 1;
+    if (next < round.shown.length) {
+      setStep({ kind: "showing", index: next });
+    } else {
+      studyMs.current = Date.now() - shownSince.current;
+      setStep({ kind: "stars" });
     }
-    if (step.kind === "stars") {
-      const t = setTimeout(() => {
-        choosingSince.current = Date.now();
-        setStep({ kind: "choosing" });
-      }, DISTRACTION_MS);
-      return () => clearTimeout(t);
-    }
-  }, [step, round.shown.length]);
+  }
 
   function toggle(word: WordId) {
     const next = new Set(picked);
@@ -70,30 +77,36 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
       correct: isRecallCorrect(round.shown, picked),
       reaction_ms: Date.now() - choosingSince.current,
       hint_used: hintLetters !== null,
+      study_ms: Math.round(studyMs.current),
     });
   }
 
   if (step.kind === "showing") {
     return (
-      <div className="flex flex-col items-center gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-2xl">{copy.games.wordRecall.remember}</p>
-        <p className="w-full rounded-2xl border-4 border-brand bg-white py-12 text-center text-5xl font-bold" aria-live="polite">
+        <p
+          className="flex min-h-[10rem] items-center justify-center rounded-2xl border-4 border-brand bg-white text-center text-5xl font-bold"
+          aria-live="polite"
+        >
           {copy.words[round.shown[step.index]!]}
         </p>
+        <BigButton label={copy.games.wordRecall.nextWord} icon="➡️" size="compact" onClick={nextWord} />
       </div>
     );
   }
 
   if (step.kind === "stars") {
+    const order = [...starCells].sort((a, b) => a - b);
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-2xl" aria-live="polite">
-          {tappedStars.size === STAR_COUNT ? copy.games.wordRecall.starsDone : copy.games.wordRecall.stars}
+          {starsDone ? copy.games.wordRecall.starsDone : copy.games.wordRecall.stars}
         </p>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="mx-auto grid w-full max-w-sm grid-cols-3 gap-3">
           {[...Array(STAR_GRID_CELLS).keys()].map((cell) => {
-            if (!starCells.has(cell)) return <div key={cell} className="min-h-20" />;
-            const n = [...starCells].sort((a, b) => a - b).indexOf(cell) + 1;
+            if (!starCells.has(cell)) return <div key={cell} aria-hidden="true" />;
+            const n = order.indexOf(cell) + 1;
             const tapped = tappedStars.has(cell);
             return (
               <button
@@ -102,8 +115,8 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
                 onClick={() => setTappedStars(new Set([...tappedStars, cell]))}
                 aria-label={tapped ? copy.games.wordRecall.starTapped(n) : copy.games.wordRecall.star(n)}
                 className={
-                  "min-h-20 rounded-full border-4 text-4xl transition-colors " +
-                  (tapped ? "border-amber-500 bg-amber-100" : "border-gray-400 bg-white hover:bg-amber-50")
+                  "aspect-square min-h-[64px] rounded-full border-4 text-4xl transition-colors " +
+                  (tapped ? "border-amber-500 bg-amber-100" : "border-gray-500 bg-white hover:bg-amber-50")
                 }
               >
                 <span aria-hidden="true">{tapped ? "⭐" : "☆"}</span>
@@ -115,15 +128,16 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
     );
   }
 
+  const wide = round.options.length > 10;
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-2xl">{copy.games.wordRecall.choose}</p>
-      {hintLetters && hintLetters.length > 0 && (
-        <p className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-2xl" role="status">
-          {copy.games.wordRecall.hintLetters(hintLetters.join(", "))}
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <p className="text-xl">{copy.games.wordRecall.choose}</p>
+      {/* Up to 16 words, each at least 64px tall: 3 columns (at the 20px minimum) once there
+          are more than 10, so the whole list and Done fit on a phone screen. */}
+      <div
+        className={`grid min-h-0 flex-1 gap-[6px] ${wide ? "grid-cols-3" : "grid-cols-2"}`}
+        style={{ gridTemplateRows: `repeat(${Math.ceil(round.options.length / (wide ? 3 : 2))}, minmax(64px, 5rem))` }}
+      >
         {round.options.map((word) => {
           const on = picked.has(word);
           return (
@@ -133,7 +147,8 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
               aria-pressed={on}
               onClick={() => toggle(word)}
               className={
-                "flex min-h-16 items-center justify-center gap-2 rounded-2xl border-4 px-3 text-2xl font-semibold " +
+                "flex min-h-[64px] items-center justify-center gap-1 rounded-2xl border-4 px-1 font-semibold " +
+                (wide ? "text-base " : "text-2xl ") +
                 (on ? "border-calm bg-emerald-50 text-ink" : "border-gray-500 bg-white text-ink hover:bg-gray-50")
               }
             >
@@ -143,12 +158,20 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
           );
         })}
       </div>
-      <HintButton
-        used={hintLetters !== null}
-        available
-        onUse={() => setHintLetters(missingFirstLetters(round.shown, picked))}
-      />
-      <BigButton label={copy.games.wordRecall.done} icon="✅" onClick={done} />
+      <div className="flex shrink-0 flex-col gap-2">
+        {/* The hint letters appear where the hint button was, so nothing else moves. */}
+        {hintLetters && hintLetters.length > 0 && (
+          <p className="rounded-xl border-4 border-amber-500 bg-amber-50 px-3 py-1 text-xl leading-tight" role="status">
+            {copy.games.wordRecall.hintLetters(hintLetters.join(", "))}
+          </p>
+        )}
+        <HintButton
+          used={hintLetters !== null}
+          available
+          onUse={() => setHintLetters(missingFirstLetters(round.shown, picked))}
+        />
+        <BigButton label={copy.games.wordRecall.done} icon="✅" size="compact" onClick={done} />
+      </div>
     </div>
   );
 }

@@ -5,11 +5,13 @@ export type WordId = keyof typeof copy.words;
 
 export const WORDS = Object.keys(copy.words) as WordId[];
 
-/** Each word is shown alone for this long. */
-export const WORD_SHOW_MS = 2000;
-/** The star-tapping distraction lasts this long (not scored, no countdown shown). */
-export const DISTRACTION_MS = 15000;
-export const STAR_COUNT = 8;
+/**
+ * The star-tapping distraction (not scored) ends once all the stars are tapped. Words
+ * stay on screen until the patient taps "Next word": no hidden timers (CLAUDE.md section 7).
+ */
+export const STAR_COUNT = 5;
+/** Short "Lovely!" pause after the last star, before the word list appears. */
+export const STARS_DONE_PAUSE_MS = 800;
 /** Share of the shown words that must be recalled (after subtracting wrong picks). */
 export const PASS_SCORE = 0.8;
 

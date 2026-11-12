@@ -8,7 +8,7 @@ import { MemoryMatchRound } from "./memoryMatch/MemoryMatch";
 import { ReactionTapRound } from "./reactionTap/ReactionTap";
 import { buildSequence, sequenceConfig } from "./sequenceRecall/logic";
 import { PLAYBACK_DELAY_MS, SequenceRecallRound } from "./sequenceRecall/SequenceRecall";
-import { buildWordRound, DISTRACTION_MS, WORD_SHOW_MS, wordCount } from "./wordRecall/logic";
+import { buildWordRound, STAR_COUNT, STARS_DONE_PAUSE_MS, wordCount } from "./wordRecall/logic";
 import { WordRecallRound } from "./wordRecall/WordRecall";
 
 const rng = () => 0.42;
@@ -24,25 +24,30 @@ afterEach(() => {
 });
 
 describe("Show me again", () => {
-  it("Memory Match re-reveals every card for the preview time, once", () => {
+  it("Memory Match shows every card again until the patient hides them, once", () => {
     const onComplete = vi.fn();
-    const { pairs, previewMs } = memoryMatchConfig(1);
+    const { pairs } = memoryMatchConfig(1);
     const deck = buildDeck(pairs, rng);
+    const hide = () => fireEvent.click(screen.getByRole("button", { name: copy.games.memoryMatch.hideCards }));
     render(<MemoryMatchRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
-    noShowMeAgain(); // not during the opening preview
-    act(() => vi.advanceTimersByTime(previewMs));
+    noShowMeAgain(); // not while the cards are up
+    act(() => vi.advanceTimersByTime(4000));
+    hide();
 
     fireEvent.click(showMeAgain());
-    const cards = () => screen.getAllByRole("button").filter((b) => b.textContent !== copy.games.showMeAgain);
+    const cards = () => screen.getAllByRole("button").slice(0, deck.length);
     cards().forEach((card, i) => expect(card).toHaveAccessibleName(copy.cards[deck[i]!.face]));
     noShowMeAgain();
-    act(() => vi.advanceTimersByTime(previewMs));
+    act(() => vi.advanceTimersByTime(3000));
+    hide();
     expect(cards()[0]).toHaveAccessibleName(copy.games.memoryMatch.faceDown(1));
 
     // Finish with no mistakes: still correct, but flagged as hinted.
     const faces = [...new Set(deck.map((c) => c.face))];
     faces.forEach((face) => deck.forEach((c, i) => c.face === face && fireEvent.click(cards()[i]!)));
-    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: true, hint_used: true }));
+    expect(onComplete).toHaveBeenCalledWith(
+      expect.objectContaining({ correct: true, hint_used: true, study_ms: 7000 }), // 4s + 3s of looking
+    );
   });
 
   it("Sequence Recall replays the sequence once and starts input over", () => {
@@ -75,12 +80,18 @@ describe("WordRecallRound", () => {
     render(<WordRecallRound level={1} roundIndex={0} onComplete={onComplete} rng={rng} />);
     for (const w of shown) {
       expect(screen.getByText(copy.words[w])).toBeInTheDocument();
-      act(() => vi.advanceTimersByTime(WORD_SHOW_MS));
+      act(() => vi.advanceTimersByTime(10_000)); // no hidden timer: the word stays until "Next word"
+      expect(screen.getByText(copy.words[w])).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: copy.games.wordRecall.nextWord }));
     }
     expect(screen.getByText(copy.games.wordRecall.stars)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: copy.games.wordRecall.star(1) }));
-    expect(screen.getByRole("button", { name: copy.games.wordRecall.starTapped(1) })).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(DISTRACTION_MS));
+    for (let n = 1; n <= STAR_COUNT; n++) {
+      act(() => vi.advanceTimersByTime(60_000)); // the distraction does not end by itself
+      fireEvent.click(screen.getByRole("button", { name: copy.games.wordRecall.star(n) }));
+      expect(screen.getByRole("button", { name: copy.games.wordRecall.starTapped(n) })).toBeInTheDocument();
+    }
+    expect(screen.getByText(copy.games.wordRecall.starsDone)).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(STARS_DONE_PAUSE_MS));
     expect(screen.getByText(copy.games.wordRecall.choose)).toBeInTheDocument();
   }
   const onComplete = vi.fn();
@@ -95,7 +106,13 @@ describe("WordRecallRound", () => {
     act(() => vi.advanceTimersByTime(4000));
     fireEvent.click(screen.getByRole("button", { name: copy.games.wordRecall.done }));
 
-    expect(onComplete).toHaveBeenCalledWith({ correct: true, reaction_ms: 4000, hint_used: false });
+    // study_ms = 10s per word, the time spent looking before tapping "Next word".
+    expect(onComplete).toHaveBeenCalledWith({
+      correct: true,
+      reaction_ms: 4000,
+      hint_used: false,
+      study_ms: 10_000 * shown.length,
+    });
   });
 
   it("hint shows first letters of missing words; wrong picks lower the score", () => {

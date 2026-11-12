@@ -115,6 +115,8 @@ export interface RoundResult {
   /** null when the round has no meaningful reaction time (e.g. a red circle correctly left alone). */
   reaction_ms: number | null;
   hint_used: boolean;
+  /** How long the patient looked before playing (Memory Match preview, Word Recall words); null otherwise. */
+  study_ms?: number | null;
 }
 
 export interface SessionInput {

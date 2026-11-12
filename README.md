@@ -54,6 +54,12 @@ To regenerate it (e.g. after changing the decline rule), add `--reset`. This rem
 python -m app.seed --demo-history --reset
 ```
 
+The demo family photos are plain coloured silhouettes, with no names or initials. To replace older demo photos with them:
+
+```powershell
+python -m app.seed --refresh-demo-photos
+```
+
 Run (from `backend/`, venv active):
 
 ```powershell
@@ -118,6 +124,8 @@ Routes so far:
 - `GET /api/patients/{id}/sessions?game_type=` — the patient themself or a linked caregiver.
 
 ## Games and the adaptive engine
+
+No hidden timers (CLAUDE.md section 7): Memory Match cards stay up until "I've looked — hide the cards", Word Recall words stay until "Next word", and the star distraction ends after 5 stars. Each round stores `study_ms`, the time spent looking before playing. During a round the patient screen switches to a compact play mode that fits a 375 × 812 phone without scrolling. Before and after screenshots are in `docs/ui-audit/batch1/`.
 
 - One session = 5 rounds; the level (1–10, start 2) changes at most once, at the end of a completed session, using `ml/adaptive/rule_based.py` (≥85% → up, <55% → down). The server uses its stored level, not one sent by the client.
 - **Stopped early:** leaving mid-game (Home button, closing the page) saves the rounds played with `completed=false`. These never change the level and show as "Stopped early (3/5 rounds)" for the caregiver.

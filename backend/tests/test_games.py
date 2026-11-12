@@ -1,6 +1,10 @@
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import GameRound
 
 from tests.conftest import Register, bearer
 
@@ -165,3 +169,18 @@ def test_session_history_access(client: TestClient, register: Register) -> None:
 
     assert client.get(url, headers=rahim).status_code == 403
     assert client.get(url, headers=stranger).status_code == 403
+
+
+def test_study_time_is_stored_per_round(client: TestClient, register: Register, db: Session) -> None:
+    patient = bearer(register("Kamala", "k@example.com", "patient"))
+    body = session_body("11111")
+    for i, r in enumerate(body["rounds"]):
+        r["study_ms"] = 4000 + i * 500  # how long the cards were looked at
+    body["rounds"][4].pop("study_ms")  # optional: older clients and games without a study phase
+    session_id = client.post("/api/sessions", json=body, headers=patient).json()["session"]["id"]
+
+    rounds = db.scalars(select(GameRound).where(GameRound.session_id == session_id).order_by(GameRound.id)).all()
+    assert [r.study_ms for r in rounds] == [4000, 4500, 5000, 5500, None]
+
+    body["rounds"][0]["study_ms"] = -1
+    assert client.post("/api/sessions", json=body, headers=patient).status_code == 422
