@@ -48,6 +48,15 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+class PairIn(BaseModel):
+    code: Annotated[str, Field(pattern=r"^\d{6}$")]
+
+
+class PairingCodeOut(BaseModel):
+    code: str
+    expires_at: datetime
+
+
 class LinkPatientIn(BaseModel):
     patient_email: Email
 
@@ -86,6 +95,7 @@ class RoundIn(BaseModel):
     correct: bool
     reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
     hint_used: bool = False
+    study_ms: Annotated[int, Field(ge=0, le=3_600_000)] | None = None
 
 
 def _to_utc(dt: datetime) -> datetime:
@@ -259,12 +269,17 @@ class TrendPointOut(BaseModel):
 
 class GameTrendOut(BaseModel):
     game_type: GameType
+    # Alert status (warning/critical thresholds, CLAUDE.md section 6).
     status: DeclineStatus
+    # The same words and thresholds as the overall index (Stable / Watch / Declining), for display.
+    trend_status: IndexStatus
     z: float | None
     score: float | None
     baseline_mean: float | None
     baseline_std: float | None
     sessions: int
+    sessions_needed: int
+    z_raw: float | None
     explanation: str
     points: list[TrendPointOut]
 

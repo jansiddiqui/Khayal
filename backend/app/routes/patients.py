@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.deps import CurrentCaregiver, DbSession, Now, ensure_patient_access
 from app.models import User
-from app.schemas import LinkPatientIn, PatientOut, PatientSummaryOut, PatientUpdateIn
-from app.services import auth, care, decline
+from app.schemas import LinkPatientIn, PairingCodeOut, PatientOut, PatientSummaryOut, PatientUpdateIn
+from app.services import auth, care, decline, pairing
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -33,6 +33,16 @@ def link_patient(body: LinkPatientIn, caregiver: CurrentCaregiver, db: DbSession
     except care.NotAPatientError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="That account is not a patient")
     return PatientOut.model_validate(patient)
+
+
+@router.post("/{patient_id}/pairing-code", response_model=PairingCodeOut, status_code=status.HTTP_201_CREATED)
+def create_pairing_code(patient_id: int, caregiver: CurrentCaregiver, db: DbSession, now: Now) -> PairingCodeOut:
+    """A one-time 6-digit code (valid 10 minutes) for signing in the patient's own device."""
+    ensure_patient_access(db, caregiver, patient_id)
+    patient = db.get(User, patient_id)
+    assert patient is not None  # ensure_patient_access checked the care link
+    new = pairing.create_code(db, caregiver, patient, now)
+    return PairingCodeOut(code=new.code, expires_at=new.expires_at)
 
 
 @router.patch("/{patient_id}", response_model=PatientOut)

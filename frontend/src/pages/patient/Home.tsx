@@ -1,5 +1,6 @@
+import { AlarmClock, ClipboardList, Puzzle, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getTodayReminders, type TodayReminder } from "../../api/client";
+import { getTodayReminders, getTodaysGames, type TodayReminder } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { BigButton } from "../../components/BigButton";
 import { Layout } from "../../components/Layout";
@@ -15,30 +16,39 @@ function nextReminderText(reminders: TodayReminder[] | undefined): string {
   return copy.patientHome.noReminder;
 }
 
-/** Patient Home layout is fixed by CLAUDE.md section 4: reminder card + exactly 3 buttons. */
+/**
+ * Patient Home layout is fixed by CLAUDE.md section 4: reminder card + exactly 3 buttons.
+ * Compact enough to fit a 375 × 667 phone without scrolling; "Play a game" shows today's progress.
+ */
 export function PatientHome() {
   const { state } = useAuth();
   const firstName = state.status === "authenticated" ? state.user.name.split(" ")[0] : "";
   const reminders = useQuery({ queryKey: ["todayReminders"], queryFn: getTodayReminders, staleTime: 0 });
+  const games = useQuery({ queryKey: ["todaysGames"], queryFn: getTodaysGames, staleTime: 0 });
+  const progress = games.data
+    ? copy.patientHome.gamesProgress(games.data.games.filter((g) => g.done_today).length, games.data.games.length)
+    : undefined;
 
   return (
-    <Layout title={copy.patientHome.greeting(firstName)}>
+    <Layout title={copy.patientHome.greeting(firstName)} snug>
       <section
         aria-labelledby="next-reminder"
-        className="rounded-2xl border-4 border-calm bg-emerald-50 p-6"
+        className="flex items-start gap-3 rounded-2xl border-4 border-calm bg-calm-soft px-4 py-3"
       >
-        <h2 id="next-reminder" className="flex items-center gap-3 text-2xl font-bold">
-          <span aria-hidden="true">⏰</span>
-          {copy.patientHome.nextReminderLabel}
-        </h2>
-        <p className="mt-2 text-2xl">
-          {reminders.isPending ? copy.common.loading : nextReminderText(reminders.data)}
-        </p>
+        <AlarmClock aria-hidden="true" className="mt-1 size-8 shrink-0 text-calm" />
+        <div>
+          <h2 id="next-reminder" className="text-xl font-bold">
+            {copy.patientHome.nextReminderLabel}
+          </h2>
+          <p className="text-2xl leading-snug">
+            {reminders.isPending ? copy.common.loading : nextReminderText(reminders.data)}
+          </p>
+        </div>
       </section>
-      <nav aria-label="Main actions" className="flex flex-col gap-5">
-        <BigButton to="/patient/games" icon="🧩" label={copy.patientHome.playGames} />
-        <BigButton to="/patient/reminders" icon="📋" label={copy.patientHome.todaysReminders} />
-        <BigButton to="/patient/who-is-this" icon="👪" label={copy.patientHome.whoIsThis} />
+      <nav aria-label="Main actions" className="flex flex-col gap-3">
+        <BigButton to="/patient/games" icon={<Puzzle />} label={copy.patientHome.playGames} note={progress} size="home" />
+        <BigButton to="/patient/reminders" icon={<ClipboardList />} label={copy.patientHome.todaysReminders} size="home" />
+        <BigButton to="/patient/who-is-this" icon={<Users />} label={copy.patientHome.whoIsThis} size="home" />
       </nav>
     </Layout>
   );

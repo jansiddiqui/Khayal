@@ -95,6 +95,8 @@ class GameRound(Base):
     # None when the round has no meaningful reaction (e.g. a correctly ignored red circle).
     reaction_ms: Mapped[int | None]
     hint_used: Mapped[bool]
+    # How long the patient looked before playing (CLAUDE.md section 7); None for games without a study phase.
+    study_ms: Mapped[int | None]
 
     session: Mapped[GameSession] = relationship(back_populates="rounds")
 
@@ -180,6 +182,21 @@ class Alert(Base):
     severity: Mapped[Severity] = mapped_column(SAEnum(Severity, native_enum=False, length=16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     acknowledged: Mapped[bool] = mapped_column(default=False)
+
+
+class PairingCode(Base):
+    """A one-time 6-digit code a caregiver shows so a patient's device can sign in."""
+
+    __tablename__ = "pairing_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # Keyed hash of the code; the code itself is never stored.
+    code_hash: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
 class FamilyMember(Base):

@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { copy } from "../copy";
 
 const STORAGE_KEY = "khayal.readAloud";
 
@@ -46,6 +47,7 @@ export function ReadAloudProvider({ children }: { children: ReactNode }) {
       s.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9; // a little slower than default
+      utterance.lang = copy.speechLang;
       s.speak(utterance);
     },
     [enabled],
@@ -55,8 +57,17 @@ export function ReadAloudProvider({ children }: { children: ReactNode }) {
   return <ReadAloudContext.Provider value={value}>{children}</ReadAloudContext.Provider>;
 }
 
+/** Outside a provider (e.g. a game round rendered on its own in a test) nothing is spoken. */
+const SILENT: ReadAloudValue = { enabled: false, toggle: () => undefined, speak: () => undefined };
+
 export function useReadAloud(): ReadAloudValue {
-  const ctx = useContext(ReadAloudContext);
-  if (!ctx) throw new Error("useReadAloud must be used inside <ReadAloudProvider>");
-  return ctx;
+  return useContext(ReadAloudContext) ?? SILENT;
+}
+
+/** Speak `text` whenever it changes (and read-aloud is on). Empty text says nothing. */
+export function useSpeakOnChange(text: string): void {
+  const { speak } = useReadAloud();
+  useEffect(() => {
+    if (text) speak(text);
+  }, [text, speak]);
 }

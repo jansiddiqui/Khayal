@@ -13,7 +13,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
     return <p className="p-8 text-2xl">{copy.common.loading}</p>;
   }
   if (state.status === "anonymous") {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={role === "patient" ? "/pair" : "/login"} replace state={{ from: location.pathname }} />;
   }
   if (state.user.role !== role) {
     return <Navigate to={homePathFor(state.user)} replace />;
@@ -21,10 +21,10 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
   return <>{children}</>;
 }
 
-/** `/` sends people to their home, or to sign in. */
+/** `/` sends people to their home; a device that is not signed in starts at "Pair a device". */
 export function RootRedirect() {
   const { state } = useAuth();
   if (state.status === "loading") return <p className="p-8 text-2xl">{copy.common.loading}</p>;
-  if (state.status === "anonymous") return <Navigate to="/login" replace />;
+  if (state.status === "anonymous") return <Navigate to="/pair" replace />;
   return <Navigate to={homePathFor(state.user)} replace />;
 }

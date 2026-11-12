@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import type { GameType, RoundResult } from "../api/client";
 
@@ -22,7 +23,7 @@ export interface GameDefinition {
   type: GameType;
   title: string;
   intro: string;
-  icon: string;
+  icon: LucideIcon;
   Round: ComponentType<RoundProps>;
 }
 

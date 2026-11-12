@@ -1,3 +1,4 @@
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { listFamily, type FamilyMember, type FamilyPhoto } from "../../api/client";
@@ -6,6 +7,7 @@ import { AuthedImage } from "../../components/AuthedImage";
 import { BigButton } from "../../components/BigButton";
 import { Card } from "../../components/Card";
 import { Layout } from "../../components/Layout";
+import { QuestionRow } from "../../games/QuestionRow";
 import { copy } from "../../copy";
 
 interface Tile {
@@ -24,19 +26,23 @@ export function WhoIsThis() {
   if (open) {
     const { member, photo } = open;
     return (
-      <Layout title={member.name} spoken={w.spoken(member.name, member.relation, member.note)}>
-        {/* Height-capped so the words and the Back button stay on screen on a phone. */}
-        <AuthedImage
-          src={photo.url}
-          alt={w.photoOf(member.name)}
-          className="mx-auto aspect-square h-[30vh] max-h-[480px] w-auto max-w-full rounded-2xl object-cover"
-        />
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
+      <Layout title={member.name} spoken={w.spoken(member.name, member.relation, member.note)} compact>
+        {/* The photo is as wide as the screen allows; the words and Back always stay on screen. */}
+        <div className="flex min-h-0 shrink justify-center">
+          <AuthedImage
+            src={photo.url}
+            alt={w.photoOf(member.name)}
+            className="aspect-square max-h-full w-full max-w-[600px] rounded-2xl object-cover"
+          />
+        </div>
+        <QuestionRow spoken={w.spoken(member.name, member.relation, member.note)}>
+          <div className="flex flex-col gap-2">
             <p className="text-3xl font-semibold">{w.thisIs(member.name, member.relation)}</p>
             {member.note && <p className="text-2xl">{member.note}</p>}
           </div>
-          <BigButton label={w.back} icon="⬅️" onClick={() => setOpen(null)} />
+        </QuestionRow>
+        <div className="mt-auto">
+          <BigButton label={w.back} icon={<ArrowLeft />} onClick={() => setOpen(null)} />
         </div>
       </Layout>
     );
@@ -50,13 +56,12 @@ export function WhoIsThis() {
       {family.isError && (
         <Card>
           <p className="mb-6 text-2xl">{w.loadFailed}</p>
-          <BigButton label={copy.games.retry} icon="🔄" onClick={() => void family.refetch()} />
+          <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={() => void family.refetch()} />
         </Card>
       )}
       {family.isSuccess && tiles.length === 0 && (
         <Card>
           <p className="text-2xl">
-            <span aria-hidden="true">👪 </span>
             {w.empty}
           </p>
         </Card>
@@ -71,7 +76,7 @@ export function WhoIsThis() {
                 type="button"
                 onClick={() => setOpen(tile)}
                 aria-label={`${tile.member.name}, ${tile.member.relation}`}
-                className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-white text-left hover:border-brand-dark"
+                className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left hover:border-brand-dark"
               >
                 <AuthedImage src={tile.photo.url} alt="" className="aspect-square w-full object-cover" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>

@@ -1,0 +1,57 @@
+/*
+ * Khayal theme: every colour and font in the app comes from these tokens (PRODUCT.md).
+ * Light mode only. One calm primary (deep indigo), one warm accent (marigold), warm neutrals.
+ * The patient side sits on warm paper with Atkinson Hyperlegible; the caregiver side uses
+ * the same tokens on a quieter near-white with Inter. Game content colours (Sequence tiles,
+ * Reaction Tap circles, card art) are part of the games, not the theme.
+ *
+ * Contrast (checked): ink 15:1, ink-soft 9:1, ink-muted 5.6:1 on paper; white on brand 9:1;
+ * accent-strong 5.3:1 on surface; line-strong 3.4:1 (control borders); focus 3.4:1.
+ */
+@import "@fontsource/atkinson-hyperlegible/latin-400.css";
+@import "@fontsource/atkinson-hyperlegible/latin-700.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+
+@theme {
+  /* Surfaces */
+  --color-paper: oklch(0.975 0.014 85); /* patient canvas: warm paper */
+  --color-desk: oklch(0.978 0.005 85); /* caregiver canvas: quieter near-white */
+  --color-surface: oklch(0.996 0.004 85); /* cards, inputs, light buttons */
+  --color-sunken: oklch(0.945 0.012 80); /* wells, placeholders, waiting states */
+
+  /* Text */
+  --color-ink: oklch(0.22 0.015 60);
+  --color-ink-soft: oklch(0.36 0.015 60);
+  --color-ink-muted: oklch(0.47 0.015 60);
+
+  /* Lines */
+  --color-line: oklch(0.89 0.014 80);
+  --color-line-strong: oklch(0.6 0.02 70);
+
+  /* Primary: calm deep indigo, for the one main action and links */
+  --color-brand: oklch(0.42 0.12 268);
+  --color-brand-dark: oklch(0.34 0.11 268);
+  --color-brand-soft: oklch(0.95 0.025 268);
+
+  /* Accent: warm marigold, for celebration, hints and gentle attention */
+  --color-accent: oklch(0.78 0.15 70);
+  --color-accent-strong: oklch(0.5 0.11 60);
+  --color-accent-soft: oklch(0.965 0.035 80);
+
+  /* Calm green: done, matched, next reminder */
+  --color-calm: oklch(0.48 0.1 155);
+  --color-calm-soft: oklch(0.96 0.03 155);
+
+  /* Caregiver only: errors and critical status (never on patient screens) */
+  --color-danger: oklch(0.5 0.17 27);
+  --color-danger-soft: oklch(0.965 0.02 27);
+
+  /* Focus ring: deep marigold, visible on every surface */
+  --color-focus: oklch(0.6 0.14 60);
+
+  --font-patient: "Atkinson Hyperlegible", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-caregiver: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+}

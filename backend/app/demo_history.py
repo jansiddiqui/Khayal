@@ -8,11 +8,13 @@ realistic dates. Reminder logs for the last 14 days give the adherence tile some
 from datetime import datetime, timedelta
 
 import numpy as np
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import (
     LEVELLED_GAMES,
+    Alert,
+    AlertType,
     GameRound,
     GameSession,
     GameType,
@@ -117,6 +119,31 @@ def load_reminder_logs(db: Session, patient: User, profile: Profile, seed: int) 
             added += 1
     db.commit()
     return added
+
+
+def reset_demo_history(db: Session, patients: list[User]) -> list[str]:
+    """Remove the demo patients' play history so it can be reloaded: all game sessions (and
+    their rounds), levels and decline alerts, and reminder logs dated before today. Today's
+    reminder logs, reminders, family members and other alerts are kept."""
+    report: list[str] = []
+    today = local(utc_now()).date()
+    for patient in patients:
+        if patient.email not in DEMO_PROFILES:
+            continue
+        sessions = list(db.scalars(select(GameSession).where(GameSession.patient_id == patient.id)))
+        for s in sessions:
+            db.delete(s)  # rounds cascade
+        db.execute(delete(PlayerLevel).where(PlayerLevel.patient_id == patient.id))
+        alerts = db.execute(
+            delete(Alert).where(Alert.patient_id == patient.id, Alert.type == AlertType.decline)
+        ).rowcount
+        reminder_ids = select(Reminder.id).where(Reminder.patient_id == patient.id)
+        logs = db.execute(
+            delete(ReminderLog).where(ReminderLog.reminder_id.in_(reminder_ids), ReminderLog.date < today)
+        ).rowcount
+        report.append(f"{patient.email}: removed {len(sessions)} sessions, {alerts} decline alerts, {logs} reminder logs")
+    db.commit()
+    return report
 
 
 def load_demo_history(db: Session, patients: list[User]) -> list[str]:

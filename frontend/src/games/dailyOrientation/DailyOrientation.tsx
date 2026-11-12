@@ -1,5 +1,8 @@
+import { CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow } from "../QuestionRow";
 import { listFamily } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AuthedImage } from "../../components/AuthedImage";
@@ -37,6 +40,8 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   useEffect(() => {
     askedAt.current = Date.now();
   }, [question]);
+  const spoken = question ? `${question.prompt} ${copy.common.spokenChoices(question.options)}` : "";
+  useSpeakOnChange(spoken);
 
   if (!question) return <p className="text-2xl">{copy.common.loading}</p>;
 
@@ -51,18 +56,23 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-3xl font-semibold">{question.prompt}</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <QuestionRow spoken={spoken}>
+        <p className="text-3xl font-semibold">{question.prompt}</p>
+      </QuestionRow>
+      {/* The photo takes only the space left, so every answer stays on screen. */}
       {question.photoUrl && (
-        <AuthedImage
-          src={question.photoUrl}
-          alt={copy.games.orientation.askWhoIsThis}
-          className="mx-auto aspect-square h-[30vh] max-h-[400px] w-auto max-w-full rounded-2xl object-cover"
-        />
+        <div className="flex min-h-0 flex-1 justify-center">
+          <AuthedImage
+            src={question.photoUrl}
+            alt={copy.games.orientation.askWhoIsThis}
+            className="aspect-square h-full max-h-[400px] w-auto max-w-full rounded-2xl object-cover"
+          />
+        </div>
       )}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {question.options.map((option) => (
-          <BigButton key={option} label={option} icon="👉" variant="secondary" onClick={() => answer(option)} />
+          <BigButton key={option} label={option} variant="secondary" size="compact" onClick={() => answer(option)} />
         ))}
       </div>
     </div>
@@ -73,6 +83,6 @@ export const dailyOrientation: GameDefinition = {
   type: "daily_orientation",
   title: copy.games.orientation.title,
   intro: copy.games.orientation.intro,
-  icon: "📅",
+  icon: CalendarDays,
   Round: DailyOrientationRound,
 };

@@ -1,17 +1,18 @@
 """Decline tracking for the dashboard and alerts. The scoring itself is ml.decline.zscore."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import get_args
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app import config
 from app.models import Alert, AlertType, GameRound, GameSession, GameType, Severity, User
 from app.services import reminders
 from app.services.clock import as_utc, local
 from ml.decline import zscore
 
-ALERT_COOLDOWN = timedelta(days=7)
 SIGNAL_WINDOW_DAYS = 14
 
 
@@ -57,9 +58,24 @@ def overview(db: Session, patient_id: int, until: datetime | None = None) -> Ove
     return Overview(index=index, status=zscore.index_status(index), games=games)
 
 
+_RULES: dict[str, zscore.AlertRule] = {rule: rule for rule in get_args(zscore.AlertRule)}
+
+
+def alert_config() -> zscore.DeclineConfig:
+    """The decline settings with the configured alert rule (KHAYAL_ALERT_RULE, default B)."""
+    return replace(zscore.DEFAULT, alert_rule=_RULES[config.ALERT_RULE])
+
+
+def shared_status(z: float | None) -> zscore.IndexStatus:
+    """One scale for a game and for the overall index: Stable / Watch / Declining."""
+    return zscore.index_status(z)
+
+
 def _empty(game: GameType) -> zscore.DeclineResult:
     name = zscore.GAME_NAMES.get(game.value, game.value)
-    return zscore.DeclineResult(score=None, z=None, status="insufficient", explanation=f"{name}: not played yet.")
+    return zscore.DeclineResult(
+        score=None, z=None, status="insufficient", explanation=f"{name}: not played yet.", sessions=0
+    )
 
 
 def index_history(result: Overview) -> list[tuple[date, float]]:
@@ -83,26 +99,31 @@ _SEVERITY = {"warning": Severity.warning, "critical": Severity.critical}
 
 
 def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | None:
-    """Raise one decline alert (worst severity, every declining game explained) at most once per 7 days."""
+    """Raise one decline alert (worst severity, every declining game explained) when
+    `zscore.alert_decision` allows it: each severity at most once per 7 days, and a
+    critical alert may follow a warning inside that window."""
     result = overview(db, patient.id, until=now)
     declining = [r for r in result.games.values() if r.status in ("warning", "critical")]
-    if not declining:
-        return None
-    recent = db.scalar(
-        select(Alert.id).where(
+    recent = db.execute(
+        select(Alert.created_at, Alert.severity).where(
             Alert.patient_id == patient.id,
             Alert.type == AlertType.decline,
-            Alert.created_at > now - ALERT_COOLDOWN,
-            Alert.created_at <= now,
+            Alert.created_at > now - zscore.ALERT_COOLDOWN,
         )
+    ).all()
+    z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in result.games.items()}
+    candidate = zscore.candidate_alert(z_history, alert_config())
+    severity = zscore.alert_decision(
+        [candidate] if candidate is not None else [],
+        [(as_utc(created), "critical" if sev == Severity.critical else "warning") for created, sev in recent if sev != Severity.info],
+        as_utc(now),
     )
-    if recent is not None:
+    if severity is None:
         return None
-    worst = "critical" if any(r.status == "critical" for r in declining) else "warning"
     alert = Alert(
         patient_id=patient.id,
         type=AlertType.decline,
-        severity=_SEVERITY[worst],
+        severity=_SEVERITY[severity],
         message=" ".join(r.explanation for r in sorted(declining, key=lambda r: r.z or 0.0)),
         created_at=now,
     )

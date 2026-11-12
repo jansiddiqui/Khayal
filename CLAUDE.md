@@ -30,7 +30,7 @@ Out of scope for the prototype: mobile app, MRI, real push notifications (use in
 
 ## 2. Tech stack (decided, do not change without asking)
 
-- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios.
+- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios, lucide-react for icons.
 - **Backend:** Python 3.11+ (3.12 is fine), FastAPI, SQLAlchemy 2.0 + Alembic migrations, Pydantic v2, Pillow (photo resizing), SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose, with `bcrypt==4.0.1` pinned because passlib 1.7.4 breaks on newer bcrypt), Uvicorn.
 - **ML:** plain Python modules in `ml/` that the backend imports through `backend/app/services/`. NumPy/pandas only for now. No torch dependency until real models are added.
 - **Tests:** pytest + httpx (FastAPI TestClient) for backend + ml; Vitest + React Testing Library + jsdom + `@testing-library/jest-dom` for frontend.
@@ -87,6 +87,17 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - Then exactly 3 big buttons: "Play a game", "Today's reminders", "Who is this?".
 - The weekly voice task is not on Home. It appears inside the games list as "Tell me about a picture", and only when it is due.
 
+**Patient UI decisions (decided after the UI audit, `docs/ui-audit.md`):**
+
+- Game pieces (cards, tiles, answer options, word choices) never count toward the 3-button rule. The rule covers navigation and actions.
+- No important button below the fold at 375 × 812: every game board, every answer and every commit button ("Done", "Create account") is visible without scrolling. Game screens use a compact play mode for this.
+- No hidden timers (see section 7). Reaction Tap is the only game that measures speed.
+- **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
+- **Fonts (approved dependencies):** `@fontsource/atkinson-hyperlegible` on the patient side, `@fontsource/inter` on the caregiver side.
+- **Patient game names:** "Find the Pairs" (Memory Match), "Follow the Colours" (Sequence Recall), "Remember the Words" (Word Recall), "About Today" (Daily Orientation), "Tap When Green" (Reaction Tap). Caregiver screens keep the clinical names.
+- Demo family photos are plain coloured silhouettes, with no names or initials, so they never give away an answer.
+- **No emoji anywhere in the UI**, patient or caregiver. Interface icons (Home, Read aloud, reminders, games, status, alerts) come from `lucide-react` (approved dependency) in one consistent stroke style, always next to words. Memory Match cards use 10 flat SVG illustrations in one style (chai, roti, mango, rickshaw, marigold, cricket bat, diya, kite, elephant, coconut) as React components in `frontend/src/games/memory/art/`: clear shapes, few details, high contrast, recognisable at 60px. Plain text marks such as ✓ and ● stay only where they carry meaning; `copy.ts` has no decorative symbols.
+
 The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
@@ -94,7 +105,7 @@ The caregiver UI can be a normal dense dashboard.
 - **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
-- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool)
+- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
 - **PlayerLevel**: patient_id, game_type, current_level (1–10), updated_at
 - **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, days_of_week, active
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
@@ -118,14 +129,27 @@ The caregiver UI can be a normal dense dashboard.
 - `z < −1.5` → `warning` alert. `z < −2.5` → `critical` alert. Do not raise the same alert type more than once per 7 days.
 - Interface: `assess(sessions: list[SessionSummary]) -> DeclineResult(score, z, status, explanation)`.
 
+**v2 changes (decided; these override the baseline and alert bullets above):**
+
+- **Warm-up:** ignore each game's first 5 completed sessions. The baseline = the next 10 completed sessions (sessions 6–15). No z and no alerts for a game until it has 15 completed sessions; until then the chart shows "Learning this patient's normal (8/15 sessions)".
+- **Std floor:** baseline std = max(sample std, 0.05, 0.15 × baseline mean).
+- **Clipping:** clip z to [−4, 4] before alerts and before the overall index, so one game can't dominate. The unclipped z is kept for reference.
+- **Escalation:** a `critical` alert may be raised within 7 days of a `warning` for the same patient. The same severity stays limited to once per 7 days.
+- The first version (floor 0.02, no clipping, no warm-up, no escalation) is kept as `zscore.LEGACY` for the ablation in `python -m ml.decline.evaluate`.
+- **Alert rule B is the default (decided after the evaluation):** a decline alert is raised only when the same game's z is below −1.5 on its last 3 completed sessions in a row; the severity comes from that game's latest z (critical below −2.5). Rules A–E stay selectable for the evaluation and per install via `KHAYAL_ALERT_RULE` (`any` = A, `persistence` = B, `two_games` = C, `index` = D, `persistence_or_index` = E). Results: `ml/results/decline_eval.md`.
+
 **Composite score (decided, used in the paper).** Per *completed* session; stopped-early sessions are excluded.
 
 - `acc` = (correct rounds without hint + 0.5 × correct rounds with hint) / rounds
 - `lvl` = level_start / 10 (About Today: `lvl` = 1)
-- `rt` = clamp(patient's baseline median reaction time for this game / this session's median reaction time, 0.5, 1.5). The baseline is the median over the first 10 completed sessions; until those exist, `rt` = 1. About Today: `rt` = 1.
+- `rt` = clamp(patient's baseline median reaction time for this game / this session's median reaction time, 0.5, 1.5). The baseline is the median over the baseline sessions (6–15, after the warm-up); until those exist, `rt` = 1. About Today: `rt` = 1.
 - `composite = acc × lvl × rt`
 
 **Overall cognitive index** = mean of the latest z across the games that have a baseline. The caregiver patient list shows it as a status dot (Stable / Watch / Declining).
+
+**One status scale on caregiver screens (decided):** each game and the overall index use the same words and thresholds (Stable at −0.5 or above, Watch below −0.5, Declining below −1.5, Learning before a baseline), labelled "This game: …" and "Overall: …", with a one-line explanation when they differ. Alerts keep their own thresholds (warning below −1.5, critical below −2.5). Each alert line about a game links to that game's chart and highlights it for 2 seconds.
+
+**Theme (decided):** all colours and fonts come from `frontend/src/theme.css`. Light mode only. One calm primary (deep indigo), one warm accent (marigold); warm paper + Atkinson Hyperlegible on the patient side, near-white + Inter on the caregiver side.
 
 **Secondary signals** (shown on the dashboard, no alerts yet): stopped-early rate and hint rate over the last 14 days, and reminder adherence (patient-marked only).
 
@@ -155,6 +179,15 @@ Each game is a self-contained component: it receives `level`, reports each round
 3. **Word Recall**: show 3–8 everyday words, a short distraction, then pick the ones seen from a list.
 4. **Daily Orientation**: day, date, season, and "Which of these is your grandson?" using family photos. No difficulty levels; results go to the trend only.
 5. **Reaction Tap**: tap when the circle turns green. The only game with timing.
+
+**No hidden timers (decided):** apart from Reaction Tap, nothing on a game screen ends by itself.
+
+- **Memory Match:** the preview stays until the patient taps "I've looked — hide the cards". Difficulty = number of pairs only (there is no preview time any more).
+- **Word Recall:** each word stays until the patient taps "Next word". The star distraction ends once 5 stars are tapped. The pick list has at most 12 words: every shown word plus new ones up to 12.
+- **End of a session:** warm, varied encouragement (never a level number). The main button is "Next game" (the next game on today's list not finished today), or "Back to Home" when all are done; "Play again" is secondary.
+- **Read aloud in games:** when on, each question is spoken with its answer choices, and the kind reply after answering.
+- **Sequence Recall:** after a wrong tap, the game gently replays the right order ("Here's how it went") before moving on.
+- Each round records how long the patient looked before playing as `study_ms` on `GameRound` (nullable: Memory Match preview time, Word Recall total word-viewing time; empty for the other games). It is stored for the decline analysis but is not part of the composite score yet.
 
 **Today's games (decided):** the patient's games list shows exactly 3 games per day, chosen by the server (`GET /me/games/today`, logic in `backend/app/services/today_games.py`).
 

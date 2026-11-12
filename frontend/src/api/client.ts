@@ -84,6 +84,22 @@ export async function register(input: RegisterInput): Promise<TokenResponse> {
   return data;
 }
 
+/** A patient's device signs in with the caregiver's 6-digit code (stays signed in for 90 days). */
+export async function pairDevice(code: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/pair", { code });
+  return data;
+}
+
+export interface PairingCode {
+  code: string;
+  expires_at: string;
+}
+
+export async function createPairingCode(patientId: number): Promise<PairingCode> {
+  const { data } = await api.post<PairingCode>(`/patients/${patientId}/pairing-code`);
+  return data;
+}
+
 export async function getMe(): Promise<User> {
   const { data } = await api.get<User>("/auth/me");
   return data;
@@ -115,6 +131,8 @@ export interface RoundResult {
   /** null when the round has no meaningful reaction time (e.g. a red circle correctly left alone). */
   reaction_ms: number | null;
   hint_used: boolean;
+  /** How long the patient looked before playing (Memory Match preview, Word Recall words); null otherwise. */
+  study_ms?: number | null;
 }
 
 export interface SessionInput {
@@ -372,12 +390,19 @@ export interface TrendPoint {
 
 export interface GameTrend {
   game_type: GameType;
+  /** Alert status (warning/critical thresholds). */
   status: DeclineStatus;
+  /** The shared display scale, the same as the overall index. */
+  trend_status: IndexStatus;
   z: number | null;
   score: number | null;
   baseline_mean: number | null;
   baseline_std: number | null;
   sessions: number;
+  /** Completed sessions before z exists: 5 warm-up + 10 baseline. */
+  sessions_needed: number;
+  /** z before clipping to [−4, 4]. */
+  z_raw: number | null;
   explanation: string;
   points: TrendPoint[];
 }

@@ -1,25 +1,48 @@
 @import "tailwindcss";
+@import "./theme.css";
 
 /* Patient-first defaults (CLAUDE.md section 4): base text 20px, high contrast. */
-@theme {
-  --color-ink: #111827;
-  --color-paper: #fffdf7;
-  --color-brand: #1d4ed8;
-  --color-brand-dark: #1e3a8a;
-  --color-calm: #047857;
-}
-
 html {
   font-size: 20px;
 }
 
 body {
   @apply bg-paper text-ink antialiased;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-patient);
   line-height: 1.5;
 }
 
+/* Headings wrap evenly; body text avoids a lone last word. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+/* The parts the browser draws still follow the theme. */
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+input,
+textarea {
+  caret-color: var(--color-brand);
+}
+
 :focus-visible {
-  outline: 4px solid #f59e0b;
+  outline: 4px solid var(--color-focus);
   outline-offset: 3px;
+}
+
+/* Caregiver screens: Inter, tabular numbers for scores, times and dates. */
+.caregiver {
+  font-family: var(--font-caregiver);
+  font-variant-numeric: tabular-nums;
+}
+.caregiver :focus-visible {
+  outline-width: 3px;
+  outline-offset: 2px;
 }

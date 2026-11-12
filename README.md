@@ -48,6 +48,18 @@ Add 90 days of simulated play so the dashboard charts have data (Rahim = healthy
 python -m app.seed --demo-history
 ```
 
+To regenerate it (e.g. after changing the decline rule), add `--reset`. This removes the demo patients' game sessions, levels and decline alerts and their reminder logs before today, then reloads them. Back up `data/khayal.db` first:
+
+```powershell
+python -m app.seed --demo-history --reset
+```
+
+The demo family photos are plain coloured silhouettes, with no names or initials. To replace older demo photos with them:
+
+```powershell
+python -m app.seed --refresh-demo-photos
+```
+
 Run (from `backend/`, venv active):
 
 ```powershell
@@ -59,7 +71,7 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 | Role | Email |
 |---|---|
 | Caregiver | `caregiver@khayal.test` (linked to all three patients) |
-| Patient | `kamala@khayal.test` (has demo reminders and 3 demo family members with placeholder pictures), `rahim@khayal.test`, `shanti@khayal.test` |
+| Patient | `kamala@khayal.test` (has demo reminders and 3 demo family members with silhouette placeholder photos), `rahim@khayal.test`, `shanti@khayal.test` |
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
@@ -82,7 +94,7 @@ Open http://localhost:5173. The dev server proxies `/api` to the backend on port
 Routes so far:
 
 - `/login`, `/register` — sign in or create an account; `/` sends you to your role's home.
-- `/patient` — patient Home: Next reminder card + Play a game / Today's reminders / Who is this? (patients only).
+- `/patient` — patient Home: a compact Next reminder card + Play a game (with today's progress, "2 of 3 done today") / Today's reminders / Who is this? (patients only). Fits a 375 × 667 phone without scrolling.
 - `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
 - `/patient/reminders` — today's reminders with big Done buttons.
 - `/patient/who-is-this` — family photo grid with name + relation; tapping a photo shows it big and reads aloud who it is.
@@ -90,7 +102,7 @@ Routes so far:
 - `/caregiver` — linked patients with a status dot (Stable / Watch / Declining) from the overall cognitive index, and a form to link a patient by account email (caregivers only).
 - `/caregiver/patients/:id/family` — add, edit and delete people (name, relation, note) and their photos.
 - `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
-- `/caregiver/patients/:id` — alerts with plain explanations (Acknowledge), the overall cognitive index chart, secondary-signal tiles, one composite-score chart per game (baseline dashed, ±1.5 std band), levels, session table, then the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
+- `/caregiver/patients/:id` — a summary card (overall status, latest new alert, reminders done by the patient, last played), alerts with plain explanations (Acknowledge), then collapsible sections: the overall cognitive index chart with secondary-signal tiles; one card per game (the 5-session average as a bold line, single sessions as faint dots, baseline dashed, ±1.5 std band), open only for games on Watch or Declining; levels and session history including stopped-early sessions; settings (pair a device, home city, pinned games).
 
 ## API so far
 
@@ -113,6 +125,8 @@ Routes so far:
 
 ## Games and the adaptive engine
 
+No hidden timers (CLAUDE.md section 7): Memory Match cards stay up until "I've looked — hide the cards", Word Recall words stay until "Next word", and the star distraction ends after 5 stars. Each round stores `study_ms`, the time spent looking before playing. During a round the patient screen switches to a compact play mode that fits a 375 × 812 phone without scrolling. Before and after screenshots are in `docs/ui-audit/batch1/`.
+
 - One session = 5 rounds; the level (1–10, start 2) changes at most once, at the end of a completed session, using `ml/adaptive/rule_based.py` (≥85% → up, <55% → down). The server uses its stored level, not one sent by the client.
 - **Stopped early:** leaving mid-game (Home button, closing the page) saves the rounds played with `completed=false`. These never change the level and show as "Stopped early (3/5 rounds)" for the caregiver.
 - **Show me again:** one hint per round where the game has one. Using it sets `hint_used=true`; the round can still be correct.
@@ -123,6 +137,8 @@ Routes so far:
 - **Daily Orientation** (patients see "About Today"): day of week, month, season (Mar–May Summer, Jun–Sep Monsoon, Oct–Feb Winter), time of day (5–12 Morning, 12–17 Afternoon, otherwise Evening) and home city, or the year if no city is set. No levels (stored at level 1, never adapted), no hint. Every answer gets a kind reply with the right answer ("It's Wednesday today.").
 - **Reaction Tap:** one round = one trial. After a random 2–5 s wait the circle turns green; a tap within 3 s is correct and the reaction time is recorded. From level 4 some circles are red (10% rising to 40% at level 10): not tapping is correct. Tapping too early shows "Wait for green" and the trial repeats without counting. Rounds with no tap store no reaction time (`null`).
 - Patients never see their level. The end screen says "Great work! Next time will be a little more interesting" after a level-up, otherwise "Nice playing! Let's keep it comfortable". Caregivers see levels on the patient page.
+
+**Read aloud** (toggle on every patient screen): each question is spoken with its choices. When it is on, a "Say it again" button sits next to the question in every game and on the Who is this? photo. On Remember the Words' pick list it shares the row with "Show me again", so all 12 words and Done still fit on a phone. Reaction Tap's red circle is a rounded square with a hand icon and "Don't tap", so it never relies on colour alone. Screenshots: `docs/ui-audit/batch4/`.
 
 ## Tests
 
@@ -147,6 +163,19 @@ npm run typecheck # tsc strict
 - Patient-scoped backend routes must call `ensure_patient_access` (`backend/app/deps.py`).
 - Never commit `data/`, `.env`, uploads or model weights.
 
+## Device pairing (patient sign-in)
+
+Patients never type an email or password:
+
+1. On the caregiver's patient page, under Settings, "Pair a device" shows a 6-digit code. It is valid for 10 minutes and works once; a new code replaces the old one.
+2. On the patient's phone or tablet, open Khayal. A device that isn't signed in starts at "Set up this device". Type the code.
+3. The device stays signed in as that patient for 90 days.
+
+- **Caregivers:** they still sign in with email ("Family member or doctor? Sign in with email").
+- **Wrong codes:** after 10 wrong codes from one address within 10 minutes, pairing pauses.
+- **Storage:** codes are stored only as a keyed hash.
+- **API:** `POST /api/patients/{id}/pairing-code` (linked caregiver), `POST /api/auth/pair` `{code}`.
+
 ## Reminders
 
 - A reminder repeats on chosen weekdays at a local time. The patient's Today screen shows a Done button for reminders whose time has come (at most 3 at once), lists later ones without buttons, and lists finished ones with ✓ Done. Wording stays positive: an overdue reminder says "Let's do this now."
@@ -163,7 +192,28 @@ npm run typecheck # tsc strict
 
 ## Decline tracking
 
-The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py` (it goes into the paper). In short: composite = accuracy (hinted correct rounds count half) × level/10 × reaction-time ratio against the patient's own baseline, per completed session. Each game's baseline is its first 10 completed sessions; z compares the mean of the last 5 sessions with it. z < −1.5 raises a warning, z < −2.5 critical, at most one decline alert per 7 days, and the alert lists every declining game in plain words. The overall cognitive index is the mean of the latest z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py` (it goes into the paper). In short: composite = accuracy (hinted correct rounds count half) × level/10 × reaction-time ratio against the patient's own baseline, per completed session.
+
+- **Warm-up:** each game's first 5 completed sessions are ignored (levels are still climbing from 2).
+- **Baseline:** completed sessions 6–15 (also used for the reaction-time baseline). Std = max(sample std, 0.05, 0.15 × baseline mean), so a near-perfect game like About Today can't turn one bad session into an extreme z.
+- Until a game has 15 completed sessions it has no z and no alerts; the chart says "Learning this patient's normal (8/15 sessions)".
+- **z** = (mean of the last 5 sessions − baseline mean) / baseline std, clipped to [−4, 4] so one game can't dominate. z < −1.5 → warning, z < −2.5 → critical.
+- **Alert rule (default B):** a game alerts only when its z has been below −1.5 on 3 consecutive completed sessions. Set `KHAYAL_ALERT_RULE` to choose another rule: `any` (A, any game below −1.5), `persistence` (B, default), `two_games` (C), `index` (D), `persistence_or_index` (E).
+- **Alerts:** each severity at most once per 7 days per patient; a critical may follow a warning within those 7 days (escalation). The alert lists every declining game in plain words.
+- **Overall cognitive index** = mean of the latest (clipped) z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+
+Evaluation for the paper (simulated patients; the current settings and the first version as an ablation):
+
+```powershell
+# from the repo root, backend venv active
+python -m ml.decline.evaluate --patients-per-profile 50 --seeds 5
+```
+
+It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients. It also compares the alert rule variants A–E (`DeclineConfig.alert_rule`: any game, persistence over 3 sessions, two games at once, index only, persistence or index; the app uses B) and draws `ml/results/decline_tradeoff.png`. The chart needs matplotlib, which only the results use:
+
+```powershell
+pip install -r ml/requirements-results.txt
+```
 
 Synthetic data (healthy / MCI / moderate, rounds played through the real adaptive engine):
 
@@ -178,4 +228,5 @@ Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, c
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
+- **Pairing limit kept in memory:** the wrong-code counter for device pairing lives in the server process, so it resets when the server restarts and isn't shared between several server processes.
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.

@@ -8,13 +8,19 @@ function thisIs(name: string, relation: string): string {
 
 export const copy = {
   appName: "Khayal",
+  /** Voice for read-aloud (Indian English now; "hi-IN" once the Hindi copy exists). */
+  speechLang: "en-IN",
   common: {
     loading: "Just a moment…",
+    /** Read aloud after a question: "Thursday, Friday, Monday, or Saturday?" */
+    spokenChoices: (options: readonly string[]) =>
+      options.length < 2 ? options.join("") : `${options.slice(0, -1).join(", ")}, or ${options[options.length - 1]}?`,
   },
   nav: {
     home: "Home",
     readAloudOn: "Read aloud: On",
     readAloudOff: "Read aloud: Off",
+    sayItAgain: "Say it again",
   },
   patientHome: {
     greeting: (name: string) => `Hello, ${name}!`,
@@ -25,6 +31,8 @@ export const copy = {
     playGames: "Play a game",
     todaysReminders: "Today's reminders",
     whoIsThis: "Who is this?",
+    /** Status line on "Play a game": today's progress, never a score. */
+    gamesProgress: (done: number, total: number) => `${done} of ${total} done today`,
   },
   games: {
     title: "Games",
@@ -39,33 +47,46 @@ export const copy = {
     saving: "Just a moment…",
     saveFailed: "We could not save your game just now. Let's try again.",
     retry: "Try again",
-    endUp: "Great work! Next time will be a little more interesting.",
-    endKeep: "Nice playing! Let's keep it comfortable.",
+    /** One is picked at the end of each session, so the ending varies. Never mentions levels. */
+    encouragement: [
+      "Lovely playing. Thank you!",
+      "That was wonderful. Well done.",
+      "Beautifully done. A good stretch for the mind.",
+      "Well played! That was a pleasure.",
+      "You took your time and did it well. Lovely work.",
+    ],
+    /** Added when the game will be a little harder next time. */
+    endUp: "Next time will be a little more interesting.",
     showMeAgain: "Show me again",
     playAgain: "Play again",
     backToGames: "Back to games",
+    nextGame: "Next game",
+    backHome: "Back to Home",
     memoryMatch: {
-      title: "Memory Match",
+      title: "Find the Pairs",
       intro: "Turn over two cards at a time and find the matching pairs.",
-      lookCarefully: "Look carefully at the cards…",
+      lookCarefully: "Look at the cards.",
+      hideCards: "I've looked — hide the cards",
       findPairs: "Now find the pairs.",
       faceDown: (n: number) => `Card ${n}, face down`,
     },
     sequenceRecall: {
-      title: "Sequence Recall",
+      title: "Follow the Colours",
       intro: "Watch the tiles light up, then tap them in the same order.",
       watch: "Watch carefully…",
+      replay: "Here's how it went.",
       yourTurn: "Your turn. Tap the tiles in the same order.",
     },
     wordRecall: {
-      title: "Word Recall",
+      title: "Remember the Words",
       intro: "Some words will appear one at a time. Try to remember them.",
       remember: "Remember this word",
-      stars: "Now tap all the stars.",
+      nextWord: "Next word",
+      stars: "Now tap the 5 stars.",
       starsDone: "Lovely! Just a moment…",
       star: (n: number) => `Star ${n}`,
       starTapped: (n: number) => `Star ${n}, tapped`,
-      choose: "Which words did you see? Tap them, then press Done.",
+      choose: "Which words did you see?",
       done: "Done",
       hintLetters: (letters: string) => `Look for words starting with: ${letters}`,
     },
@@ -88,7 +109,7 @@ export const copy = {
       replyYear: (year: string) => `It's ${year}.`,
     },
     reactionTap: {
-      title: "Reaction Tap",
+      title: "Tap When Green",
       intro: "Tap the circle as soon as it turns green.",
       instructions: "Tap the circle when it turns green.",
       instructionsWithRed: "Tap the circle when it turns green. Don't tap red.",
@@ -148,9 +169,9 @@ export const copy = {
     chai: "Chai",
     roti: "Roti",
     mango: "Mango",
-    auto: "Auto-rickshaw",
+    auto: "Rickshaw",
     marigold: "Marigold",
-    cricket: "Cricket bat",
+    cricket: "Cricket",
     diya: "Diya",
     kite: "Kite",
     elephant: "Elephant",
@@ -179,7 +200,6 @@ export const copy = {
     saveFailed: "That didn't save just now. Let's try again.",
     retry: "Try again",
     types: { medicine: "Medicine", meal: "Meal", appointment: "Appointment", other: "Reminder" },
-    icons: { medicine: "💊", meal: "🍽️", appointment: "🩺", other: "📌" },
     /** "13:05:00" -> "1:05 PM" */
     time: (hhmmss: string) => {
       const [h = 0, m = 0] = hhmmss.split(":").map(Number);
@@ -201,6 +221,17 @@ export const copy = {
   voiceTask: {
     title: "Tell me about a picture",
     comingSoon: "This activity is coming soon.",
+  },
+  pair: {
+    title: "Set up this device",
+    intro: "Ask your family member for the 6-digit code, then type it here.",
+    codeLabel: "6-digit code",
+    submit: "Start",
+    submitting: "Just a moment…",
+    failed: "That code did not work. Please ask for a new one.",
+    tooMany: "Let's wait a few minutes, then try a new code.",
+    unavailable: "We could not reach Khayal just now. Please try again in a moment.",
+    caregiverLink: "Family member or doctor? Sign in with email",
   },
   login: {
     title: "Welcome to Khayal",

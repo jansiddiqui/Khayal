@@ -25,7 +25,7 @@ export function AuthedImage({ src, alt, className = "" }: AuthedImageProps) {
   }, [blob.data]);
 
   if (!objectUrl) {
-    return <div role="img" aria-label={alt} aria-busy={blob.isPending} className={`bg-gray-200 ${className}`} />;
+    return <div role="img" aria-label={alt} aria-busy={blob.isPending} className={`bg-sunken ${className}`} />;
   }
   return <img src={objectUrl} alt={alt} className={className} />;
 }

@@ -7,6 +7,7 @@ import { CaregiverFamily } from "./pages/caregiver/Family";
 import { PatientDetail } from "./pages/caregiver/PatientDetail";
 import { CaregiverReminders } from "./pages/caregiver/Reminders";
 import { Login } from "./pages/Login";
+import { PairDevice } from "./pages/PairDevice";
 import { ComingSoon } from "./pages/patient/ComingSoon";
 import { Games } from "./pages/patient/Games";
 import { PatientHome } from "./pages/patient/Home";
@@ -22,6 +23,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
+      <Route path="/pair" element={<PairDevice />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 

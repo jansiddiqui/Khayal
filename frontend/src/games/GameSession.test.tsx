@@ -1,4 +1,5 @@
 import { fireEvent, screen } from "@testing-library/react";
+import { Puzzle } from "lucide-react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
 import type { SessionResult } from "../api/client";
@@ -9,7 +10,13 @@ import type { GameDefinition, RoundProps } from "./types";
 
 vi.mock("../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/client")>();
-  return { ...actual, getLevel: vi.fn(), postSession: vi.fn(), postSessionOnPageHide: vi.fn() };
+  return {
+    ...actual,
+    getLevel: vi.fn(),
+    postSession: vi.fn(),
+    postSessionOnPageHide: vi.fn(),
+    getTodaysGames: vi.fn(),
+  };
 });
 const api = vi.mocked(apiClient);
 
@@ -21,7 +28,16 @@ function FakeRound({ level, onComplete }: RoundProps) {
     </button>
   );
 }
-const fakeGame: GameDefinition = { type: "memory_match", title: "Fake", intro: "Play the fake game.", icon: "🎲", Round: FakeRound };
+const fakeGame: GameDefinition = { type: "memory_match", title: "Fake", intro: "Play the fake game.", icon: Puzzle, Round: FakeRound };
+
+/** The end message: one of the encouragements, plus the gentle note only when the game got harder. */
+const isEncouragement = (text: string) => (copy.games.encouragement as readonly string[]).includes(text);
+async function findEnding(withUp = false) {
+  const words = await screen.findByText(isEncouragement);
+  if (withUp) expect(screen.getByText(copy.games.endUp)).toBeInTheDocument();
+  else expect(screen.queryByText(copy.games.endUp)).toBeNull();
+  return words;
+}
 
 function result(change: SessionResult["level_change"]): SessionResult {
   const end = change === "up" ? 4 : change === "down" ? 2 : 3;
@@ -60,6 +76,7 @@ async function playFullSession() {
 beforeEach(() => {
   vi.resetAllMocks();
   api.getLevel.mockResolvedValue(3);
+  api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
 });
 
 describe("GameSession", () => {
@@ -76,7 +93,7 @@ describe("GameSession", () => {
       if (i < ROUNDS_PER_SESSION) fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
     }
 
-    expect(await screen.findByText(copy.games.endUp)).toBeInTheDocument();
+    expect(await findEnding(true)).toBeInTheDocument();
     expect(api.postSession).toHaveBeenCalledOnce();
     const body = api.postSession.mock.calls[0]![0];
     expect(body.game_type).toBe("memory_match");
@@ -84,18 +101,18 @@ describe("GameSession", () => {
     expect(body.rounds[0]).toEqual({ correct: true, reaction_ms: 900, hint_used: false });
   });
 
-  it.each(["down", "same"] as const)("level %s ends with the comfortable message", async (change) => {
+  it.each(["down", "same"] as const)("level %s ends on warm encouragement, without the harder-next-time note", async (change) => {
     api.postSession.mockResolvedValue(result(change));
     renderWithProviders(<GameSession game={fakeGame} />);
     await playFullSession();
-    expect(await screen.findByText(copy.games.endKeep)).toBeInTheDocument();
+    expect(await findEnding()).toBeInTheDocument();
   });
 
   it("never shows the level number to the patient", async () => {
     api.postSession.mockResolvedValue(result("up"));
     const { container } = renderWithProviders(<GameSession game={fakeGame} />);
     await playFullSession();
-    await screen.findByText(copy.games.endUp);
+    await findEnding(true);
     expect(container.textContent).not.toMatch(/level/i);
     expect(container.textContent).not.toMatch(/\b4\b/);
   });
@@ -106,7 +123,7 @@ describe("GameSession", () => {
     await playFullSession();
 
     fireEvent.click(await screen.findByRole("button", { name: copy.games.retry }));
-    expect(await screen.findByText(copy.games.endKeep)).toBeInTheDocument();
+    expect(await findEnding()).toBeInTheDocument();
     expect(api.postSession).toHaveBeenCalledTimes(2);
   });
 
@@ -149,7 +166,7 @@ describe("GameSession", () => {
     api.postSession.mockResolvedValue(result("same"));
     const { unmount } = renderWithProviders(<GameSession game={fakeGame} />);
     await playFullSession();
-    await screen.findByText(copy.games.endKeep);
+    await findEnding();
     unmount();
     expect(api.postSession).toHaveBeenCalledOnce();
     expect(api.postSession.mock.calls[0]![0].completed).toBe(true);
@@ -174,6 +191,40 @@ describe("GameSession", () => {
       }
     }
     expect(await screen.findByText(`Answer ${ROUNDS_PER_SESSION - 1}.`)).toBeInTheDocument();
-    expect(screen.getByText(copy.games.endKeep)).toBeInTheDocument();
+    expect(screen.getByText(isEncouragement)).toBeInTheDocument();
+  });
+
+  it("ends with Next game (the next unfinished game today), and Play again as the second choice", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    api.getTodaysGames.mockResolvedValue({
+      games: [
+        { game_type: "daily_orientation", done_today: true },
+        { game_type: "memory_match", done_today: true },
+        { game_type: "word_recall", done_today: false },
+      ],
+      pinned: false,
+    });
+    renderWithProviders(<GameSession game={fakeGame} />);
+    await playFullSession();
+    const next = await screen.findByRole("link", { name: new RegExp(copy.games.nextGame) });
+    expect(next).toHaveAttribute("href", "/patient/games/word_recall");
+    expect(next).toHaveTextContent(copy.games.wordRecall.title);
+    expect(screen.getByRole("button", { name: copy.games.playAgain })).toBeInTheDocument();
+  });
+
+  it("ends with Back to Home when every game today is done", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    api.getTodaysGames.mockResolvedValue({
+      games: [
+        { game_type: "daily_orientation", done_today: true },
+        { game_type: "memory_match", done_today: true },
+        { game_type: "word_recall", done_today: true },
+      ],
+      pinned: false,
+    });
+    renderWithProviders(<GameSession game={fakeGame} />);
+    await playFullSession();
+    expect(await screen.findByRole("link", { name: copy.games.backHome })).toHaveAttribute("href", "/patient");
+    expect(screen.queryByRole("link", { name: new RegExp(copy.games.nextGame) })).toBeNull();
   });
 });

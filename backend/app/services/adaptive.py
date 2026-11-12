@@ -57,7 +57,13 @@ def record_session(
         hints_used=sum(r.hint_used for r in rounds),
         completed=completed,
         rounds=[
-            GameRound(level=level_start, correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used)
+            GameRound(
+                level=level_start,
+                correct=r.correct,
+                reaction_ms=r.reaction_ms,
+                hint_used=r.hint_used,
+                study_ms=r.study_ms,
+            )
             for r in rounds
         ],
     )

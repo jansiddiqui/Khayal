@@ -248,11 +248,13 @@ describe("caregiver reminders and alerts", () => {
     api.listSessions.mockResolvedValue([]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
-    expect(await screen.findByText(alert.message)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Alerts (1 new)" })).toBeInTheDocument();
+    const panel = within(await screen.findByRole("region", { name: "Alerts (1 new)" }));
+    expect(panel.getByText(alert.message)).toBeInTheDocument();
+    // The summary card at the top repeats the latest new alert.
+    expect(within(screen.getByRole("region", { name: "Summary" })).getByText(alert.message)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
     await waitFor(() => expect(api.acknowledgeAlert.mock.calls[0]?.[0]).toBe(3));
     expect(await screen.findByText("Acknowledged (1)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Reminders →" })).toHaveAttribute("href", "/caregiver/patients/2/reminders");
+    expect(screen.getByRole("link", { name: "Reminders" })).toHaveAttribute("href", "/caregiver/patients/2/reminders");
   });
 });

@@ -1,14 +1,19 @@
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pytest
 
 from ml.decline.zscore import (
-    BASELINE_SESSIONS,
-    STD_FLOOR,
+    DEFAULT,
+    LEGACY,
     RoundSummary,
     SessionSummary,
+    AlertRule,
+    alert_decision,
+    candidate_alert,
     assess,
     baseline_reaction_ms,
+    baseline_stats,
     composite,
     completed_in_order,
     index_status,
@@ -17,6 +22,8 @@ from ml.decline.zscore import (
 )
 
 T0 = datetime(2026, 8, 1, 10)
+WARMUP = DEFAULT.warmup_sessions  # 5
+NEEDED = DEFAULT.sessions_needed  # 15
 
 
 def session(
@@ -32,6 +39,11 @@ def session(
     """`correct` correct rounds, of which `hinted` used a hint."""
     rs = [RoundSummary(correct=k < correct, hint_used=k < hinted, reaction_ms=rt) for k in range(rounds)]
     return SessionSummary(game, T0 + timedelta(days=i), level, tuple(rs), completed, session_id=i)
+
+
+def warmup(n: int = WARMUP, **kw: object) -> list[SessionSummary]:
+    """Warm-up sessions that must not affect the baseline: deliberately very different."""
+    return [session(i, correct=0, level=2, rt=9000, **kw) for i in range(n)]  # type: ignore[arg-type]
 
 
 class TestComposite:
@@ -53,68 +65,88 @@ class TestComposite:
         assert composite(session(0, level=10, rt=None), 1000) == pytest.approx(1.0)
 
     def test_about_today_ignores_level_and_rt(self) -> None:
-        s = session(0, correct=4, level=1, rt=9000, game="daily_orientation")
-        assert composite(s, 1000) == pytest.approx(0.8)
+        assert composite(session(0, correct=4, level=1, rt=9000, game="daily_orientation"), 1000) == pytest.approx(0.8)
 
-    def test_baseline_rt_is_median_of_first_ten_session_medians(self) -> None:
-        done = [session(i, rt=1000 + 100 * i) for i in range(12)]
-        assert baseline_reaction_ms(done[:9]) is None
-        assert baseline_reaction_ms(done) == pytest.approx(1450)  # median of 1000..1900
+    def test_rt_baseline_uses_the_baseline_window_not_the_warm_up(self) -> None:
+        done = warmup() + [session(WARMUP + i, rt=1000 + 100 * i) for i in range(12)]
+        assert baseline_reaction_ms(done[: NEEDED - 1]) is None
+        assert baseline_reaction_ms(done) == pytest.approx(1450)  # median of 1000..1900; 9000s ignored
+        assert baseline_reaction_ms(done[5:], LEGACY) == pytest.approx(1450)  # legacy: first 10
 
     def test_stopped_early_sessions_are_excluded(self) -> None:
-        sessions = [session(1, completed=False, rounds=3), session(0)]
-        assert [s.session_id for s in completed_in_order(sessions)] == [0]
+        assert [s.session_id for s in completed_in_order([session(1, completed=False, rounds=3), session(0)])] == [0]
+
+
+class TestBaseline:
+    def test_std_floors(self) -> None:
+        flat_high = [1.0] * 10
+        assert baseline_stats([0.0] * 5 + flat_high) == (1.0, pytest.approx(0.15))  # 0.15 × mean
+        flat_low = [0.2] * 10
+        assert baseline_stats([0.0] * 5 + flat_low) == (0.2, pytest.approx(0.05))  # absolute floor
+        noisy = [0.2, 0.6] * 5
+        mean, std = baseline_stats([0.0] * 5 + noisy)
+        assert mean == pytest.approx(0.4) and std == pytest.approx(0.2108, abs=1e-4)  # sample std wins
+        assert baseline_stats(flat_high, LEGACY) == (1.0, pytest.approx(0.02))
+
+    def test_learning_until_fifteen_sessions(self) -> None:
+        result = assess(warmup() + [session(WARMUP + i) for i in range(3)])
+        assert (result.status, result.z, result.score) == ("insufficient", None, None)
+        assert result.explanation == "Learning this patient's normal (8/15 sessions)"
+        assert (result.sessions, result.sessions_needed) == (8, 15)
+        result = assess(warmup() + [session(WARMUP + i) for i in range(9)])
+        assert result.status == "insufficient" and all(p.z is None for p in result.trend)
+
+    def test_trend_has_z_from_the_fifteenth_session(self) -> None:
+        points = trend(warmup() + [session(WARMUP + i) for i in range(12)])
+        assert [p.z is None for p in points] == [True] * (NEEDED - 1) + [False] * 3
+
+    def test_warm_up_does_not_shape_the_baseline(self) -> None:
+        steady = [session(WARMUP + i, correct=4 + i % 2, level=6) for i in range(15)]
+        assert assess(warmup() + steady).status == "stable"  # a terrible warm-up is ignored
 
 
 class TestDecline:
-    def test_no_baseline_before_ten_sessions(self) -> None:
-        result = assess([session(i) for i in range(9)])
-        assert (result.status, result.z, result.score) == ("insufficient", None, None)
-        assert "9 of 10" in result.explanation
-        assert all(p.z is None for p in result.trend)
-
-    def test_steady_patient_is_stable(self) -> None:
-        sessions = [session(i, correct=4 + i % 2) for i in range(20)]
-        result = assess(sessions)
-        assert result.status == "stable"
-        assert result.z is not None and abs(result.z) < 1.5
-        assert result.baseline_mean is not None
-
-    def test_drop_raises_warning_then_critical(self) -> None:
-        base = [session(i, correct=4 + i % 2, level=6) for i in range(10)]  # composites 0.48 / 0.6
-        mild = base + [session(10 + i, correct=4, level=5) for i in range(5)]  # 0.40
+    def test_drop_raises_warning_then_critical_with_plain_explanation(self) -> None:
+        base = warmup() + [session(WARMUP + i, correct=4 + i % 2, level=6) for i in range(10)]  # 0.48 / 0.6
+        mild = base + [session(NEEDED + i, correct=4, level=5) for i in range(5)]  # 0.40
         result = assess(mild)
         assert result.status == "warning"
         assert result.explanation == (
             f"Memory Match average dropped from {result.baseline_mean:.2f} to {result.score:.2f} "
             f"over the last 5 sessions (z = {format(result.z, '.1f').replace('-', '−')})."
         )
-        severe = base + [session(10 + i, correct=2, level=4) for i in range(5)]  # 0.16
+        severe = base + [session(NEEDED + i, correct=2, level=4) for i in range(5)]  # 0.16
         assert assess(severe).status == "critical"
 
     def test_formula_matches_hand_calculation(self) -> None:
-        # Baseline: alternating 1.0 and 0.8 accuracy at level 5 -> composites 0.5 / 0.4.
-        base = [session(i, correct=5 if i % 2 == 0 else 4, level=5) for i in range(10)]
-        later = [session(10 + i, correct=3, level=5) for i in range(5)]  # 0.3 each
+        base = warmup() + [session(WARMUP + i, correct=5 if i % 2 == 0 else 4, level=5) for i in range(10)]
+        later = [session(NEEDED + i, correct=3, level=5) for i in range(5)]  # 0.3 each
         result = assess(base + later)
         scores = [0.5, 0.4] * 5
         mean = sum(scores) / 10
-        std = (sum((x - mean) ** 2 for x in scores) / 9) ** 0.5
+        std = max((sum((x - mean) ** 2 for x in scores) / 9) ** 0.5, 0.05, 0.15 * mean)
         assert result.baseline_mean == pytest.approx(mean)
         assert result.baseline_std == pytest.approx(std)
         assert result.score == pytest.approx(0.3)
         assert result.z == pytest.approx((0.3 - mean) / std)
 
-    def test_std_floor_for_a_perfectly_flat_baseline(self) -> None:
-        sessions = [session(i) for i in range(10)] + [session(10, correct=4)]
-        result = assess(sessions)
-        assert result.baseline_std == STD_FLOOR
-        # rolling mean of last 5 = (4 × 0.5 + 0.4) / 5 = 0.48 -> z = −0.02 / 0.02 = −1.0
-        assert result.z == pytest.approx(-1.0)
+    def test_one_bad_about_today_session_is_not_extreme(self) -> None:
+        """The case that motivated the floors: perfect baseline, then one 0/5 session."""
+        sessions = [session(i, game="daily_orientation", level=1) for i in range(NEEDED + 4)]
+        sessions.append(session(NEEDED + 4, correct=0, game="daily_orientation", level=1))
+        new = assess(sessions)
+        assert new.z == pytest.approx((0.8 - 1.0) / 0.15)  # −1.33: stable, not an alert
+        assert new.status == "stable"
+        legacy = assess(sessions, LEGACY)
+        assert legacy.z == pytest.approx(-10.0) and legacy.status == "critical"
 
-    def test_trend_has_z_from_the_tenth_session(self) -> None:
-        points = trend([session(i) for i in range(12)])
-        assert [p.z is None for p in points] == [True] * (BASELINE_SESSIONS - 1) + [False] * 3
+    def test_z_is_clipped_but_raw_z_is_kept(self) -> None:
+        base = [session(i, correct=4 + i % 2, level=8) for i in range(NEEDED)]
+        crash = base + [session(NEEDED + i, correct=0, level=8) for i in range(5)]
+        result = assess(crash)
+        assert result.z == -4.0 and result.z_raw is not None and result.z_raw < -4.0
+        assert "(z ≤ −4.0)" in result.explanation
+        assert assess(crash, LEGACY).z == pytest.approx(assess(crash, LEGACY).z_raw)
 
 
 class TestOverallIndex:
@@ -122,9 +154,78 @@ class TestOverallIndex:
         assert overall_index([-1.0, None, -2.0]) == pytest.approx(-1.5)
         assert overall_index([None, None]) is None
 
+    def test_clipping_limits_one_game(self) -> None:
+        assert overall_index([-4.0, 0.2, 0.0, 0.4]) == pytest.approx(-0.85)  # one crash: Watch, not Declining
+
     @pytest.mark.parametrize(
         ("index", "status"),
         [(None, "insufficient"), (0.4, "stable"), (-0.5, "stable"), (-0.6, "watch"), (-1.5, "watch"), (-1.6, "declining")],
     )
     def test_status(self, index: float | None, status: str) -> None:
         assert index_status(index) == status
+
+
+class TestAlertDecision:
+    now = T0 + timedelta(days=30)
+
+    def ago(self, days: float) -> datetime:
+        return self.now - timedelta(days=days)
+
+    def test_worst_game_decides(self) -> None:
+        assert alert_decision(["stable", "insufficient"], [], self.now) is None
+        assert alert_decision(["stable", "warning"], [], self.now) == "warning"
+        assert alert_decision(["warning", "critical"], [], self.now) == "critical"
+
+    def test_same_severity_once_per_7_days(self) -> None:
+        assert alert_decision(["warning"], [(self.ago(6), "warning")], self.now) is None
+        assert alert_decision(["warning"], [(self.ago(7.1), "warning")], self.now) == "warning"
+        assert alert_decision(["critical"], [(self.ago(6), "critical")], self.now) is None
+
+    def test_critical_escalates_within_7_days_of_a_warning(self) -> None:
+        assert alert_decision(["critical"], [(self.ago(2), "warning")], self.now) == "critical"
+        assert alert_decision(["warning"], [(self.ago(2), "critical")], self.now) is None  # no step down
+        assert alert_decision(["critical"], [(self.ago(2), "warning")], self.now, LEGACY) is None
+
+    def test_future_alerts_are_ignored_when_replaying(self) -> None:
+        assert alert_decision(["warning"], [(self.now + timedelta(days=1), "warning")], self.now) == "warning"
+
+
+class TestAlertRules:
+    @staticmethod
+    def check(rule: AlertRule, history: dict[str, list[float]]) -> str | None:
+        return candidate_alert(history, replace(DEFAULT, alert_rule=rule))
+
+    def test_persistence_is_the_default_and_legacy_keeps_any_game(self) -> None:
+        assert DEFAULT.alert_rule == "persistence"
+        assert LEGACY.alert_rule == "any"
+
+    def test_any_game(self) -> None:
+        assert self.check("any", {"memory_match": [0.0, -1.6], "word_recall": [0.2]}) == "warning"
+        assert self.check("any", {"memory_match": [-2.6]}) == "critical"
+        assert self.check("any", {"memory_match": [-1.4]}) is None
+
+    def test_persistence_needs_three_consecutive_sessions_of_one_game(self) -> None:
+        assert self.check("persistence", {"memory_match": [-1.6, -1.6]}) is None
+        assert self.check("persistence", {"memory_match": [-1.6, -1.4, -1.6, -1.6]}) is None
+        assert self.check("persistence", {"memory_match": [-1.6, -1.7, -1.6]}) == "warning"
+        assert self.check("persistence", {"memory_match": [-1.6, -1.7, -2.8]}) == "critical"
+        # Two games, two bad sessions each: not the same game three times.
+        assert self.check("persistence", {"memory_match": [-1.6, -1.6], "word_recall": [-1.6, -1.6]}) is None
+
+    def test_two_games_at_once(self) -> None:
+        assert self.check("two_games", {"memory_match": [-2.8], "word_recall": [-1.0]}) is None
+        assert self.check("two_games", {"memory_match": [-1.6], "word_recall": [-1.7]}) == "warning"
+        assert self.check("two_games", {"memory_match": [-2.8], "word_recall": [-1.7]}) == "critical"
+
+    def test_index_only(self) -> None:
+        assert self.check("index", {"memory_match": [-4.0], "word_recall": [0.0], "reaction_tap": [0.0]}) is None
+        assert self.check("index", {"memory_match": [-2.0], "word_recall": [-1.2]}) == "warning"
+        assert self.check("index", {"memory_match": [-3.0], "word_recall": [-2.6]}) == "critical"
+        assert self.check("index", {"memory_match": []}) is None
+
+    def test_persistence_or_index_takes_the_more_severe(self) -> None:
+        persistent = {"memory_match": [-1.6, -1.6, -1.6], "word_recall": [0.5]}  # index −0.55
+        assert self.check("persistence_or_index", persistent) == "warning"
+        index_only = {"memory_match": [-3.0], "word_recall": [-2.6]}
+        assert self.check("persistence_or_index", index_only) == "critical"
+        assert self.check("persistence_or_index", {"memory_match": [-1.6], "word_recall": [0.0]}) is None

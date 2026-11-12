@@ -1,7 +1,9 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { ArrowRight, House, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
   getLevel,
+  getTodaysGames,
   postSession,
   postSessionOnPageHide,
   type RoundResult,
@@ -12,6 +14,7 @@ import { BigButton } from "../components/BigButton";
 import { Card } from "../components/Card";
 import { copy } from "../copy";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
+import { findGame } from ".";
 import type { GameDefinition, Rng } from "./types";
 
 /** Agreed for M3: one session = 5 rounds, so the level can only change at the end. */
@@ -26,6 +29,8 @@ type Phase =
 interface GameSessionProps {
   game: GameDefinition;
   rng?: Rng;
+  /** True while a round is on screen, so the page can switch to play mode. */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 /**
@@ -35,14 +40,24 @@ interface GameSessionProps {
  * If the patient leaves part-way (Home button, closing the page), the rounds played
  * so far are saved as a stopped-early session, which never changes the level.
  */
-export function GameSession({ game, rng }: GameSessionProps) {
+export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const { speak } = useReadAloud();
+  const queryClient = useQueryClient();
   const level = useQuery({ queryKey: ["level", game.type], queryFn: () => getLevel(game.type), staleTime: 0 });
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const results = useRef<RoundResult[]>([]);
   const startedAt = useRef<string>("");
+  /** The ending picked for this session (varies from session to session). */
+  const ending = useRef("");
   /** True once the current session has been handed to the server (or there is nothing to save). */
   const submitted = useRef(true);
+  /** The kind reply to the last answer, read aloud together with the ending. */
+  const lastFeedback = useRef<string | undefined>(undefined);
+
+  const playing = phase.kind === "playing";
+  useEffect(() => {
+    onPlayingChange?.(playing);
+  }, [playing, onPlayingChange]);
 
   function sessionInput(): SessionInput {
     return {
@@ -58,7 +73,9 @@ export function GameSession({ game, rng }: GameSessionProps) {
     mutationFn: () => postSession(sessionInput()),
     onSuccess: (result: SessionResult) => {
       void level.refetch();
-      speak(endMessage(result));
+      void queryClient.invalidateQueries({ queryKey: ["todaysGames"] });
+      ending.current = endMessage(result, (rng ?? Math.random)());
+      speak([lastFeedback.current, ending.current].filter(Boolean).join(" "));
     },
     onError: () => {
       // Not saved: let leaving the page try once more.
@@ -100,6 +117,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
     results.current = [...results.current, result];
     const message = feedback ?? (result.correct ? copy.games.roundWell : copy.games.roundTryAnother);
     if (round >= ROUNDS_PER_SESSION) {
+      lastFeedback.current = feedback;
       setPhase({ kind: "done", lastFeedback: feedback });
       submit();
     } else {
@@ -108,12 +126,23 @@ export function GameSession({ game, rng }: GameSessionProps) {
     }
   }
 
+  // After a session: the next game on today's list that is not finished yet.
+  const today = useQuery({
+    queryKey: ["todaysGames"],
+    queryFn: getTodaysGames,
+    enabled: phase.kind === "done" && save.isSuccess,
+  });
+  const nextGame = today.data?.games
+    .filter((g) => !g.done_today && g.game_type !== game.type)
+    .map((g) => findGame(g.game_type))
+    .find((g) => g !== undefined);
+
   if (level.isPending) return <p className="text-2xl">{copy.common.loading}</p>;
   if (level.isError) {
     return (
       <Card>
         <p className="mb-6 text-2xl">{copy.games.saveFailed}</p>
-        <BigButton label={copy.games.retry} icon="🔄" onClick={() => void level.refetch()} />
+        <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={() => void level.refetch()} />
       </Card>
     );
   }
@@ -123,14 +152,14 @@ export function GameSession({ game, rng }: GameSessionProps) {
       return (
         <>
           <p className="text-2xl">{game.intro}</p>
-          <BigButton label={copy.games.start} icon="▶️" onClick={start} />
+          <BigButton label={copy.games.start} icon={<Play />} onClick={start} />
         </>
       );
 
     case "playing":
       return (
-        <>
-          <p className="text-xl text-gray-800">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
           <game.Round
             key={phase.round}
             level={level.data}
@@ -138,7 +167,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
             rng={rng}
             onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
           />
-        </>
+        </div>
       );
 
     case "between":
@@ -149,7 +178,7 @@ export function GameSession({ game, rng }: GameSessionProps) {
           </p>
           <BigButton
             label={copy.games.next}
-            icon="➡️"
+            icon={<ArrowRight />}
             onClick={() => setPhase({ kind: "playing", round: phase.round + 1 })}
           />
         </Card>
@@ -160,27 +189,41 @@ export function GameSession({ game, rng }: GameSessionProps) {
         return (
           <Card>
             <p className="mb-6 text-2xl">{copy.games.saveFailed}</p>
-            <BigButton label={copy.games.retry} icon="🔄" onClick={submit} />
+            <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={submit} />
           </Card>
         );
       }
       if (!save.isSuccess) return <p className="text-2xl">{copy.games.saving}</p>;
       return (
-        <>
-          <Card>
-            {phase.lastFeedback && <p className="mb-4 text-2xl">{phase.lastFeedback}</p>}
-            <p className="text-3xl font-semibold" role="status">
-              <span aria-hidden="true">🌟 </span>
-              {endMessage(save.data)}
+        // Kept compact so "Next game" is always on screen on a phone (CLAUDE.md section 4).
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2 rounded-2xl border-2 border-line bg-surface p-4" role="status">
+            {phase.lastFeedback && <p className="text-2xl">{phase.lastFeedback}</p>}
+            <p className="flex items-start gap-2 text-2xl font-semibold">
+              <Sparkles aria-hidden="true" className="mt-1 size-7 shrink-0 text-accent-strong" />
+              <span>{ending.current.replace(copy.games.endUp, "").trim()}</span>
             </p>
-          </Card>
-          <BigButton label={copy.games.playAgain} icon="🔁" onClick={start} />
-          <BigButton to="/patient/games" label={copy.games.backToGames} icon="🧩" variant="secondary" />
-        </>
+            {ending.current.includes(copy.games.endUp) && <p className="text-xl">{copy.games.endUp}</p>}
+          </div>
+          {nextGame ? (
+            <BigButton
+              to={`/patient/games/${nextGame.type}`}
+              label={copy.games.nextGame}
+              note={nextGame.title}
+              icon={<ArrowRight />}
+            />
+          ) : (
+            <BigButton to="/patient" label={copy.games.backHome} icon={<House />} />
+          )}
+          <BigButton label={copy.games.playAgain} icon={<RotateCw />} variant="secondary" onClick={start} />
+        </div>
       );
   }
 }
 
-function endMessage(result: SessionResult): string {
-  return result.level_change === "up" ? copy.games.endUp : copy.games.endKeep;
+/** Warm, varied encouragement; a gentle note when the game will be harder next time. */
+export function endMessage(result: SessionResult, random: number): string {
+  const words = copy.games.encouragement;
+  const pick = words[Math.min(words.length - 1, Math.floor(random * words.length))]!;
+  return result.level_change === "up" ? `${pick} ${copy.games.endUp}` : pick;
 }
