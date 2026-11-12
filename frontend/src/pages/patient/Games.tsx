@@ -21,7 +21,8 @@ export function Games() {
           <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={() => void today.refetch()} />
         </Card>
       )}
-      {today.isSuccess && (
+      {today.isSuccess && today.data.games.length === 0 && <p className="text-2xl">{copy.games.empty}</p>}
+      {today.isSuccess && today.data.games.length > 0 && (
         <nav aria-label="Games" className="flex flex-col gap-5">
           {today.data.games.map(({ game_type, done_today }) => {
             if (game_type === VOICE_TASK) {

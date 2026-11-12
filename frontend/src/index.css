@@ -46,3 +46,36 @@ textarea {
   outline-width: 3px;
   outline-offset: 2px;
 }
+
+/*
+ * Caregiver tables become stacked lists on phones: one block per row, each value
+ * labelled from its cell's data-label. Roles are set in the markup, so screen readers
+ * still read a table.
+ */
+@media (max-width: 639px) {
+  .stack-table,
+  .stack-table tbody,
+  .stack-table tr,
+  .stack-table td {
+    display: block;
+    width: 100%;
+  }
+  .stack-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .stack-table tr {
+    padding-block: 0.5rem;
+  }
+  .stack-table td {
+    padding: 0.125rem 0;
+  }
+  .stack-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--color-ink-muted);
+  }
+}
