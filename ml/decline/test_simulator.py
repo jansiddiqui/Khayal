@@ -68,3 +68,16 @@ def test_cli_writes_the_stable_columns(tmp_path: Path) -> None:
             assert r["composite"] == ""
         else:
             assert 0.0 <= float(r["composite"]) <= 1.5
+
+
+def test_study_time_is_optional_and_leaves_everything_else_unchanged() -> None:
+    plain = simulate_patient(1, "moderate", 60, np.random.default_rng(4), START)
+    studied = simulate_patient(1, "moderate", 60, np.random.default_rng(4), START, np.random.default_rng(9))
+    assert [(s.day, s.game_type, s.rounds, s.level_end, s.completed) for s in plain] == [
+        (s.day, s.game_type, s.rounds, s.level_end, s.completed) for s in studied
+    ]
+    assert all(s.study_ms == () for s in plain)
+    for s in studied:
+        assert len(s.study_ms) == len(s.rounds)
+        has_study = s.game_type in ("memory_match", "word_recall")
+        assert all((t is not None and t > 0) if has_study else t is None for t in s.study_ms)

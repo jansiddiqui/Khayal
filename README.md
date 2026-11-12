@@ -241,6 +241,45 @@ python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv
 
 Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints, median_rt_ms, completed, composite` (composite is empty for stopped-early sessions).
 
+## Deep learning for decline detection (research, not in the app)
+
+GRU, LSTM and an MLP baseline, trained on simulated patients and compared with the app's rule (variant B) on the same test patients. Code in `ml/dl/`, results in `ml/results/dl_decline.md`.
+
+PyTorch stays out of the backend: it has its own environment in `ml/.venv` (gitignored).
+
+```powershell
+# from the repo root, once
+python -m venv ml/.venv
+ml/.venv/Scripts/python -m pip install -r ml/requirements-dl.txt
+
+# full run: 600 patients per profile, 90 days, 5 seeds (about 2 hours on CPU)
+ml/.venv/Scripts/python -m ml.dl.run
+
+# quick check (a few minutes; numbers are not the reported ones)
+ml/.venv/Scripts/python -m ml.dl.run --per-profile 60 --seeds 2 --epochs 5 --out data/dl-quick --cache data/dl-quick
+
+# rewrite the report from the saved models and predictions (no retraining)
+ml/.venv/Scripts/python -m ml.dl.run
+
+# tests for this code (the torch ones are skipped in the backend environment)
+ml/.venv/Scripts/python -m pytest ml/dl
+```
+
+- **Data:** each seed simulates a new cohort with `ml.decline.simulator`, split 70/15/15 by patient, so no patient is in two splits. Scalers are fitted on the training patients only.
+- **Study time:** the simulator now also simulates `study_ms` when given a second random generator. It's off by default, so every earlier result, the CSV and `decline_eval.md`, is unchanged.
+- **Resumable:** trained models and each finished seed are saved in `data/dl/` (gitignored). Running the same command again loads them instead of retraining. Add `--re-evaluate` to recompute predictions from the saved models.
+- **What it reports:**
+  - every method at flag threshold 0.5;
+  - the models at a matched false-alarm rate, with the threshold chosen on validation to match rule B;
+  - threshold-sweep trade-off curves;
+  - robustness on five shifted simulators: later onset, 1.5× noise, slower MCI decline, playing every other day, and the same noise and play rate for every profile;
+  - what the models use in the first two weeks;
+  - limitations.
+- **Outputs** in `ml/results/`:
+  - `dl_decline.md` and `dl_decline.csv` (per seed), plus `dl_sweep.csv` (threshold sweep);
+  - `dl_tradeoff.png`, `dl_confusion.png`, `dl_delay.png` and `dl_training_curves.png`.
+- **Colab:** `ml/notebooks/dl_decline.ipynb` clones the repository and runs the same command. A private repository needs a `GITHUB_TOKEN` Colab secret.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

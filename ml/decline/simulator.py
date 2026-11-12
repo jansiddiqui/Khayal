@@ -13,6 +13,13 @@ CSV columns (stable; also used to train the LSTM later):
 patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints,
 median_rt_ms, completed, composite
 `composite` is empty for stopped-early sessions (they are excluded from scoring).
+
+Study time (`study_ms`, CLAUDE.md section 7) is optional: pass `study_rng` to
+`simulate_patient` to also get how long the patient looked before playing each round
+(Find the Pairs and Remember the Words only). It is drawn from that separate generator,
+so all other numbers stay exactly the same with or without it. It is not in the CSV.
+Model (an assumption, not fitted to real data): about 1.5 s per card pair or 1.8 s per
+word for a healthy adult, slower as ability falls, with log-normal noise.
 """
 
 import argparse
@@ -50,6 +57,8 @@ CSV_COLUMNS = [
 ORIENTATION = "daily_orientation"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall"})
+# Study time per item for a healthy adult (ms): per card pair, per word.
+STUDY_MS_PER_ITEM = {"memory_match": 1500, "word_recall": 1800}
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
     "memory_match": 2600,
@@ -85,6 +94,8 @@ class SimSession:
     level_end: int
     rounds: tuple[RoundSummary, ...]
     completed: bool
+    # Per round, ms looked at before playing; only filled when simulated with a study_rng.
+    study_ms: tuple[int | None, ...] = ()
 
     def summary(self, session_id: int | None = None) -> SessionSummary:
         return SessionSummary(self.game_type, self.started_at, self.level_start, self.rounds, self.completed, session_id)
@@ -104,6 +115,22 @@ def difficulty(game: str, level: int) -> float:
 def red_chance(level: int) -> float:
     """Same rule as the frontend's Reaction Tap: no red below level 4, then 10% → 40%."""
     return 0.0 if level < 4 else min(0.4, 0.1 + (level - 4) * 0.05)
+
+
+def study_items(game: str, level: int) -> int:
+    """Cards pairs (Find the Pairs) or words (Remember the Words) shown at this level, as in the app."""
+    level = min(10, max(1, level))
+    if game == "memory_match":
+        return min(10, level + 1)
+    return 3 + ((level - 1) * 5) // 9
+
+
+def study_time(game: str, level: int, ability: float, rng: np.random.Generator) -> int | None:
+    """How long the patient looks before playing one round (ms); None for games without a study phase."""
+    if game not in STUDY_MS_PER_ITEM:
+        return None
+    slow = 1.0 + 1.0 * max(0.0, 0.8 - ability)
+    return int(STUDY_MS_PER_ITEM[game] * study_items(game, level) * slow * rng.lognormal(0.0, 0.3))
 
 
 def play_round(game: str, level: int, ability: float, rng: np.random.Generator) -> RoundSummary:
@@ -127,18 +154,31 @@ def simulate_patient(
     days: int,
     rng: np.random.Generator,
     start: datetime,
+    study_rng: np.random.Generator | None = None,
+    params: ProfileParams | None = None,
+    onset_day: int = 0,
+    play_every: int = 1,
 ) -> list[SimSession]:
-    """`days` days of play for one patient, starting at local midnight `start` (tz-aware)."""
-    params = PARAMS[profile]
+    """`days` days of play for one patient, starting at local midnight `start` (tz-aware).
+
+    With `study_rng`, each session also gets `study_ms` per round (drawn only from `study_rng`).
+    For robustness tests (all off by default, which gives exactly the usual patients):
+    `params` replaces the profile's parameters, the decline starts on `onset_day` instead of
+    day 0, and with `play_every` = 2 the patient can only play every other day.
+    """
+    params = params or PARAMS[profile]
     ability0 = float(rng.normal(0.80, 0.04))
     levels = {g: START_LEVEL for g in LEVELLED}
     last_played = {g: -1 for g in LEVELLED}
     out: list[SimSession] = []
 
     for day in range(days):
+        if day % play_every:
+            continue
         if rng.random() > params.play_probability:
             continue
-        ability = ability0 - params.decline_per_day * day + float(rng.normal(0.0, params.daily_noise))
+        declined = params.decline_per_day * max(0, day - onset_day)
+        ability = ability0 - declined + float(rng.normal(0.0, params.daily_noise))
         # Today's games: About Today + the 2 levelled games played least recently (ties random).
         tiebreak = rng.permutation(len(LEVELLED))
         flex = sorted(LEVELLED, key=lambda g: (last_played[g], tiebreak[LEVELLED.index(g)]))[:2]
@@ -151,6 +191,9 @@ def simulate_patient(
             n_rounds = int(rng.integers(1, BLOCK_SIZE)) if stopped else BLOCK_SIZE
             level = 1 if game == ORIENTATION else levels[game]
             rounds = tuple(play_round(game, level, ability, rng) for _ in range(n_rounds))
+            study = (
+                tuple(study_time(game, level, ability, study_rng) for _ in rounds) if study_rng is not None else ()
+            )
 
             level_end = level
             if game != ORIENTATION and not stopped:
@@ -160,7 +203,9 @@ def simulate_patient(
                 last_played[game] = day
 
             out.append(
-                SimSession(patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped)
+                SimSession(
+                    patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped, study_ms=study
+                )
             )
             clock += timedelta(minutes=float(rng.uniform(4, 9)))
     return out
