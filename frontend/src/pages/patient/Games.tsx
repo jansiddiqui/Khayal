@@ -1,6 +1,6 @@
-import { RotateCcw } from "lucide-react";
+import { Mic, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getTodaysGames } from "../../api/client";
+import { getTodaysGames, VOICE_TASK } from "../../api/client";
 import { BigButton } from "../../components/BigButton";
 import { Card } from "../../components/Card";
 import { Layout } from "../../components/Layout";
@@ -24,6 +24,18 @@ export function Games() {
       {today.isSuccess && (
         <nav aria-label="Games" className="flex flex-col gap-5">
           {today.data.games.map(({ game_type, done_today }) => {
+            if (game_type === VOICE_TASK) {
+              return (
+                <BigButton
+                  key={VOICE_TASK}
+                  to="/patient/voice"
+                  icon={<Mic />}
+                  label={copy.voiceTask.title}
+                  note={done_today ? copy.games.doneToday : undefined}
+                  variant={done_today ? "secondary" : "primary"}
+                />
+              );
+            }
             const game = findGame(game_type);
             if (!game) return null;
             return (

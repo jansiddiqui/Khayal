@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, String, Time, UniqueConstraint
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, String, Time, UniqueConstraint, false
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,6 +31,10 @@ class User(Base):
     city: Mapped[str | None] = mapped_column(String(80), default=None)
     # Patients only: two game types a caregiver fixed in slots 2-3 of "Today's games", or None.
     pinned_games: Mapped[list[str] | None] = mapped_column(JSON, default=None)
+    # Patients only: the weekly voice task needs a caregiver's consent; off by default.
+    voice_task_enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # When the voice task was last turned on (consent date); None while it is off.
+    voice_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
 class CareLink(Base):
@@ -213,3 +217,22 @@ class FamilyMember(Base):
     # File names under data/uploads/family/{patient_id}/, in display order.
     photo_paths: Mapped[list[str]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SpeechSample(Base):
+    """One recording of the weekly "Tell me about a picture" voice task."""
+
+    __tablename__ = "speech_samples"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # File name under data/uploads/speech/{patient_id}/.
+    audio_path: Mapped[str] = mapped_column(String(80))
+    content_type: Mapped[str] = mapped_column(String(40))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    # Length of the recording as measured by the patient's browser.
+    duration_ms: Mapped[int]
+    # Filled by the speech model (ml/speech); None while it is the stub.
+    transcript: Mapped[str | None] = mapped_column(String(10000), default=None)
+    risk_score: Mapped[float | None] = mapped_column(default=None)
+    model_version: Mapped[str] = mapped_column(String(40))

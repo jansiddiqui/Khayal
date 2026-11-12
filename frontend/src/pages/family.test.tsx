@@ -26,8 +26,8 @@ vi.mock("../api/client", async (importOriginal) => {
 });
 const api = vi.mocked(apiClient);
 
-const kamala: User = { id: 2, name: "Kamala Devi", email: "k@khayal.test", role: "patient", created_at: "", city: "Pune", pinned_games: null };
-const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null };
+const kamala: User = { id: 2, name: "Kamala Devi", email: "k@khayal.test", role: "patient", created_at: "", city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
+const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
 
 function person(id: number, name: string, relation: string, photos: number, note: string | null = null): FamilyMember {
   return {
@@ -185,7 +185,7 @@ describe("patient Who is this?", () => {
 describe("caregiver family page", () => {
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listFamily.mockResolvedValue([rahul]);
   });
 

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.deps import CurrentCaregiver, DbSession, Now, ensure_patient_access
 from app.models import User
 from app.schemas import LinkPatientIn, PairingCodeOut, PatientOut, PatientSummaryOut, PatientUpdateIn
-from app.services import auth, care, decline, pairing
+from app.services import auth, care, decline, pairing, speech
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -46,7 +46,9 @@ def create_pairing_code(patient_id: int, caregiver: CurrentCaregiver, db: DbSess
 
 
 @router.patch("/{patient_id}", response_model=PatientOut)
-def update_patient(patient_id: int, body: PatientUpdateIn, caregiver: CurrentCaregiver, db: DbSession) -> PatientOut:
+def update_patient(
+    patient_id: int, body: PatientUpdateIn, caregiver: CurrentCaregiver, db: DbSession, now: Now
+) -> PatientOut:
     ensure_patient_access(db, caregiver, patient_id)
     patient = db.get(User, patient_id)
     if patient is None:
@@ -56,4 +58,6 @@ def update_patient(patient_id: int, body: PatientUpdateIn, caregiver: CurrentCar
     if "pinned_games" in body.model_fields_set:
         patient.pinned_games = [g.value for g in body.pinned_games] if body.pinned_games else None
     db.commit()
+    if body.voice_task_enabled is not None:
+        speech.set_enabled(db, patient, body.voice_task_enabled, now)
     return PatientOut.model_validate(patient)

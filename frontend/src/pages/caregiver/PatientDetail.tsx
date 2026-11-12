@@ -17,6 +17,7 @@ import {
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
+import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
 import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
 
@@ -468,11 +469,21 @@ export function PatientDetail() {
       )}
 
       {patient && (
+        <Section
+          id="voice"
+          title="Voice recordings"
+          hint={patient.voice_task_enabled ? "Weekly picture description · on" : "Weekly picture description · off"}
+        >
+          <VoiceRecordings patient={patient} />
+        </Section>
+      )}
+
+      {patient && (
         <Section id="settings" title="Settings" hint="Pair a device, home city, pinned games">
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
-            <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
-            <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
+            <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
+            <PinForm key={`pins-${(patient.pinned_games ?? []).join()}`} patientId={patient.id} pinned={patient.pinned_games} />
           </div>
         </Section>
       )}

@@ -1,4 +1,5 @@
 """Seed demo accounts: 1 caregiver linked to 3 patients, plus demo reminders and family for the first patient.
+The first patient (Kamala) also has the weekly voice task turned on.
 
 Run from backend/ with the venv active, after `alembic upgrade head`:  python -m app.seed
 Add 90 days of simulated play (healthy / mci / moderate):              python -m app.seed --demo-history
@@ -17,7 +18,8 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal, ensure_schema_current
 from app.demo_history import load_demo_history, reset_demo_history
 from app.models import FamilyMember, Reminder, ReminderType, Role, User
-from app.services import auth, care, family
+from app.services import auth, care, family, speech
+from app.services.clock import utc_now
 
 DEMO_PASSWORD = "khayal-demo"
 
@@ -97,6 +99,9 @@ def seed(db: Session) -> tuple[User, list[User]]:
             db.add(member)
             db.commit()
             family.add_photo(db, member, placeholder_photo(colour))
+    # Voice task consent for the demo: on for Kamala, off (the default) for the others.
+    if not patients[0].voice_task_enabled:
+        speech.set_enabled(db, patients[0], True, utc_now())
     return caregiver, patients
 
 

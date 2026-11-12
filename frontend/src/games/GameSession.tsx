@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getLevel,
   getTodaysGames,
+  VOICE_TASK,
   postSession,
   postSessionOnPageHide,
   type RoundResult,
@@ -132,10 +133,12 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     queryFn: getTodaysGames,
     enabled: phase.kind === "done" && save.isSuccess,
   });
-  const nextGame = today.data?.games
-    .filter((g) => !g.done_today && g.game_type !== game.type)
-    .map((g) => findGame(g.game_type))
-    .find((g) => g !== undefined);
+  const next = today.data?.games.find((g) => !g.done_today && g.game_type !== game.type);
+  const nextGame = !next
+    ? undefined
+    : next.game_type === VOICE_TASK
+      ? { to: "/patient/voice", title: copy.voiceTask.title }
+      : { to: `/patient/games/${next.game_type}`, title: findGame(next.game_type)?.title ?? "" };
 
   if (level.isPending) return <p className="text-2xl">{copy.common.loading}</p>;
   if (level.isError) {
@@ -207,7 +210,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
           </div>
           {nextGame ? (
             <BigButton
-              to={`/patient/games/${nextGame.type}`}
+              to={nextGame.to}
               label={copy.games.nextGame}
               note={nextGame.title}
               icon={<ArrowRight />}

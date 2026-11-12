@@ -1,18 +1,17 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { RequireRole, RootRedirect } from "./auth/RequireRole";
-import { copy } from "./copy";
 import { CaregiverDashboard } from "./pages/caregiver/Dashboard";
 import { CaregiverFamily } from "./pages/caregiver/Family";
 import { PatientDetail } from "./pages/caregiver/PatientDetail";
 import { CaregiverReminders } from "./pages/caregiver/Reminders";
 import { Login } from "./pages/Login";
 import { PairDevice } from "./pages/PairDevice";
-import { ComingSoon } from "./pages/patient/ComingSoon";
 import { Games } from "./pages/patient/Games";
 import { PatientHome } from "./pages/patient/Home";
 import { PlayGame } from "./pages/patient/PlayGame";
 import { Reminders } from "./pages/patient/Reminders";
+import { VoiceTask } from "./pages/patient/VoiceTask";
 import { WhoIsThis } from "./pages/patient/WhoIsThis";
 import { Register } from "./pages/Register";
 
@@ -32,10 +31,7 @@ export function App() {
       <Route path="/patient/games/:gameType" element={patient(<PlayGame />)} />
       <Route path="/patient/reminders" element={patient(<Reminders />)} />
       <Route path="/patient/who-is-this" element={patient(<WhoIsThis />)} />
-      <Route
-        path="/patient/voice"
-        element={patient(<ComingSoon title={copy.voiceTask.title} message={copy.voiceTask.comingSoon} />)}
-      />
+      <Route path="/patient/voice" element={patient(<VoiceTask />)} />
 
       <Route path="/caregiver" element={caregiver(<CaregiverDashboard />)} />
       <Route path="/caregiver/patients/:patientId" element={caregiver(<PatientDetail />)} />

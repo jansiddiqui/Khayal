@@ -40,6 +40,8 @@ class UserOut(BaseModel):
     created_at: datetime
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    voice_task_enabled: bool = False
+    voice_consent_at: datetime | None = None
 
 
 class TokenOut(BaseModel):
@@ -69,6 +71,8 @@ class PatientOut(BaseModel):
     email: str
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    voice_task_enabled: bool = False
+    voice_consent_at: datetime | None = None
 
 
 class PatientUpdateIn(BaseModel):
@@ -77,6 +81,8 @@ class PatientUpdateIn(BaseModel):
     city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
     # Two different levelled games for slots 2-3 of "Today's games"; null = automatic.
     pinned_games: list[GameType] | None = None
+    # Caregiver consent for the weekly voice task.
+    voice_task_enabled: bool | None = None
 
     @model_validator(mode="after")
     def _check_pins(self) -> "PatientUpdateIn":
@@ -149,7 +155,8 @@ class SessionResultOut(BaseModel):
 
 
 class TodayGameOut(BaseModel):
-    game_type: GameType
+    # "voice_task" is the weekly "Tell me about a picture" (slot 3 when it is due).
+    game_type: GameType | Literal["voice_task"]
     done_today: bool
 
 
@@ -302,3 +309,15 @@ class SignalsOut(BaseModel):
     stopped_early_rate: float | None
     hint_rate: float | None
     adherence: AdherenceOut
+
+
+class SpeechSampleOut(BaseModel):
+    """A voice-task recording. transcript and risk_score stay null until a real model exists."""
+
+    id: int
+    recorded_at: datetime
+    duration_ms: int
+    transcript: str | None
+    risk_score: float | None
+    model_version: str
+    audio_url: str

@@ -111,7 +111,7 @@ The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
 
-- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at
+- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable)
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
 - **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
@@ -119,7 +119,7 @@ The caregiver UI can be a normal dense dashboard.
 - **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, days_of_week, active
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
-- **SpeechSample**: id, patient_id, audio_path, recorded_at, transcript (nullable), risk_score (nullable), model_version
+- **SpeechSample**: id, patient_id, audio_path, content_type, recorded_at, duration_ms, transcript (nullable), risk_score (nullable), model_version
 - **Alert**: id, patient_id, type (`decline` | `missed_reminders` | `speech_risk`), message, severity (`info` | `warning` | `critical`), created_at, acknowledged
 
 ## 6. Core logic (implement exactly)
@@ -206,6 +206,15 @@ Each game is a self-contained component: it receives `level`, reports each round
 - Once a game is finished today (a completed session), its button shows "✓ Done today", but the patient can still play it again.
 - On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
 - "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
+
+**Voice task (decided, Milestone 8):**
+
+- **Picture:** an original flat illustration of a busy Indian home kitchen (`frontend/src/voice/KitchenScene.tsx`): a mother cooking at the stove, milk boiling over, a child on a stool reaching for the laddoo jar, a cat by a spilled glass, rain at the window. No text in the picture. Not a copy of the Cookie Theft picture.
+- **Patient screen "Tell me about a picture":** the picture, "Tell me everything you see happening", one big Start button, then Stop with a simple live sound-level bar. No countdown; it stops by itself after 3 minutes. Then "Thank you, that was lovely." Read aloud speaks the instruction.
+- **Due weekly:** offered when the patient has made no recording in the 6 days before today; it then replaces slot 3, and stays there marked "✓ Done today" once recorded.
+- **Consent:** a caregiver toggle "Voice task enabled" per patient, off by default (on for Kamala in the seed). Turning it on records the consent date; turning it off clears it, hides the task and refuses uploads.
+- **Upload:** WebM or Ogg (Opus) as the raw request body, at most 10 MB, stored under `data/uploads/speech/{patient_id}/` with `duration_ms`; `ml/speech/stub.py` runs on it (no transcript, no score).
+- **Caregiver:** a "Voice recordings" section with date, length, authenticated playback and "Analysis coming soon". No made-up numbers.
 
 ## 8. API (prefix `/api`)
 
