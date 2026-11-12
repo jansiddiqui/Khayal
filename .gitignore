@@ -24,3 +24,7 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Impeccable: the launcher downloads and verifies its engine binary on first run
+.claude/skills/impeccable/scripts/bin/
+*.local.json
