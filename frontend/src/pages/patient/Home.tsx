@@ -37,11 +37,16 @@ export function PatientHome() {
       >
         <AlarmClock aria-hidden="true" className="mt-1 size-8 shrink-0 text-calm" />
         <div>
-          <h2 id="next-reminder" className="text-xl font-bold">
+          {/* A label for the card, not a heading: section 4 keeps headings at 32px or more. */}
+          <p id="next-reminder" className="text-xl font-bold">
             {copy.patientHome.nextReminderLabel}
-          </h2>
+          </p>
           <p className="text-2xl leading-snug">
-            {reminders.isPending ? copy.common.loading : nextReminderText(reminders.data)}
+            {reminders.isPending
+              ? copy.common.loading
+              : reminders.isError
+                ? copy.patientHome.reminderUnavailable
+                : nextReminderText(reminders.data)}
           </p>
         </div>
       </section>

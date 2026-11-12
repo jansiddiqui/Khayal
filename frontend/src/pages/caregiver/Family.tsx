@@ -15,6 +15,7 @@ import {
   type FamilyMemberInput,
 } from "../../api/client";
 import { AuthedImage } from "../../components/AuthedImage";
+import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 
 export const RELATIONS = ["Son", "Daughter", "Grandson", "Granddaughter", "Wife", "Husband", "Friend", "Other"] as const;
@@ -246,7 +247,7 @@ export function CaregiverFamily() {
       </section>
 
       {family.isPending && <p className="text-ink-muted">Loading family…</p>}
-      {family.isError && <p className="text-danger">Could not load the family list.</p>}
+      {family.isError && <LoadError message="Could not load the family list." onRetry={() => void family.refetch()} />}
       {family.isSuccess && family.data.length === 0 && <p className="text-ink-muted">No one added yet.</p>}
       {family.isSuccess && family.data.length > 0 && (
         <ul className="flex flex-col gap-4">

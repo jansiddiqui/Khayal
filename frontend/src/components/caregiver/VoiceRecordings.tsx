@@ -1,6 +1,7 @@
 import { Play } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { LoadError } from "./LoadError";
 import { fetchAudioBlob, listRecordings, updatePatient, type Patient, type SpeechSample } from "../../api/client";
 
 const when = (iso: string) =>
@@ -49,7 +50,7 @@ export function VoiceRecordings({ patient }: { patient: Patient }) {
       </div>
 
       {recordings.isPending && <p className="text-ink-muted">Loading recordings…</p>}
-      {recordings.isError && <p className="text-danger">Could not load the recordings.</p>}
+      {recordings.isError && <LoadError message="Could not load the recordings." onRetry={() => void recordings.refetch()} />}
       {recordings.isSuccess &&
         (recordings.data.length === 0 ? (
           <p className="text-ink-muted">No recordings yet.</p>

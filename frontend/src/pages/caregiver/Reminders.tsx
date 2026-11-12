@@ -13,6 +13,7 @@ import {
   type ReminderInput,
   type ReminderType,
 } from "../../api/client";
+import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { copy } from "../../copy";
 
@@ -203,25 +204,25 @@ export function CaregiverReminders() {
       <section className="overflow-x-auto rounded-lg border border-line bg-surface p-4">
         <h2 className="mb-3 text-lg font-semibold">All reminders</h2>
         {reminders.isPending && <p className="text-ink-muted">Loading reminders…</p>}
-        {reminders.isError && <p className="text-danger">Could not load reminders.</p>}
+        {reminders.isError && <LoadError message="Could not load reminders." onRetry={() => void reminders.refetch()} />}
         {reminders.isSuccess && reminders.data.length === 0 && <p className="text-ink-muted">No reminders yet.</p>}
         {reminders.isSuccess && reminders.data.length > 0 && (
-          <table className="w-full text-left">
-            <thead className="border-b border-line text-ink-muted">
-              <tr>
-                <th className="py-2 pr-3 font-medium">Time</th>
-                <th className="py-2 pr-3 font-medium">Title</th>
-                <th className="py-2 pr-3 font-medium">Type</th>
-                <th className="py-2 pr-3 font-medium">Days</th>
-                <th className="py-2 pr-3 font-medium">Today</th>
-                <th className="py-2 font-medium">Actions</th>
+          <table role="table" className="stack-table w-full text-left">
+            <thead role="rowgroup" className="border-b border-line text-ink-muted">
+              <tr role="row">
+                <th role="columnheader" className="py-2 pr-3 font-medium">Time</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">Title</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">Type</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">Days</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">Today</th>
+                <th role="columnheader" className="py-2 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {reminders.data.map((r) =>
                 editing === r.id ? (
-                  <tr key={r.id} className="border-b border-line">
-                    <td colSpan={6} className="py-3">
+                  <tr role="row" key={r.id} className="border-b border-line">
+                    <td role="cell" colSpan={6} className="py-3">
                       <ReminderForm
                         initial={toInput(r)}
                         submitLabel="Save changes"
@@ -232,18 +233,18 @@ export function CaregiverReminders() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={r.id} className={`border-b border-line last:border-0 ${r.active ? "" : "text-ink-muted"}`}>
-                    <td className="py-2 pr-3">{copy.reminders.time(r.time_of_day)}</td>
-                    <td className="py-2 pr-3">
+                  <tr role="row" key={r.id} className={`border-b border-line last:border-0 ${r.active ? "" : "text-ink-muted"}`}>
+                    <td role="cell" data-label="Time" className="py-2 pr-3">{copy.reminders.time(r.time_of_day)}</td>
+                    <td role="cell" data-label="Title" className="py-2 pr-3">
                       {r.title}
                       {!r.active && " (paused)"}
                     </td>
-                    <td className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
-                    <td className="py-2 pr-3">{daysLabel(r.days_of_week)}</td>
-                    <td className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-accent-strong" : ""}`}>
+                    <td role="cell" data-label="Type" className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
+                    <td role="cell" data-label="Days" className="py-2 pr-3">{daysLabel(r.days_of_week)}</td>
+                    <td role="cell" data-label="Today" className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-accent-strong" : ""}`}>
                       {todayLabel(r)}
                     </td>
-                    <td className="flex gap-2 py-2">
+                    <td role="cell" className="flex gap-2 py-2">
                       <button type="button" onClick={() => setEditing(r.id)} className="text-brand-dark underline">
                         Edit
                       </button>

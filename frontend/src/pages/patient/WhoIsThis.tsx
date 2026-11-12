@@ -51,7 +51,7 @@ export function WhoIsThis() {
   const tiles: Tile[] = (family.data ?? []).flatMap((member) => member.photos.map((photo) => ({ member, photo })));
 
   return (
-    <Layout title={w.title} spokenIntro={tiles.length > 0 ? w.intro : w.empty}>
+    <Layout title={w.title} spokenIntro={tiles.length > 0 ? w.intro : w.empty} snug>
       {family.isPending && <p className="text-2xl">{copy.common.loading}</p>}
       {family.isError && (
         <Card>
@@ -78,7 +78,7 @@ export function WhoIsThis() {
                 aria-label={`${tile.member.name}, ${tile.member.relation}`}
                 className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left hover:border-brand-dark"
               >
-                <AuthedImage src={tile.photo.url} alt="" className="aspect-square w-full object-cover" />
+                <AuthedImage src={tile.photo.url} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>
                 <span className="px-3 pb-3 text-xl">{tile.member.relation}</span>
               </button>

@@ -91,6 +91,23 @@ npm run dev
 
 Open http://localhost:5173. The dev server proxies `/api` to the backend on port 8000.
 
+### Testing on a phone (local HTTPS, optional)
+
+Browsers only allow the microphone (the voice task) on secure pages, so a phone on your Wi-Fi needs HTTPS:
+
+```powershell
+cd frontend
+npm run dev:https
+```
+
+1. Start the backend as usual; the HTTPS dev server still proxies `/api` to it.
+2. Vite prints a `Network:` address such as `https://192.168.1.20:5173/`. Open it on the phone, which must be on the same Wi-Fi.
+3. The certificate is self-signed (`@vitejs/plugin-basic-ssl`), so the phone warns once. Choose "Advanced" → "Continue"; it is your own computer.
+4. Windows may ask to let Node.js through the firewall on private networks. Allow it, or the phone can't connect.
+5. Pair the phone as a patient with a code from the caregiver page (see Device pairing).
+
+Plain `npm run dev` stays HTTP on this computer only.
+
 Routes so far:
 
 - `/login`, `/register` — sign in or create an account; `/` sends you to your role's home.
@@ -239,6 +256,23 @@ The weekly picture description (rules in CLAUDE.md section 7):
   - `GET /api/patients/{id}/speech/{sample_id}/audio` — the audio file.
   - `PATCH /api/patients/{id}` `{voice_task_enabled}` (linked caregiver).
 - Screenshots: `docs/m8/`.
+
+## Polish (Milestone 9)
+
+- **Caregiver pages on a phone:** no sideways scrolling at 375 px. The header wraps, and the patient, session and reminder tables become stacked lists with each value labelled (`.stack-table` in `frontend/src/index.css`; table roles stay in the markup for screen readers).
+- **Loading, empty and error states:** every screen has them.
+  - **Patient screens:** kind wording, always with a way on ("Let's try again"). If reminders can't be loaded, Home says so instead of "Nothing planned".
+  - **Caregiver screens:** errors come with "Try again", and a patient who isn't linked shows "Patient not found".
+- **Accessibility pass (CLAUDE.md section 4):** checked on every patient screen at 375 × 812 with a script in the browser:
+  - text at least 20 px, headings at least 32 px, controls at least 64 px tall;
+  - at most 3 actions besides game pieces, no icon-only controls, the Home button on every screen;
+  - nothing important below the fold, no sideways scroll;
+  - text contrast at least 4.5:1 against its real background.
+  Fixes:
+  - the Home "Next reminder" label is no longer a small heading;
+  - the "Who is this?" grid fits 3 people without scrolling (4:3 photos, snug spacing).
+- **Tests:** they run without warnings; charts get a fixed size in jsdom, and every API call a test triggers is mocked.
+- **Report screenshots:** `docs/report-screenshots/`, numbered in order (patient screens at 375 px, caregiver screens at 1280 px).
 
 ## Known limitations (prototype)
 

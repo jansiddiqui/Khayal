@@ -16,6 +16,7 @@ import {
   type Trend,
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { LoadError } from "../../components/caregiver/LoadError";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
 import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
@@ -134,7 +135,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
         Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
       </h2>
       {alerts.isPending && <p className="text-ink-muted">Loading alerts…</p>}
-      {alerts.isError && <p className="text-danger">Could not load alerts.</p>}
+      {alerts.isError && <LoadError message="Could not load alerts." onRetry={() => void alerts.refetch()} />}
       {alerts.isSuccess && alerts.data.length === 0 && <p className="text-ink-muted">No alerts.</p>}
       <ul className="flex flex-col gap-2">
         {shown.map((a) => {
@@ -158,7 +159,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
                         <button
                           type="button"
                           onClick={() => onShowGame(game)}
-                          className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-brand-dark underline underline-offset-2"
+                          className="inline-flex items-center gap-1 text-left font-medium text-brand-dark underline underline-offset-2"
                         >
                           <ChartLine aria-hidden="true" className="size-4" />
                           See {GAME_NAMES[game]} chart
@@ -351,9 +352,28 @@ export function PatientDetail() {
   });
   const rows = allRows ? sessions.data ?? [] : (sessions.data ?? []).slice(0, SESSION_ROWS);
 
+  if (patients.isError) {
+    return (
+      <CaregiverLayout title="Patient">
+        <LoadError message="Could not load your patients." onRetry={() => void patients.refetch()} />
+      </CaregiverLayout>
+    );
+  }
+  if (patients.isSuccess && !patient) {
+    return (
+      <CaregiverLayout title="Patient not found">
+        <p className="mb-4">This patient is not linked to your account.</p>
+        <Link to="/caregiver" className="inline-flex items-center gap-1 text-brand-dark underline">
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          All patients
+        </Link>
+      </CaregiverLayout>
+    );
+  }
+
   return (
-    <CaregiverLayout title={patient?.name ?? "Patient"}>
-      <nav className="mb-4 flex gap-6">
+    <CaregiverLayout title={patient?.name ?? "Loading…"}>
+      <nav className="mb-4 flex flex-wrap gap-x-6 gap-y-2">
         <Link to="/caregiver" className="inline-flex items-center gap-1 text-brand-dark underline">
           <ArrowLeft aria-hidden="true" className="size-4" />
           All patients
@@ -372,18 +392,30 @@ export function PatientDetail() {
         </button>
       </nav>
 
-      <SummaryCard patientId={patientId} trend={trend.data} signals={signals.data} lastSession={sessions.data?.[0]} />
+      <SummaryCard
+        patientId={patientId}
+        trend={trend.data}
+        trendFailed={trend.isError}
+        signals={signals.data}
+        signalsFailed={signals.isError}
+        sessionsLoading={sessions.isPending}
+        lastSession={sessions.data?.[0]}
+      />
 
       {/* Alerts are always shown, never collapsed. */}
       <AlertsPanel patientId={patientId} onShowGame={showGame} />
 
       <Section title="Overall trend and signals" defaultOpen>
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-          {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-ink-muted">Loading trends…</p>}
+          {trend.isSuccess && <IndexChart trend={trend.data} />}
+          {trend.isPending && <p className="text-ink-muted">Loading trends…</p>}
+          {trend.isError && <LoadError message="Could not load the trends." onRetry={() => void trend.refetch()} />}
           {signals.isSuccess && <SignalTiles signals={signals.data} />}
+          {signals.isError && (
+            <LoadError message="Could not load the 14-day signals." onRetry={() => void signals.refetch()} />
+          )}
         </div>
       </Section>
-      {trend.isError && <p className="mb-4 text-danger">Could not load the trends.</p>}
 
       {trend.isSuccess && (
         <Section title="Games" hint="Games on Watch or Declining are open; tap a game to open or close it." defaultOpen>
@@ -405,7 +437,9 @@ export function PatientDetail() {
       )}
 
       {sessions.isPending && <p className="text-ink-muted">Loading sessions…</p>}
-      {sessions.isError && <p className="text-danger">Could not load sessions for this patient.</p>}
+      {sessions.isError && (
+        <LoadError message="Could not load sessions for this patient." onRetry={() => void sessions.refetch()} />
+      )}
 
       {sessions.isSuccess && (
         <Section title="Levels and session history" hint={`${sessions.data.length} sessions`}>
@@ -426,32 +460,32 @@ export function PatientDetail() {
               <p className="text-ink-muted">No games played yet.</p>
             ) : (
               <>
-                <table className="w-full text-left">
-                  <thead className="border-b border-line text-ink-muted">
-                    <tr>
-                      <th className="py-2 pr-3 font-medium">Date</th>
-                      <th className="py-2 pr-3 font-medium">Game</th>
-                      <th className="py-2 pr-3 font-medium">Status</th>
-                      <th className="py-2 pr-3 font-medium">Level</th>
-                      <th className="py-2 pr-3 font-medium">Correct</th>
-                      <th className="py-2 pr-3 font-medium">Avg reaction</th>
-                      <th className="py-2 font-medium">Hints</th>
+                <table role="table" className="stack-table w-full text-left">
+                  <thead role="rowgroup" className="border-b border-line text-ink-muted">
+                    <tr role="row">
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Date</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Game</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Status</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Level</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Correct</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">Avg reaction</th>
+                      <th role="columnheader" className="py-2 font-medium">Hints</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {rows.map((s) => (
-                      <tr key={s.id} className="border-b border-line last:border-0">
-                        <td className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
-                        <td className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
-                        <td className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
-                        <td className="py-2 pr-3">{levelCell(s)}</td>
-                        <td className="py-2 pr-3">
+                      <tr role="row" key={s.id} className="border-b border-line last:border-0">
+                        <td role="cell" data-label="Date" className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
+                        <td role="cell" data-label="Game" className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
+                        <td role="cell" data-label="Status" className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
+                        <td role="cell" data-label="Level" className="py-2 pr-3">{levelCell(s)}</td>
+                        <td role="cell" data-label="Correct" className="py-2 pr-3">
                           {s.rounds_correct} / {s.rounds_played}
                         </td>
-                        <td className="py-2 pr-3">
+                        <td role="cell" data-label="Avg reaction" className="py-2 pr-3">
                           {s.avg_reaction_ms === null ? "—" : `${(s.avg_reaction_ms / 1000).toFixed(1)} s`}
                         </td>
-                        <td className="py-2">{s.hints_used}</td>
+                        <td role="cell" data-label="Hints" className="py-2">{s.hints_used}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -521,12 +555,18 @@ function Section({
 function SummaryCard({
   patientId,
   trend,
+  trendFailed,
   signals,
+  signalsFailed,
+  sessionsLoading,
   lastSession,
 }: {
   patientId: number;
   trend: Trend | undefined;
+  trendFailed: boolean;
   signals: Signals | undefined;
+  signalsFailed: boolean;
+  sessionsLoading: boolean;
   lastSession: GameSession | undefined;
 }) {
   const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
@@ -542,7 +582,7 @@ function SummaryCard({
             {trend.cognitive_index !== null && <span className="text-ink-muted">index {formatZ(trend.cognitive_index)}</span>}
           </p>
         ) : (
-          <p className="text-ink-muted">Loading…</p>
+          <p className="text-ink-muted">{trendFailed ? "Not available" : "Loading…"}</p>
         )}
       </div>
       <div>
@@ -555,12 +595,12 @@ function SummaryCard({
             {alertLines(latest.message)[0]}
           </p>
         ) : (
-          <p>{alerts.isSuccess ? "No new alerts" : "Loading…"}</p>
+          <p>{alerts.isSuccess ? "No new alerts" : alerts.isError ? "Not available" : "Loading…"}</p>
         )}
       </div>
       <div>
         <p className="text-ink-muted">Reminders done by the patient</p>
-        <p className="text-lg font-semibold">{rate === undefined ? "Loading…" : rate === null ? "—" : `${Math.round(rate * 100)}%`}</p>
+        <p className="text-lg font-semibold">{rate === undefined ? (signalsFailed ? "Not available" : "Loading…") : rate === null ? "—" : `${Math.round(rate * 100)}%`}</p>
         {signals && <p className="text-ink-muted">last {signals.adherence.days} days</p>}
       </div>
       <div>
@@ -572,7 +612,7 @@ function SummaryCard({
             <span className="text-ink-muted">{alertTime(lastSession.started_at)}</span>
           </p>
         ) : (
-          <p className="text-ink-muted">Not played yet</p>
+          <p className="text-ink-muted">{sessionsLoading ? "Loading…" : "Not played yet"}</p>
         )}
       </div>
     </section>

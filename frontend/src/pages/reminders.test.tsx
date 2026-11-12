@@ -4,6 +4,7 @@ import * as apiClient from "../api/client";
 import type { Alert, Reminder, TodayReminder, User } from "../api/client";
 import { App } from "../App";
 import { copy } from "../copy";
+import { EMPTY_SIGNALS, EMPTY_TREND } from "../test/fixtures";
 import { renderWithProviders } from "../test/renderWithProviders";
 
 vi.mock("../api/client", async (importOriginal) => {
@@ -50,6 +51,8 @@ const today = (id: number, title: string, time: string, status: TodayReminder["s
 beforeEach(() => {
   vi.resetAllMocks();
   api.listRecordings.mockResolvedValue([]);
+  api.getTrend.mockResolvedValue(EMPTY_TREND);
+  api.getSignals.mockResolvedValue(EMPTY_SIGNALS);
   api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
 });
 

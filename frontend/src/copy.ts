@@ -26,6 +26,8 @@ export const copy = {
     greeting: (name: string) => `Hello, ${name}!`,
     nextReminderLabel: "Next reminder",
     noReminder: "Nothing planned right now. Enjoy your day.",
+    /** When reminders can't be loaded: never claim there is nothing planned. */
+    reminderUnavailable: "We could not check your reminders just now. Tap Today's reminders to look again.",
     nextReminder: (time: string, title: string) => `${time} · ${title}`,
     reminderNow: (title: string) => `Now · ${title}`,
     playGames: "Play a game",
@@ -39,6 +41,7 @@ export const copy = {
     intro: "Here are today's games. Pick one to play.",
     doneToday: "✓ Done today",
     listFailed: "We could not load today's games just now. Let's try again.",
+    empty: "Your games will be ready soon. Please come back a little later.",
     start: "Start",
     roundOf: (n: number, total: number) => `Round ${n} of ${total}`,
     roundWell: "Well done!",

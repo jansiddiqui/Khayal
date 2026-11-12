@@ -4,6 +4,7 @@ import * as apiClient from "./api/client";
 import type { Patient, User } from "./api/client";
 import { App } from "./App";
 import { copy } from "./copy";
+import { EMPTY_SIGNALS, EMPTY_TREND } from "./test/fixtures";
 import { renderWithProviders } from "./test/renderWithProviders";
 
 vi.mock("./api/client", async (importOriginal) => {
@@ -24,6 +25,7 @@ vi.mock("./api/client", async (importOriginal) => {
     getTodayReminders: vi.fn(),
     listAlerts: vi.fn(),
     listRecordings: vi.fn(),
+    listFamily: vi.fn(),
   };
 });
 
@@ -42,6 +44,9 @@ beforeEach(() => {
   api.getTodayReminders.mockResolvedValue([]);
   api.listAlerts.mockResolvedValue([]);
   api.listRecordings.mockResolvedValue([]);
+  api.listFamily.mockResolvedValue([]);
+  api.getTrend.mockResolvedValue(EMPTY_TREND);
+  api.getSignals.mockResolvedValue(EMPTY_SIGNALS);
   api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
 });
 

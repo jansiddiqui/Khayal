@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { errorStatus, linkPatient, listPatients } from "../../api/client";
+import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
 
@@ -42,33 +43,33 @@ export function CaregiverDashboard() {
         <section className="rounded-lg border border-line bg-surface p-4">
           <h2 className="mb-3 text-lg font-semibold">My patients</h2>
           {patients.isPending && <p className="text-ink-muted">Loading patients…</p>}
-          {patients.isError && <p className="text-danger">Could not load patients.</p>}
+          {patients.isError && <LoadError message="Could not load patients." onRetry={() => void patients.refetch()} />}
           {patients.isSuccess && patients.data.length === 0 && (
             <p className="text-ink-muted">No linked patients yet. Link one using their account email.</p>
           )}
           {patients.isSuccess && patients.data.length > 0 && (
-            <table className="w-full text-left">
-              <thead className="border-b border-line text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Index</th>
-                  <th className="py-2 font-medium">Email</th>
+            <table role="table" className="stack-table w-full text-left">
+              <thead role="rowgroup" className="border-b border-line text-ink-muted">
+                <tr role="row">
+                  <th role="columnheader" className="py-2 pr-4 font-medium">Name</th>
+                  <th role="columnheader" className="py-2 pr-4 font-medium">Status</th>
+                  <th role="columnheader" className="py-2 pr-4 font-medium">Index</th>
+                  <th role="columnheader" className="py-2 font-medium">Email</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {patients.data.map((p) => (
-                  <tr key={p.id} className="border-b border-line last:border-0">
-                    <td className="py-2 pr-4">
+                  <tr role="row" key={p.id} className="border-b border-line last:border-0">
+                    <td role="cell" data-label="Name" className="py-2 pr-4">
                       <Link to={`/caregiver/patients/${p.id}`} className="text-brand-dark underline">
                         {p.name}
                       </Link>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td role="cell" data-label="Status" className="py-2 pr-4">
                       <StatusBadge status={p.cognitive_status} />
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">{p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}</td>
-                    <td className="py-2 text-ink-soft">{p.email}</td>
+                    <td role="cell" data-label="Index" className="py-2 pr-4 tabular-nums">{p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}</td>
+                    <td role="cell" data-label="Email" className="py-2 text-ink-soft">{p.email}</td>
                   </tr>
                 ))}
               </tbody>
