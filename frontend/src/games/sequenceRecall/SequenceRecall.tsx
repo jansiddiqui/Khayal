@@ -2,6 +2,7 @@ import { Palette } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copy } from "../../copy";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow } from "../QuestionRow";
 import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps, RoundResult } from "../types";
 import { buildSequence, sequenceConfig, TILES, type TileId } from "./logic";
@@ -102,9 +103,11 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <p className="text-2xl" aria-live="polite">
-        {prompt}
-      </p>
+      <QuestionRow spoken={prompt}>
+        <p className="text-2xl" aria-live="polite">
+          {prompt}
+        </p>
+      </QuestionRow>
       <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3" style={{ maxHeight: "22rem" }}>
         {TILES.map((tile) => {
           const isLit = lit === tile.id;

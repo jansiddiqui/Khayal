@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowRight, ChartLine, Info, OctagonAlert, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import {
   acknowledgeAlert,
@@ -13,9 +13,11 @@ import {
   type GameSession,
   type GameType,
   type Signals,
+  type Trend,
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
+import { formatZ, StatusBadge } from "../../components/caregiver/Status";
 import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
@@ -322,12 +324,23 @@ export function PatientDetail() {
   useEffect(() => () => clearTimeout(highlightTimer.current), []);
   function showGame(game: GameType) {
     const chart = document.getElementById(trendChartId(game));
+    // Open the game's card (and the Games section) before scrolling to it.
+    if (chart instanceof HTMLDetailsElement) chart.open = true;
+    const section = chart?.closest("details.section");
+    if (section instanceof HTMLDetailsElement) section.open = true;
     const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     chart?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "center" });
     chart?.focus({ preventScroll: true });
     setHighlighted(game);
     clearTimeout(highlightTimer.current);
     highlightTimer.current = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS);
+  }
+
+  function openSettings() {
+    const settings = document.getElementById("settings");
+    if (settings instanceof HTMLDetailsElement) settings.open = true;
+    const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    settings?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
   }
 
   // Sessions arrive newest first, so the first one per game holds the current level.
@@ -352,26 +365,32 @@ export function PatientDetail() {
           Family photos
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
+        <button type="button" onClick={openSettings} className="inline-flex items-center gap-1 text-brand-dark underline">
+          <Smartphone aria-hidden="true" className="size-4" />
+          Pair a device
+        </button>
       </nav>
 
+      <SummaryCard patientId={patientId} trend={trend.data} signals={signals.data} lastSession={sessions.data?.[0]} />
+
+      {/* Alerts are always shown, never collapsed. */}
       <AlertsPanel patientId={patientId} onShowGame={showGame} />
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
-        {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-ink-muted">Loading trends…</p>}
-        {signals.isSuccess && <SignalTiles signals={signals.data} />}
-      </section>
+      <Section title="Overall trend and signals" defaultOpen>
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-ink-muted">Loading trends…</p>}
+          {signals.isSuccess && <SignalTiles signals={signals.data} />}
+        </div>
+      </Section>
       {trend.isError && <p className="mb-4 text-danger">Could not load the trends.</p>}
 
       {trend.isSuccess && (
-        <section aria-labelledby="games-heading" className="mb-6">
-          <h2 id="games-heading" className="mb-1 text-lg font-semibold">
-            Games
-          </h2>
+        <Section title="Games" hint="Games on Watch or Declining are open; tap a game to open or close it." defaultOpen>
           <p className="mb-3 text-sm text-ink-muted">
-            Composite score per completed session. Dashed line: baseline (sessions 6–15; the first 5 are warm-up); shaded band: ±1.5 standard
-            deviations.
+            Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
+            shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).
           </p>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             {trend.data.games.map((g) => (
               <GameTrendChart
                 key={g.game_type}
@@ -381,14 +400,15 @@ export function PatientDetail() {
               />
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
       {sessions.isPending && <p className="text-ink-muted">Loading sessions…</p>}
       {sessions.isError && <p className="text-danger">Could not load sessions for this patient.</p>}
 
       {sessions.isSuccess && (
-        <div className="mb-6 flex flex-col gap-6">
+        <Section title="Levels and session history" hint={`${sessions.data.length} sessions`}>
+        <div className="flex flex-col gap-6">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {currentLevels.map(({ type, level, played }) => (
               <div key={type} className="rounded-lg border border-line bg-surface p-4">
@@ -444,15 +464,106 @@ export function PatientDetail() {
             )}
           </section>
         </div>
+        </Section>
       )}
 
       {patient && (
-        <section className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
-          <PairDevicePanel patientId={patient.id} patientName={patient.name} />
-          <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
-          <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
-        </section>
+        <Section id="settings" title="Settings" hint="Pair a device, home city, pinned games">
+          <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
+            <PairDevicePanel patientId={patient.id} patientName={patient.name} />
+            <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
+            <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
+          </div>
+        </Section>
       )}
     </CaregiverLayout>
+  );
+}
+
+/** A collapsible page section: the heading always shows; the content opens and closes. */
+function Section({
+  id,
+  title,
+  hint,
+  defaultOpen = false,
+  children,
+}: {
+  id?: string;
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details id={id} open={defaultOpen} className="section group mb-6 scroll-mt-20">
+      <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden">
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0 self-center text-ink-muted transition-transform group-open:rotate-90" />
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {hint && <span className="text-sm text-ink-muted">{hint}</span>}
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+/** At a glance: overall status, the latest new alert, reminder adherence and when the patient last played. */
+function SummaryCard({
+  patientId,
+  trend,
+  signals,
+  lastSession,
+}: {
+  patientId: number;
+  trend: Trend | undefined;
+  signals: Signals | undefined;
+  lastSession: GameSession | undefined;
+}) {
+  const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
+  const latest = alerts.data?.find((a) => !a.acknowledged);
+  const rate = signals?.adherence.rate;
+  return (
+    <section aria-label="Summary" className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <p className="text-ink-muted">Overall</p>
+        {trend ? (
+          <p className="flex items-center gap-3 text-lg">
+            <StatusBadge status={trend.cognitive_status} />
+            {trend.cognitive_index !== null && <span className="text-ink-muted">index {formatZ(trend.cognitive_index)}</span>}
+          </p>
+        ) : (
+          <p className="text-ink-muted">Loading…</p>
+        )}
+      </div>
+      <div>
+        <p className="text-ink-muted">Latest alert</p>
+        {latest ? (
+          <p className="line-clamp-2">
+            <span className="font-medium capitalize">{latest.severity}</span>
+            <span className="text-ink-muted"> · {alertTime(latest.created_at)}</span>
+            <br />
+            {alertLines(latest.message)[0]}
+          </p>
+        ) : (
+          <p>{alerts.isSuccess ? "No new alerts" : "Loading…"}</p>
+        )}
+      </div>
+      <div>
+        <p className="text-ink-muted">Reminders done by the patient</p>
+        <p className="text-lg font-semibold">{rate === undefined ? "Loading…" : rate === null ? "—" : `${Math.round(rate * 100)}%`}</p>
+        {signals && <p className="text-ink-muted">last {signals.adherence.days} days</p>}
+      </div>
+      <div>
+        <p className="text-ink-muted">Last played</p>
+        {lastSession ? (
+          <p>
+            <span className="font-medium">{GAME_NAMES[lastSession.game_type]}</span>
+            <br />
+            <span className="text-ink-muted">{alertTime(lastSession.started_at)}</span>
+          </p>
+        ) : (
+          <p className="text-ink-muted">Not played yet</p>
+        )}
+      </div>
+    </section>
   );
 }

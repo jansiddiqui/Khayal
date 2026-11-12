@@ -7,6 +7,7 @@ import { AuthedImage } from "../../components/AuthedImage";
 import { BigButton } from "../../components/BigButton";
 import { Card } from "../../components/Card";
 import { Layout } from "../../components/Layout";
+import { QuestionRow } from "../../games/QuestionRow";
 import { copy } from "../../copy";
 
 interface Tile {
@@ -34,10 +35,12 @@ export function WhoIsThis() {
             className="aspect-square max-h-full w-full max-w-[600px] rounded-2xl object-cover"
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-3xl font-semibold">{w.thisIs(member.name, member.relation)}</p>
-          {member.note && <p className="text-2xl">{member.note}</p>}
-        </div>
+        <QuestionRow spoken={w.spoken(member.name, member.relation, member.note)}>
+          <div className="flex flex-col gap-2">
+            <p className="text-3xl font-semibold">{w.thisIs(member.name, member.relation)}</p>
+            {member.note && <p className="text-2xl">{member.note}</p>}
+          </div>
+        </QuestionRow>
         <div className="mt-auto">
           <BigButton label={w.back} icon={<ArrowLeft />} onClick={() => setOpen(null)} />
         </div>

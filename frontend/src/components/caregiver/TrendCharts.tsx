@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChevronRight } from "lucide-react";
 import type { GameTrend, IndexStatus, Trend } from "../../api/client";
 import { formatGameZ, formatZ, STATUS_SCALE_TEXT, StatusBadge, statusDifference } from "./Status";
 
@@ -30,12 +31,24 @@ export const GAME_NAMES = {
   reaction_tap: "Reaction Tap",
 } as const;
 
+/** Rolling mean of the last `n` values at each point (the same 5-session average alerts use). */
+export function rollingMean(values: readonly number[], n = 5): number[] {
+  return values.map((_, i) => {
+    const window = values.slice(Math.max(0, i + 1 - n), i + 1);
+    return window.reduce((a, b) => a + b, 0) / window.length;
+  });
+}
+
 /** The chart's element id, so alerts can link to it. */
 export const trendChartId = (game: GameTrend["game_type"]) => `trend-${game}`;
 
+/** Games on Watch or Declining open by default; the others start collapsed. */
+export const opensByDefault = (trend: GameTrend) => trend.trend_status === "watch" || trend.trend_status === "declining";
+
 /**
- * Composite per completed session, the baseline mean (dashed) and a ±1.5 std band.
- * `highlighted` briefly rings the chart when an alert links to it.
+ * A collapsible card per game: the 5-session average (bold), each session (faint dots), the
+ * baseline mean (dashed) and a ±1.5 std band. The closed card still shows name, z and status.
+ * `highlighted` briefly rings the card when an alert links to it.
  */
 export function GameTrendChart({
   trend,
@@ -46,28 +59,34 @@ export function GameTrendChart({
   overall: IndexStatus;
   highlighted?: boolean;
 }) {
-  const data = trend.points.map((p) => ({ t: Date.parse(p.started_at), composite: p.composite }));
+  const averages = rollingMean(trend.points.map((p) => p.composite));
+  const data = trend.points.map((p, i) => ({ t: Date.parse(p.started_at), composite: p.composite, average: averages[i]! }));
   const { baseline_mean: mean, baseline_std: std } = trend;
   const top = Math.max(1, ...data.map((d) => d.composite), mean !== null && std !== null ? mean + BAND_Z * std : 0);
   const name = GAME_NAMES[trend.game_type];
 
   return (
-    <figure
+    <details
       id={trendChartId(trend.game_type)}
       tabIndex={-1}
+      open={opensByDefault(trend)}
+      aria-label={`${name} trend`}
       className={
-        "scroll-mt-24 rounded-lg border bg-surface p-4 transition-shadow duration-300 " +
+        "group/card scroll-mt-24 rounded-lg border bg-surface transition-shadow duration-300 " +
         (highlighted ? "border-accent-strong shadow-[0_0_0_4px_var(--color-accent)]" : "border-line")
       }
-      aria-label={`${name} trend`}
     >
-      <figcaption className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <span className="font-semibold">{name}</span>
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 font-semibold">
+          <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-ink-muted transition-transform group-open/card:rotate-90" />
+          {name}
+        </span>
         <span className="flex items-center gap-3 text-sm">
           {trend.z !== null && <span className="text-ink-muted">{formatGameZ(trend.z, trend.z_raw)}</span>}
           <StatusBadge status={trend.trend_status} scope="This game" />
         </span>
-      </figcaption>
+      </summary>
+      <figure className="px-4 pb-4" aria-label={`${name} chart`}>
       <p className="text-sm text-ink-soft">{trend.explanation}</p>
       {statusDifference(trend.trend_status, overall) && (
         <p className="mt-1 text-sm text-ink-muted">{statusDifference(trend.trend_status, overall)}</p>
@@ -93,16 +112,20 @@ export function GameTrendChart({
               )}
               <Tooltip
                 labelFormatter={(t) => new Date(Number(t)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                formatter={(value) => [Number(value).toFixed(2), "Composite"]}
+                formatter={(value, key) => [Number(value).toFixed(2), key === "average" ? "5-session average" : "This session"]}
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
-              <Line type="monotone" dataKey="composite" stroke={SERIES} strokeWidth={2} dot={false}
+              {/* Each session as a faint dot; the bold line is the 5-session average the alerts use. */}
+              <Line type="monotone" dataKey="composite" stroke="none" isAnimationActive={false} legendType="none"
+                dot={{ r: 2.5, fill: SERIES, fillOpacity: 0.3, stroke: "none" }} activeDot={{ r: 4, fill: SERIES }} />
+              <Line type="monotone" dataKey="average" stroke={SERIES} strokeWidth={3} dot={false}
                 activeDot={{ r: 5, stroke: "#fcfcfb", strokeWidth: 2 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}
-    </figure>
+      </figure>
+    </details>
   );
 }
 

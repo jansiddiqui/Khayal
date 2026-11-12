@@ -103,14 +103,25 @@ it("patient page shows the index, game trends with explanations, and secondary s
   expect(index.getByText("Overall:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("Overall: Declining");
 
   // One scale for games and overall; a game that differs from the overall says why.
-  const memory = within(screen.getByRole("figure", { name: "Memory Match trend" }));
+  const memory = within(screen.getByRole("group", { name: "Memory Match trend" }));
   expect(memory.getByText("This game:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("This game: Declining");
   expect(memory.queryByText(/averages all games/)).toBeNull();
-  const word = within(screen.getByRole("figure", { name: "Word Recall trend" }));
+  const word = within(screen.getByRole("group", { name: "Word Recall trend" }));
   expect(word.getByText("This game:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("This game: Watch");
   expect(word.getByText(/steadier than the overall status \(Declining\)/)).toBeInTheDocument();
+
+  // Games on Watch or Declining open by default; the others start collapsed.
+  expect(screen.getByRole("group", { name: "Memory Match trend" })).toHaveAttribute("open");
+  expect(screen.getByRole("group", { name: "Word Recall trend" })).toHaveAttribute("open");
+  expect(screen.getByRole("group", { name: "Reaction Tap trend" })).not.toHaveAttribute("open");
+
+  // Summary card at the top: overall status, latest alert, adherence, last played.
+  const summary = within(screen.getByRole("region", { name: "Summary" }));
+  expect(summary.getByText("Declining")).toBeInTheDocument();
+  expect(summary.getByText("75%")).toBeInTheDocument();
+  expect(summary.getByText("No new alerts")).toBeInTheDocument();
   expect(memory.getByText(trend.games[0]!.explanation)).toBeInTheDocument();
-  const reaction = within(screen.getByRole("figure", { name: "Reaction Tap trend" }));
+  const reaction = within(screen.getByRole("group", { name: "Reaction Tap trend" }));
   expect(reaction.getByText("Learning")).toBeInTheDocument();
   expect(reaction.getByText("Learning this patient's normal (8/15 sessions)")).toBeInTheDocument();
 
@@ -162,10 +173,16 @@ it("each alert line links to its game's chart, which is highlighted for 2 second
   expect(screen.getAllByRole("button", { name: /^See .* chart$/ })).toHaveLength(2); // none for missed reminders
   vi.useFakeTimers();
   fireEvent.click(link);
-  const chart = screen.getByRole("figure", { name: "Word Recall trend" });
+  const chart = screen.getByRole("group", { name: "Word Recall trend" });
   expect(scrolled).toEqual(["trend-word_recall"]);
+  expect(chart).toHaveAttribute("open");
   expect(chart.className).toContain("border-accent-strong");
   act(() => vi.advanceTimersByTime(HIGHLIGHT_MS));
   expect(chart.className).not.toContain("border-accent-strong");
   vi.useRealTimers();
+});
+
+it("draws the 5-session average that alerts use", async () => {
+  const { rollingMean } = await import("../components/caregiver/TrendCharts");
+  expect(rollingMean([1, 2, 3, 4, 5, 6])).toEqual([1, 1.5, 2, 2.5, 3, 4]);
 });

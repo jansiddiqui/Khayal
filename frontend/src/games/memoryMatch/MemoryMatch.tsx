@@ -5,6 +5,7 @@ import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps } from "../types";
 import { EyeOff, LayoutGrid } from "lucide-react";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow } from "../QuestionRow";
 import { CARD_ART } from "../memory/art";
 import { boardColumns, buildDeck, isBoardCorrect, memoryMatchConfig } from "./logic";
 
@@ -79,7 +80,8 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
     setRevealing(true);
   }
 
-  useSpeakOnChange(revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs);
+  const prompt = revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs;
+  useSpeakOnChange(prompt);
 
   const columns = boardColumns(deck.length);
   const rows = Math.ceil(deck.length / columns);
@@ -89,9 +91,11 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <p className="text-2xl" aria-live="polite">
-        {revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs}
-      </p>
+      <QuestionRow spoken={prompt}>
+        <p className="text-2xl" aria-live="polite">
+          {revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs}
+        </p>
+      </QuestionRow>
       {/* The board takes the space that is left, so every card is on screen without scrolling. */}
       <div
         className="grid min-h-0 flex-1 gap-2"

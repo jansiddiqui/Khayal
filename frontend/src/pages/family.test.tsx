@@ -162,10 +162,14 @@ describe("patient Who is this?", () => {
     expect(screen.getByText("Lives in Pune, visits on Sundays.")).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: copy.whoIsThis.photoOf("Rahul") })).toBeInTheDocument();
     await waitFor(() => expect(spoken[spoken.length - 1]).toBe("This is Rahul, your grandson. Lives in Pune, visits on Sundays."));
-    // Help, not a test: nothing to answer, just Back.
+    // Help, not a test: nothing to answer, just Back (and "Say it again", since Read aloud is on).
     expect(within(screen.getByRole("main")).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      expect.stringContaining(copy.nav.sayItAgain),
       expect.stringContaining(copy.whoIsThis.back),
     ]);
+    spoken.length = 0;
+    fireEvent.click(screen.getByRole("button", { name: copy.nav.sayItAgain }));
+    expect(spoken).toEqual(["This is Rahul, your grandson. Lives in Pune, visits on Sundays."]);
 
     fireEvent.click(screen.getByRole("button", { name: copy.whoIsThis.back }));
     expect(screen.getByRole("heading", { name: copy.whoIsThis.title })).toBeInTheDocument();

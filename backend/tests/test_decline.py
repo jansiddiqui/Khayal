@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -68,7 +69,8 @@ def test_decline_alert_with_plain_explanation_and_7_day_cooldown(db: Session) ->
     assert len(db.scalars(select(Alert)).all()) == 2
 
 
-def test_critical_escalates_within_7_days_of_a_warning(db: Session) -> None:
+def test_critical_escalates_within_7_days_of_a_warning(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(decline.config, "ALERT_RULE", "any")  # rule A: a single session below −1.5 alerts
     patient, _ = patient_and_caregiver(db)
     steady_then_drop(db, patient, GameType.daily_orientation, drop_to=3)  # 0.6: z = −2.2
     for d in range(NEEDED + 5, NEEDED + 10):
@@ -159,8 +161,8 @@ def test_trend_and_signals_api(client: TestClient, register: Register, clock: Cl
 
     alerts = client.get(f"/api/patients/{pid}/alerts", headers=cg).json()
     decline_alerts = [a for a in alerts if a["type"] == "decline"]
-    # A warning at the first drop, then escalated to critical within the 7 days, then throttled.
-    assert [a["severity"] for a in sorted(decline_alerts, key=lambda a: a["created_at"])] == ["warning", "critical"]
+    # Default rule B waits for 3 low sessions in a row (z −1.63, −2.22, −3.11): one critical alert, then throttled.
+    assert [a["severity"] for a in sorted(decline_alerts, key=lambda a: a["created_at"])] == ["critical"]
     assert "About Today average dropped from 0.90" in decline_alerts[0]["message"]
 
     listed = client.get("/api/patients", headers=cg).json()[0]
@@ -173,3 +175,12 @@ def test_trend_and_signals_api(client: TestClient, register: Register, clock: Cl
     stranger = bearer(register("Sam", "s@example.com", "caregiver"))
     assert client.get(f"/api/patients/{pid}/trend", headers=stranger).status_code == 403
     assert client.get(f"/api/patients/{pid}/signals", headers=stranger).status_code == 403
+
+
+def test_default_rule_b_waits_for_three_low_sessions_in_a_row(db: Session) -> None:
+    patient, _ = patient_and_caregiver(db)
+    steady_then_drop(db, patient, GameType.daily_orientation, drop_to=2)  # z −0.74, −1.63, −2.22, −3.11, −3.7
+    assert decline.config.ALERT_RULE == "persistence"
+    assert decline.evaluate_and_alert(db, patient, T0 + timedelta(days=NEEDED + 2, hours=1)) is None  # 2 below
+    alert = decline.evaluate_and_alert(db, patient, T0 + timedelta(days=NEEDED + 3, hours=1))  # 3rd in a row
+    assert alert is not None and alert.severity.value == "critical"

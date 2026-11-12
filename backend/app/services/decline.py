@@ -1,11 +1,13 @@
 """Decline tracking for the dashboard and alerts. The scoring itself is ml.decline.zscore."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import get_args
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app import config
 from app.models import Alert, AlertType, GameRound, GameSession, GameType, Severity, User
 from app.services import reminders
 from app.services.clock import as_utc, local
@@ -56,6 +58,14 @@ def overview(db: Session, patient_id: int, until: datetime | None = None) -> Ove
     return Overview(index=index, status=zscore.index_status(index), games=games)
 
 
+_RULES: dict[str, zscore.AlertRule] = {rule: rule for rule in get_args(zscore.AlertRule)}
+
+
+def alert_config() -> zscore.DeclineConfig:
+    """The decline settings with the configured alert rule (KHAYAL_ALERT_RULE, default B)."""
+    return replace(zscore.DEFAULT, alert_rule=_RULES[config.ALERT_RULE])
+
+
 def shared_status(z: float | None) -> zscore.IndexStatus:
     """One scale for a game and for the overall index: Stable / Watch / Declining."""
     return zscore.index_status(z)
@@ -102,7 +112,7 @@ def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | Non
         )
     ).all()
     z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in result.games.items()}
-    candidate = zscore.candidate_alert(z_history)
+    candidate = zscore.candidate_alert(z_history, alert_config())
     severity = zscore.alert_decision(
         [candidate] if candidate is not None else [],
         [(as_utc(created), "critical" if sev == Severity.critical else "warning") for created, sev in recent if sev != Severity.info],

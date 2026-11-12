@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -49,9 +50,12 @@ def test_replay_alerts_follow_the_backend_rules() -> None:
     sessions = flat_then_crash(40, crash_from=20)
     final, alerts = replay(sessions, 40, zscore.DEFAULT)
     assert final == "declining"
-    # Day 20: one 0/5 session drops the rolling mean to 0.8, z = −1.33 (floor 0.15): no alert.
-    # Day 21: 0.6, z = −2.7: critical straight away, then once per 7 days.
-    assert alerts == ((21, "critical"), (28, "critical"), (35, "critical"))
+    # Default rule B: z < −1.5 on 3 sessions in a row. Day 20: z = −1.33 (floor 0.15);
+    # days 21-23 are below −1.5, so the first alert is on day 23, then once per 7 days.
+    assert alerts == ((23, "critical"), (30, "critical"), (37, "critical"))
+    # Rule A (any single session below −1.5) alerts two days earlier.
+    _, any_game = replay(sessions, 40, replace(zscore.DEFAULT, alert_rule="any"))
+    assert any_game == ((21, "critical"), (28, "critical"), (35, "critical"))
     _, legacy = replay(sessions, 40, zscore.LEGACY)
     assert legacy[0] == (20, "critical")  # floor 0.02: the first bad session is already z = −10
 
@@ -65,7 +69,7 @@ def test_run_is_deterministic_and_cli_writes_both_files(tmp_path: Path) -> None:
     a = run(patients_per_profile=2, seeds=1, days=40)
     b = run(patients_per_profile=2, seeds=1, days=40)
     assert a == b and all(len(outcomes) == 6 for outcomes in a.values())
-    assert set(a) == {"current", "legacy", "B", "C", "D", "E"}
+    assert set(a) == {"current", "legacy", "A", "C", "D", "E"}
     main(["--patients-per-profile", "2", "--seeds", "1", "--days", "40", "--out", str(tmp_path)])
     md = (tmp_path / "decline_eval.md").read_text(encoding="utf-8")
     assert "## Ablation" in md and "| current |" in md and "| legacy |" in md

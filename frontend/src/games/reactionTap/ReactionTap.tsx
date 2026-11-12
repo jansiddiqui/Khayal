@@ -1,17 +1,22 @@
-import { CircleDot } from "lucide-react";
+import { CircleDot, Hand } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { copy } from "../../copy";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow } from "../QuestionRow";
 import type { GameDefinition, RoundProps } from "../types";
 import { RED_FROM_LEVEL, redChance, RESPONSE_WINDOW_MS, TOO_EARLY_PAUSE_MS, waitMs } from "./logic";
 
 type Circle = "waiting" | "green" | "red" | "tooEarly";
 
+/**
+ * Colour is never the only cue: "tap" is a green circle saying "Tap!"; "don't tap" is a red
+ * rounded square with a hand-stop icon saying "Don't tap".
+ */
 const circleStyle: Record<Circle, string> = {
-  waiting: "border-line-strong bg-sunken text-ink",
-  green: "border-green-900 bg-green-600 text-white",
-  red: "border-red-900 bg-red-700 text-white",
-  tooEarly: "border-accent-strong bg-accent-soft text-ink",
+  waiting: "rounded-full border-line-strong bg-sunken text-ink",
+  green: "rounded-full border-green-900 bg-green-600 text-white",
+  red: "rounded-[2.5rem] border-red-900 bg-red-700 text-white",
+  tooEarly: "rounded-full border-accent-strong bg-accent-soft text-ink",
 };
 
 /**
@@ -81,13 +86,19 @@ export function ReactionTapRound({ level, roundIndex, onComplete, rng = Math.ran
 
   return (
     <div className="flex flex-col items-center gap-8">
-      <p className="self-start text-2xl">{instructions}</p>
+      <div className="self-stretch">
+        <QuestionRow spoken={instructions}>
+          <p className="text-2xl">{instructions}</p>
+        </QuestionRow>
+      </div>
       <button
         type="button"
         onClick={tap}
         aria-live="assertive"
-        className={`flex h-64 w-64 items-center justify-center rounded-full border-8 text-3xl font-bold ${circleStyle[circle]}`}
+        data-shape={circle === "red" ? "square" : "circle"}
+        className={`flex h-64 w-64 flex-col items-center justify-center gap-2 border-8 text-3xl font-bold ${circleStyle[circle]}`}
       >
+        {circle === "red" && <Hand aria-hidden="true" className="size-16" strokeWidth={2.5} />}
         {label}
       </button>
     </div>

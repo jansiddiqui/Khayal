@@ -54,17 +54,17 @@ SETTING_TITLES = {
     "current": "Current (floor max(0.05, 0.15×mean), z clipped to ±4, 5-session warm-up, escalation)",
     "legacy": "Legacy (floor 0.02, no clipping, no warm-up, no escalation)",
 }
-# Alert rule variants: label -> (setting name, rule). A is the current setting.
+# Alert rule variants: label -> (setting name, rule). B is the current default.
 VARIANTS: dict[str, tuple[str, zscore.AlertRule]] = {
-    "A": ("current", "any"),
-    "B": ("B", "persistence"),
+    "A": ("A", "any"),
+    "B": ("current", "persistence"),
     "C": ("C", "two_games"),
     "D": ("D", "index"),
     "E": ("E", "persistence_or_index"),
 }
 VARIANT_TITLES = {
-    "A": "any game z < −1.5 (current)",
-    "B": "same game z < −1.5 on 3 consecutive sessions",
+    "A": "any game z < −1.5 (first rule)",
+    "B": "same game z < −1.5 on 3 consecutive sessions (current default)",
     "C": "at least 2 games z < −1.5 at once",
     "D": "overall index < −1.5",
     "E": "B or D",

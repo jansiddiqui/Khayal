@@ -31,7 +31,8 @@ Alerts: `candidate_alert` turns each game's z history into the severity to raise
 severity per 7 days per patient. A critical alert may still be raised within 7 days of a
 warning (escalation); a warning is not raised within 7 days of any decline alert.
 
-Alert rules (`DeclineConfig.alert_rule`; the app uses "any"):
+Alert rules (`DeclineConfig.alert_rule`; the app default is "persistence", rule B, chosen
+from the evaluation in ml/results/decline_eval.md; LEGACY keeps "any"):
     any          A: any game's latest z < −1.5 (critical if < −2.5); the worst game decides.
     persistence  B: the same game's z < −1.5 on its last 3 completed sessions; severity
                     from that game's latest z.
@@ -97,7 +98,7 @@ class DeclineConfig:
         return self.warmup_sessions + self.baseline_sessions
 
 
-DEFAULT = DeclineConfig()
+DEFAULT = DeclineConfig(alert_rule="persistence")
 LEGACY = DeclineConfig(warmup_sessions=0, std_floor=0.02, std_floor_relative=0.0, z_clip=None, escalation=False)
 
 

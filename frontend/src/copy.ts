@@ -20,6 +20,7 @@ export const copy = {
     home: "Home",
     readAloudOn: "Read aloud: On",
     readAloudOff: "Read aloud: Off",
+    sayItAgain: "Say it again",
   },
   patientHome: {
     greeting: (name: string) => `Hello, ${name}!`,
@@ -30,6 +31,8 @@ export const copy = {
     playGames: "Play a game",
     todaysReminders: "Today's reminders",
     whoIsThis: "Who is this?",
+    /** Status line on "Play a game": today's progress, never a score. */
+    gamesProgress: (done: number, total: number) => `${done} of ${total} done today`,
   },
   games: {
     title: "Games",

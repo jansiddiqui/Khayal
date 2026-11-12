@@ -94,7 +94,7 @@ Open http://localhost:5173. The dev server proxies `/api` to the backend on port
 Routes so far:
 
 - `/login`, `/register` — sign in or create an account; `/` sends you to your role's home.
-- `/patient` — patient Home: Next reminder card + Play a game / Today's reminders / Who is this? (patients only).
+- `/patient` — patient Home: a compact Next reminder card + Play a game (with today's progress, "2 of 3 done today") / Today's reminders / Who is this? (patients only). Fits a 375 × 667 phone without scrolling.
 - `/patient/games` — today's 3 games (see CLAUDE.md section 7); `/patient/games/<game_type>` plays a 5-round session (`memory_match`, `sequence_recall`, `word_recall`, `daily_orientation`, `reaction_tap`).
 - `/patient/reminders` — today's reminders with big Done buttons.
 - `/patient/who-is-this` — family photo grid with name + relation; tapping a photo shows it big and reads aloud who it is.
@@ -102,7 +102,7 @@ Routes so far:
 - `/caregiver` — linked patients with a status dot (Stable / Watch / Declining) from the overall cognitive index, and a form to link a patient by account email (caregivers only).
 - `/caregiver/patients/:id/family` — add, edit and delete people (name, relation, note) and their photos.
 - `/caregiver/patients/:id/reminders` — add, edit, pause and delete the patient's reminders; today's status for each.
-- `/caregiver/patients/:id` — alerts with plain explanations (Acknowledge), the overall cognitive index chart, secondary-signal tiles, one composite-score chart per game (baseline dashed, ±1.5 std band), levels, session table, then the patient's home city (for Daily Orientation), pinned games, current level per game, and session history including stopped-early sessions.
+- `/caregiver/patients/:id` — a summary card (overall status, latest new alert, reminders done by the patient, last played), alerts with plain explanations (Acknowledge), then collapsible sections: the overall cognitive index chart with secondary-signal tiles; one card per game (the 5-session average as a bold line, single sessions as faint dots, baseline dashed, ±1.5 std band), open only for games on Watch or Declining; levels and session history including stopped-early sessions; settings (pair a device, home city, pinned games).
 
 ## API so far
 
@@ -137,6 +137,8 @@ No hidden timers (CLAUDE.md section 7): Memory Match cards stay up until "I've l
 - **Daily Orientation** (patients see "About Today"): day of week, month, season (Mar–May Summer, Jun–Sep Monsoon, Oct–Feb Winter), time of day (5–12 Morning, 12–17 Afternoon, otherwise Evening) and home city, or the year if no city is set. No levels (stored at level 1, never adapted), no hint. Every answer gets a kind reply with the right answer ("It's Wednesday today.").
 - **Reaction Tap:** one round = one trial. After a random 2–5 s wait the circle turns green; a tap within 3 s is correct and the reaction time is recorded. From level 4 some circles are red (10% rising to 40% at level 10): not tapping is correct. Tapping too early shows "Wait for green" and the trial repeats without counting. Rounds with no tap store no reaction time (`null`).
 - Patients never see their level. The end screen says "Great work! Next time will be a little more interesting" after a level-up, otherwise "Nice playing! Let's keep it comfortable". Caregivers see levels on the patient page.
+
+**Read aloud** (toggle on every patient screen): each question is spoken with its choices. When it is on, a "Say it again" button sits next to the question in every game and on the Who is this? photo. On Remember the Words' pick list it shares the row with "Show me again", so all 12 words and Done still fit on a phone. Reaction Tap's red circle is a rounded square with a hand icon and "Don't tap", so it never relies on colour alone. Screenshots: `docs/ui-audit/batch4/`.
 
 ## Tests
 
@@ -196,6 +198,7 @@ The formula is in CLAUDE.md section 6 and the docstring of `ml/decline/zscore.py
 - **Baseline:** completed sessions 6–15 (also used for the reaction-time baseline). Std = max(sample std, 0.05, 0.15 × baseline mean), so a near-perfect game like About Today can't turn one bad session into an extreme z.
 - Until a game has 15 completed sessions it has no z and no alerts; the chart says "Learning this patient's normal (8/15 sessions)".
 - **z** = (mean of the last 5 sessions − baseline mean) / baseline std, clipped to [−4, 4] so one game can't dominate. z < −1.5 → warning, z < −2.5 → critical.
+- **Alert rule (default B):** a game alerts only when its z has been below −1.5 on 3 consecutive completed sessions. Set `KHAYAL_ALERT_RULE` to choose another rule: `any` (A, any game below −1.5), `persistence` (B, default), `two_games` (C), `index` (D), `persistence_or_index` (E).
 - **Alerts:** each severity at most once per 7 days per patient; a critical may follow a warning within those 7 days (escalation). The alert lists every declining game in plain words.
 - **Overall cognitive index** = mean of the latest (clipped) z across games with a baseline: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
 
@@ -206,7 +209,7 @@ Evaluation for the paper (simulated patients; the current settings and the first
 python -m ml.decline.evaluate --patients-per-profile 50 --seeds 5
 ```
 
-It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients. It also compares the alert rule variants A–E (`DeclineConfig.alert_rule`: any game, persistence over 3 sessions, two games at once, index only, persistence or index; the app uses A) and draws `ml/results/decline_tradeoff.png`. The chart needs matplotlib, which only the results use:
+It writes `ml/results/decline_eval.md` and `ml/results/decline_eval.csv`: a confusion matrix of true profile vs final status with accuracy and per-class precision/recall/F1, the detection delay for MCI and moderate patients, and the false alarm rate for healthy patients. It also compares the alert rule variants A–E (`DeclineConfig.alert_rule`: any game, persistence over 3 sessions, two games at once, index only, persistence or index; the app uses B) and draws `ml/results/decline_tradeoff.png`. The chart needs matplotlib, which only the results use:
 
 ```powershell
 pip install -r ml/requirements-results.txt

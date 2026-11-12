@@ -2,6 +2,7 @@ import { CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow } from "../QuestionRow";
 import { listFamily } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AuthedImage } from "../../components/AuthedImage";
@@ -39,7 +40,8 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   useEffect(() => {
     askedAt.current = Date.now();
   }, [question]);
-  useSpeakOnChange(question ? `${question.prompt} ${copy.common.spokenChoices(question.options)}` : "");
+  const spoken = question ? `${question.prompt} ${copy.common.spokenChoices(question.options)}` : "";
+  useSpeakOnChange(spoken);
 
   if (!question) return <p className="text-2xl">{copy.common.loading}</p>;
 
@@ -55,7 +57,9 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <p className="text-3xl font-semibold">{question.prompt}</p>
+      <QuestionRow spoken={spoken}>
+        <p className="text-3xl font-semibold">{question.prompt}</p>
+      </QuestionRow>
       {/* The photo takes only the space left, so every answer stays on screen. */}
       {question.photoUrl && (
         <div className="flex min-h-0 flex-1 justify-center">

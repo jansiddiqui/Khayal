@@ -194,6 +194,9 @@ describe("ReactionTapRound", () => {
     expect(screen.getByText(copy.games.reactionTap.instructionsWithRed)).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(2000));
     expect(circle()).toHaveTextContent(copy.games.reactionTap.red);
+    // Not colour alone: "don't tap" is a square with a stop-hand icon, "tap" is a circle.
+    expect(circle()).toHaveAttribute("data-shape", "square");
+    expect(circle().querySelector("svg")).not.toBeNull();
     act(() => vi.advanceTimersByTime(3000));
     expect(leftAlone).toHaveBeenCalledWith({ correct: true, reaction_ms: null, hint_used: false });
     unmount();

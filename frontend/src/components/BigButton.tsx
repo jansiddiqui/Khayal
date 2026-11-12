@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 
 type Variant = "primary" | "secondary";
-type Size = "normal" | "compact";
+type Size = "normal" | "compact" | "home";
 
 const base =
   "flex w-full items-center justify-center gap-3 rounded-2xl font-semibold " +
@@ -12,6 +12,8 @@ const base =
 const sizes: Record<Size, string> = {
   normal: "min-h-16 px-6 py-4 text-2xl",
   compact: "min-h-[64px] px-4 py-2 text-xl",
+  /** Patient Home: three buttons and the reminder card fit a 375 × 667 phone. */
+  home: "min-h-[72px] px-4 py-2 text-[1.4rem] leading-tight",
 };
 
 const variants: Record<Variant, string> = {

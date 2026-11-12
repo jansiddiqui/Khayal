@@ -19,6 +19,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("KHAYAL_TOKEN_MINUTES", str(60 * 24 
 # valid this long; a paired device then stays signed in for PAIRED_DEVICE_DAYS.
 PAIRING_CODE_MINUTES = 10
 PAIRED_DEVICE_DAYS = 90
+# Decline alert rule (ml/decline/zscore.py): "persistence" (rule B, default), "any" (A),
+# "two_games" (C), "index" (D) or "persistence_or_index" (E). Compared in ml.decline.evaluate.
+ALERT_RULE = os.getenv("KHAYAL_ALERT_RULE", "persistence")
+if ALERT_RULE not in ("any", "persistence", "two_games", "index", "persistence_or_index"):
+    raise ValueError(f"Unknown KHAYAL_ALERT_RULE: {ALERT_RULE}")
+
 # Wrong codes allowed per client address in PAIRING_CODE_MINUTES before pairing pauses.
 PAIRING_MAX_FAILURES = 10
 

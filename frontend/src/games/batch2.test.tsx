@@ -44,8 +44,22 @@ describe("Word Recall pick list", () => {
 describe("read aloud in games", () => {
   it("speaks each question with its answer choices", () => {
     renderWithProviders(<DailyOrientationRound level={1} roundIndex={0} onComplete={vi.fn()} rng={rng} />);
-    const options = screen.getAllByRole("button").map((b) => b.textContent ?? "");
-    expect(spoken).toContain(`${copy.games.orientation.askDay} ${copy.common.spokenChoices(options)}`);
+    const options = screen
+      .getAllByRole("button")
+      .map((b) => b.textContent ?? "")
+      .filter((t) => t !== copy.nav.sayItAgain);
+    const question = `${copy.games.orientation.askDay} ${copy.common.spokenChoices(options)}`;
+    expect(spoken).toContain(question);
+    // "Say it again" repeats the question and its choices.
+    spoken.length = 0;
+    fireEvent.click(screen.getByRole("button", { name: copy.nav.sayItAgain }));
+    expect(spoken).toEqual([question]);
+  });
+
+  it("shows Say it again only when Read aloud is on", () => {
+    localStorage.setItem("khayal.readAloud", "off");
+    renderWithProviders(<DailyOrientationRound level={1} roundIndex={0} onComplete={vi.fn()} rng={rng} />);
+    expect(screen.queryByRole("button", { name: copy.nav.sayItAgain })).toBeNull();
   });
 
   it("speaks each word, then the question with every word to choose from", () => {
@@ -57,9 +71,17 @@ describe("read aloud in games", () => {
     }
     for (let n = 1; n <= 5; n++) fireEvent.click(screen.getByRole("button", { name: copy.games.wordRecall.star(n) }));
     act(() => vi.advanceTimersByTime(1000));
-    expect(spoken[spoken.length - 1]).toBe(
-      `${copy.games.wordRecall.choose} ${copy.common.spokenChoices(options.map((w) => copy.words[w]))}`,
-    );
+    const question = `${copy.games.wordRecall.choose} ${copy.common.spokenChoices(options.map((w) => copy.words[w]))}`;
+    expect(spoken[spoken.length - 1]).toBe(question);
+
+    // On the pick list, "Say it again" shares the hint row; both still work.
+    spoken.length = 0;
+    fireEvent.click(screen.getByRole("button", { name: copy.nav.sayItAgain }));
+    expect(spoken).toEqual([question]);
+    fireEvent.click(screen.getByRole("button", { name: copy.games.showMeAgain }));
+    expect(screen.getByRole("status")).toHaveTextContent(/[A-Z]/);
+    expect(screen.queryByRole("button", { name: copy.games.showMeAgain })).toBeNull();
+    expect(screen.getByRole("button", { name: copy.nav.sayItAgain })).toBeInTheDocument();
   });
 
   it("joins choices the way people say them", () => {

@@ -195,8 +195,11 @@ class TestAlertRules:
     def check(rule: AlertRule, history: dict[str, list[float]]) -> str | None:
         return candidate_alert(history, replace(DEFAULT, alert_rule=rule))
 
-    def test_any_game_is_the_default(self) -> None:
-        assert DEFAULT.alert_rule == "any"
+    def test_persistence_is_the_default_and_legacy_keeps_any_game(self) -> None:
+        assert DEFAULT.alert_rule == "persistence"
+        assert LEGACY.alert_rule == "any"
+
+    def test_any_game(self) -> None:
         assert self.check("any", {"memory_match": [0.0, -1.6], "word_recall": [0.2]}) == "warning"
         assert self.check("any", {"memory_match": [-2.6]}) == "critical"
         assert self.check("any", {"memory_match": [-1.4]}) is None

@@ -18,6 +18,8 @@ interface LayoutProps {
    * without scrolling (CLAUDE.md section 4).
    */
   compact?: boolean;
+  /** Tighter spacing (patient Home), so everything fits a small phone. */
+  snug?: boolean;
   children: ReactNode;
 }
 
@@ -30,7 +32,7 @@ const topBarButton =
  * Accessible patient layout. The top bar (Home + Read aloud) is identical on every
  * patient screen and does not count toward the 3-button limit (CLAUDE.md section 4).
  */
-export function Layout({ title, spokenIntro, spoken, compact = false, children }: LayoutProps) {
+export function Layout({ title, spokenIntro, spoken, compact = false, snug = false, children }: LayoutProps) {
   const { enabled, toggle, speak } = useReadAloud();
 
   useEffect(() => {
@@ -53,7 +55,11 @@ export function Layout({ title, spokenIntro, spoken, compact = false, children }
           <span>{enabled ? copy.nav.readAloudOn : copy.nav.readAloudOff}</span>
         </button>
       </header>
-      <main className={compact ? "flex min-h-0 flex-1 flex-col gap-3 pt-3" : "flex flex-1 flex-col gap-8 py-8"}>
+      <main
+        className={
+          compact ? "flex min-h-0 flex-1 flex-col gap-3 pt-3" : snug ? "flex flex-1 flex-col gap-4 py-4" : "flex flex-1 flex-col gap-8 py-8"
+        }
+      >
         <h1 className={compact ? "sr-only" : "text-4xl font-bold leading-tight"}>{title}</h1>
         {children}
       </main>

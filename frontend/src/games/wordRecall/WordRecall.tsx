@@ -1,8 +1,9 @@
-import { ArrowRight, BookOpen, Check, Star } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Eye, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BigButton } from "../../components/BigButton";
 import { copy } from "../../copy";
-import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { useReadAloud, useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { QuestionRow, SayItAgain, StackedButton } from "../QuestionRow";
 import { HintButton } from "../HintButton";
 import { shuffle, type GameDefinition, type RoundProps } from "../types";
 import {
@@ -83,20 +84,23 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
     });
   }
 
-  useSpeakOnChange(
+  const spoken =
     step.kind === "showing"
       ? `${copy.games.wordRecall.remember}: ${copy.words[round.shown[step.index]!]}`
       : step.kind === "stars"
         ? starsDone
           ? copy.games.wordRecall.starsDone
           : copy.games.wordRecall.stars
-        : `${copy.games.wordRecall.choose} ${copy.common.spokenChoices(round.options.map((w) => copy.words[w]))}`,
-  );
+        : `${copy.games.wordRecall.choose} ${copy.common.spokenChoices(round.options.map((w) => copy.words[w]))}`;
+  useSpeakOnChange(spoken);
+  const { enabled: readAloud } = useReadAloud();
 
   if (step.kind === "showing") {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <p className="text-2xl">{copy.games.wordRecall.remember}</p>
+        <QuestionRow spoken={spoken}>
+          <p className="text-2xl">{copy.games.wordRecall.remember}</p>
+        </QuestionRow>
         <p
           className="flex min-h-[10rem] items-center justify-center rounded-2xl border-4 border-brand bg-surface text-center text-5xl font-bold"
           aria-live="polite"
@@ -112,9 +116,11 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
     const order = [...starCells].sort((a, b) => a - b);
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <p className="text-2xl" aria-live="polite">
-          {starsDone ? copy.games.wordRecall.starsDone : copy.games.wordRecall.stars}
-        </p>
+        <QuestionRow spoken={spoken}>
+          <p className="text-2xl" aria-live="polite">
+            {starsDone ? copy.games.wordRecall.starsDone : copy.games.wordRecall.stars}
+          </p>
+        </QuestionRow>
         <div className="mx-auto grid w-full max-w-sm grid-cols-3 gap-3">
           {[...Array(STAR_GRID_CELLS).keys()].map((cell) => {
             if (!starCells.has(cell)) return <div key={cell} aria-hidden="true" />;
@@ -142,6 +148,8 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
       </div>
     );
   }
+
+  const showHint = () => setHintLetters(missingFirstLetters(round.shown, picked));
 
   // At most 12 words (6 rows of 2) fit with Done on a phone; more would need 3 narrower columns.
   const wide = round.options.length > 12;
@@ -174,17 +182,26 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
         })}
       </div>
       <div className="flex shrink-0 flex-col gap-2">
-        {/* The hint letters appear where the hint button was, so nothing else moves. */}
-        {hintLetters && hintLetters.length > 0 && (
-          <p className="rounded-xl border-4 border-accent bg-accent-soft px-3 py-1 text-xl leading-tight" role="status">
-            {copy.games.wordRecall.hintLetters(hintLetters.join(", "))}
-          </p>
-        )}
-        <HintButton
-          used={hintLetters !== null}
-          available
-          onUse={() => setHintLetters(missingFirstLetters(round.shown, picked))}
-        />
+        {/* "Say it again" shares the hint row here: above the list it would push the last words
+            below the fold at 12 words. The hint letters appear where the hint button was. */}
+        <div className="flex items-stretch gap-2 empty:hidden">
+          {hintLetters && hintLetters.length > 0 && (
+            <p className="min-w-0 flex-1 rounded-xl border-4 border-accent bg-accent-soft px-3 py-1 text-xl leading-tight" role="status">
+              {copy.games.wordRecall.hintLetters(hintLetters.join(", "))}
+            </p>
+          )}
+          {hintLetters === null &&
+            (readAloud ? (
+              <div className="flex min-w-0 flex-1 [&>button]:flex-1">
+                <StackedButton icon={<Eye />} label={copy.games.showMeAgain} onClick={showHint} />
+              </div>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <HintButton available used={false} onUse={showHint} />
+              </div>
+            ))}
+          <SayItAgain text={spoken} />
+        </div>
         <BigButton label={copy.games.wordRecall.done} icon={<Check />} size="compact" onClick={done} />
       </div>
     </div>

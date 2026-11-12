@@ -136,6 +136,7 @@ The caregiver UI can be a normal dense dashboard.
 - **Clipping:** clip z to [−4, 4] before alerts and before the overall index, so one game can't dominate. The unclipped z is kept for reference.
 - **Escalation:** a `critical` alert may be raised within 7 days of a `warning` for the same patient. The same severity stays limited to once per 7 days.
 - The first version (floor 0.02, no clipping, no warm-up, no escalation) is kept as `zscore.LEGACY` for the ablation in `python -m ml.decline.evaluate`.
+- **Alert rule B is the default (decided after the evaluation):** a decline alert is raised only when the same game's z is below −1.5 on its last 3 completed sessions in a row; the severity comes from that game's latest z (critical below −2.5). Rules A–E stay selectable for the evaluation and per install via `KHAYAL_ALERT_RULE` (`any` = A, `persistence` = B, `two_games` = C, `index` = D, `persistence_or_index` = E). Results: `ml/results/decline_eval.md`.
 
 **Composite score (decided, used in the paper).** Per *completed* session; stopped-early sessions are excluded.
 
