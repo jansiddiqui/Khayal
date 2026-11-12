@@ -9,6 +9,15 @@ This file is the source of truth. Build in the milestone order below. After each
 
 ---
 
+## 0. Safety rules (never break)
+1. Never delete, move or overwrite anything outside this repository folder (home folder, AppData, Python/Node installs, .gitconfig, system folders).
+2. No recursive deletes with variables or globs (rm -rf $X, rm -rf *, Remove-Item -Recurse, find -delete, del /s). Delete only explicit, literal paths inside the repo; print the absolute path first and confirm it is inside the repo.
+3. Check the working directory before any command that writes or deletes.
+4. Ask me before deleting more than one file, touching anything outside the repo, or installing/uninstalling software.
+5. Back up data/khayal.db to data/backups/ before migrations, seed resets or data cleanup.
+6. Push to GitHub after every milestone.
+7. If something outside the repo looks broken (Python, Node, git config), stop and report it; never repair it yourself.
+
 ## 1. What we are building (prototype scope)
 
 A web app with two roles:
