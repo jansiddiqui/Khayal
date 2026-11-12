@@ -1,3 +1,4 @@
+import { House, Volume2, VolumeX } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router";
 import { copy } from "../copy";
@@ -40,11 +41,15 @@ export function Layout({ title, spokenIntro, spoken, compact = false, children }
     <div className={`mx-auto flex max-w-3xl flex-col px-4 py-4 sm:px-8 ${compact ? "h-dvh" : "min-h-screen"}`}>
       <header className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:gap-4" aria-label="Top bar">
         <Link to={PATIENT_HOME} className={topBarButton}>
-          <span aria-hidden="true">🏠</span>
+          <House aria-hidden="true" className="size-7 shrink-0" />
           <span>{copy.nav.home}</span>
         </Link>
         <button type="button" onClick={toggle} aria-pressed={enabled} className={topBarButton}>
-          <span aria-hidden="true">{enabled ? "🔊" : "🔈"}</span>
+          {enabled ? (
+            <Volume2 aria-hidden="true" className="size-7 shrink-0" />
+          ) : (
+            <VolumeX aria-hidden="true" className="size-7 shrink-0" />
+          )}
           <span>{enabled ? copy.nav.readAloudOn : copy.nav.readAloudOff}</span>
         </button>
       </header>

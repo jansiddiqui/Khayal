@@ -3,7 +3,10 @@ import { BigButton } from "../../components/BigButton";
 import { copy } from "../../copy";
 import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps } from "../types";
-import { boardColumns, buildDeck, emojiFor, isBoardCorrect, memoryMatchConfig } from "./logic";
+import { EyeOff, LayoutGrid } from "lucide-react";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
+import { CARD_ART } from "../memory/art";
+import { boardColumns, buildDeck, isBoardCorrect, memoryMatchConfig } from "./logic";
 
 /** Pause before a non-matching pair turns back over. */
 export const MISMATCH_SHOW_MS = 1200;
@@ -76,6 +79,8 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
     setRevealing(true);
   }
 
+  useSpeakOnChange(revealing ? copy.games.memoryMatch.lookCarefully : copy.games.memoryMatch.findPairs);
+
   const columns = boardColumns(deck.length);
   const rows = Math.ceil(deck.length / columns);
   // A 20px word does not fit a 4-column card on a phone, and words never go below 20px
@@ -99,6 +104,7 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
         {deck.map((card, index) => {
           const faceUp = revealing || open.includes(index) || matched.has(index);
           const label = copy.cards[card.face];
+          const Picture = CARD_ART[card.face];
           return (
             <button
               key={card.key}
@@ -119,13 +125,7 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
               {faceUp ? (
                 <>
                   {/* The picture shrinks with the card; the word stays at the 20px minimum. */}
-                  <span
-                    aria-hidden="true"
-                    className="leading-none"
-                    style={{ fontSize: showWords ? "min(2.5rem, 45cqh)" : "min(3rem, 70cqh, 60cqw)" }}
-                  >
-                    {emojiFor(card.face)}
-                  </span>
+                  <Picture className={showWords ? "h-[58cqh] max-h-[4.5rem] w-auto" : "h-[78cqh] max-h-24 w-auto max-w-[85cqw]"} />
                   {showWords && <span className="mt-1 text-base font-semibold leading-tight text-ink">{label}</span>}
                 </>
               ) : (
@@ -140,7 +140,7 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
       {/* Same height in every state, so the cards never move between looking and playing. */}
       <div className="flex h-[5rem] shrink-0 flex-col [&>*]:h-full">
         {revealing ? (
-          <BigButton label={copy.games.memoryMatch.hideCards} icon="👍" size="compact" onClick={hideCards} />
+          <BigButton label={copy.games.memoryMatch.hideCards} icon={<EyeOff aria-hidden="true" />} size="compact" onClick={hideCards} />
         ) : (
           <HintButton used={hintUsed} available onUse={showAgain} />
         )}
@@ -153,6 +153,6 @@ export const memoryMatch: GameDefinition = {
   type: "memory_match",
   title: copy.games.memoryMatch.title,
   intro: copy.games.memoryMatch.intro,
-  icon: "🃏",
+  icon: LayoutGrid,
   Round: MemoryMatchRound,
 };

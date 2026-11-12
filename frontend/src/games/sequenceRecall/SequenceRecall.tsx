@@ -1,5 +1,7 @@
+import { Palette } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copy } from "../../copy";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps, RoundResult } from "../types";
 import { buildSequence, sequenceConfig, TILES, type TileId } from "./logic";
@@ -96,6 +98,8 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
         ? copy.games.sequenceRecall.replay
         : copy.games.sequenceRecall.watch;
 
+  useSpeakOnChange(prompt);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-2xl" aria-live="polite">
@@ -131,6 +135,6 @@ export const sequenceRecall: GameDefinition = {
   type: "sequence_recall",
   title: copy.games.sequenceRecall.title,
   intro: copy.games.sequenceRecall.intro,
-  icon: "🟦",
+  icon: Palette,
   Round: SequenceRecallRound,
 };

@@ -13,6 +13,7 @@ vi.mock("./api/client", async (importOriginal) => {
     getMe: vi.fn(),
     login: vi.fn(),
     register: vi.fn(),
+    pairDevice: vi.fn(),
     listPatients: vi.fn(),
     linkPatient: vi.fn(),
     listSessions: vi.fn(),
@@ -44,9 +45,34 @@ beforeEach(() => {
 const patientRoutes = ["/patient", "/patient/games", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
 
 describe("signed out", () => {
-  it.each(["/", "/patient", "/caregiver"])("%s redirects to sign in", async (route) => {
+  it.each(["/", "/patient", "/patient/games"])("%s starts at Pair a device", async (route) => {
     renderWithProviders(<App />, { route });
+    expect(await screen.findByRole("heading", { name: copy.pair.title })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: copy.pair.caregiverLink })).toHaveAttribute("href", "/login");
+  });
+
+  it("caregiver pages still go to email sign-in", async () => {
+    renderWithProviders(<App />, { route: "/caregiver" });
     expect(await screen.findByRole("heading", { name: copy.login.title })).toBeInTheDocument();
+  });
+
+  it("pairs a patient device with the 6-digit code and lands on patient Home", async () => {
+    api.pairDevice.mockResolvedValue({ access_token: "paired", token_type: "bearer", user: kamala });
+    renderWithProviders(<App />, { route: "/pair" });
+    fireEvent.change(screen.getByLabelText(copy.pair.codeLabel), { target: { value: "12 34-56x7" } });
+    expect(screen.getByLabelText(copy.pair.codeLabel)).toHaveValue("123456"); // digits only, 6 at most
+    fireEvent.click(screen.getByRole("button", { name: copy.pair.submit }));
+    expect(await screen.findByRole("heading", { name: "Hello, Kamala!" })).toBeInTheDocument();
+    expect(api.pairDevice).toHaveBeenCalledWith("123456");
+    expect(localStorage.getItem("khayal.token")).toBe("paired");
+  });
+
+  it("asks kindly for a new code when pairing fails", async () => {
+    api.pairDevice.mockRejectedValue(Object.assign(new Error("400"), { isAxiosError: true, response: { status: 400 } }));
+    renderWithProviders(<App />, { route: "/pair" });
+    fireEvent.change(screen.getByLabelText(copy.pair.codeLabel), { target: { value: "000000" } });
+    fireEvent.click(screen.getByRole("button", { name: copy.pair.submit }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(copy.pair.failed);
   });
 
   it("signs a patient in and lands on patient Home", async () => {

@@ -1,3 +1,4 @@
+import { CircleArrowDown, CircleCheck, CircleDashed, OctagonAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { DeclineStatus, IndexStatus } from "../../api/client";
 
 /**
@@ -11,26 +12,30 @@ export const STATUS_COLORS = {
   none: "#9a9890",
 } as const;
 
-const INDEX_STATUS: Record<IndexStatus, { label: string; color: string; icon: string }> = {
-  stable: { label: "Stable", color: STATUS_COLORS.good, icon: "●" },
-  watch: { label: "Watch", color: STATUS_COLORS.warning, icon: "▲" },
-  declining: { label: "Declining", color: STATUS_COLORS.critical, icon: "▼" },
-  insufficient: { label: "Not enough data", color: STATUS_COLORS.none, icon: "○" },
+interface StatusLook {
+  label: string;
+  color: string;
+  icon: LucideIcon;
+}
+
+const INDEX_STATUS: Record<IndexStatus, StatusLook> = {
+  stable: { label: "Stable", color: STATUS_COLORS.good, icon: CircleCheck },
+  watch: { label: "Watch", color: STATUS_COLORS.warning, icon: TriangleAlert },
+  declining: { label: "Declining", color: STATUS_COLORS.critical, icon: CircleArrowDown },
+  insufficient: { label: "Not enough data", color: STATUS_COLORS.none, icon: CircleDashed },
 };
 
-const GAME_STATUS: Record<DeclineStatus, { label: string; color: string; icon: string }> = {
-  stable: { label: "Stable", color: STATUS_COLORS.good, icon: "●" },
-  warning: { label: "Warning", color: STATUS_COLORS.warning, icon: "▲" },
-  critical: { label: "Critical", color: STATUS_COLORS.critical, icon: "▼" },
-  insufficient: { label: "Learning", color: STATUS_COLORS.none, icon: "○" },
+const GAME_STATUS: Record<DeclineStatus, StatusLook> = {
+  stable: { label: "Stable", color: STATUS_COLORS.good, icon: CircleCheck },
+  warning: { label: "Warning", color: STATUS_COLORS.warning, icon: TriangleAlert },
+  critical: { label: "Critical", color: STATUS_COLORS.critical, icon: OctagonAlert },
+  insufficient: { label: "Learning", color: STATUS_COLORS.none, icon: CircleDashed },
 };
 
-function Badge({ label, color, icon }: { label: string; color: string; icon: string }) {
+function Badge({ label, color, icon: Icon }: StatusLook) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-gray-800">
-      <span aria-hidden="true" style={{ color }} className="text-base leading-none">
-        {icon}
-      </span>
+      <Icon aria-hidden="true" style={{ color }} className="size-4 shrink-0" strokeWidth={2.5} />
       <span>{label}</span>
     </span>
   );

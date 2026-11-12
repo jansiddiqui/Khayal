@@ -3,18 +3,18 @@ import { shuffle, type Rng } from "../types";
 
 export type CardFace = keyof typeof copy.cards;
 
-/** Familiar everyday Indian images, drawn with emoji (no image files). */
-export const CARD_FACES: readonly { id: CardFace; emoji: string }[] = [
-  { id: "chai", emoji: "☕" },
-  { id: "roti", emoji: "🫓" },
-  { id: "mango", emoji: "🥭" },
-  { id: "auto", emoji: "🛺" },
-  { id: "marigold", emoji: "🌼" },
-  { id: "cricket", emoji: "🏏" },
-  { id: "diya", emoji: "🪔" },
-  { id: "kite", emoji: "🪁" },
-  { id: "elephant", emoji: "🐘" },
-  { id: "coconut", emoji: "🥥" },
+/** Familiar everyday Indian things, drawn as flat illustrations in games/memory/art. */
+export const CARD_FACES: readonly { id: CardFace }[] = [
+  { id: "chai" },
+  { id: "roti" },
+  { id: "mango" },
+  { id: "auto" },
+  { id: "marigold" },
+  { id: "cricket" },
+  { id: "diya" },
+  { id: "kite" },
+  { id: "elephant" },
+  { id: "coconut" },
 ];
 
 export interface MemoryMatchConfig {
@@ -52,8 +52,4 @@ export function buildDeck(pairs: number, rng: Rng): DeckCard[] {
 /** M3 decision: a board counts as correct when mistakes <= number of pairs. */
 export function isBoardCorrect(mistakes: number, pairs: number): boolean {
   return mistakes <= pairs;
-}
-
-export function emojiFor(face: CardFace): string {
-  return CARD_FACES.find((f) => f.id === face)?.emoji ?? "❓";
 }

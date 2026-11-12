@@ -1,3 +1,4 @@
+import { LogIn } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { errorStatus } from "../api/client";
@@ -49,7 +50,7 @@ export function Login() {
             {error}
           </p>
         )}
-        <BigButton type="submit" label={submitting ? copy.login.submitting : copy.login.submit} icon="➡️" />
+        <BigButton type="submit" label={submitting ? copy.login.submitting : copy.login.submit} icon={<LogIn />} />
       </form>
       <Link to="/register" className="text-xl text-brand-dark underline">
         {copy.login.toRegister}

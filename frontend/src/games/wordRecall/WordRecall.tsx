@@ -1,6 +1,8 @@
+import { ArrowRight, BookOpen, Check, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BigButton } from "../../components/BigButton";
 import { copy } from "../../copy";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import { HintButton } from "../HintButton";
 import { shuffle, type GameDefinition, type RoundProps } from "../types";
 import {
@@ -81,6 +83,16 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
     });
   }
 
+  useSpeakOnChange(
+    step.kind === "showing"
+      ? `${copy.games.wordRecall.remember}: ${copy.words[round.shown[step.index]!]}`
+      : step.kind === "stars"
+        ? starsDone
+          ? copy.games.wordRecall.starsDone
+          : copy.games.wordRecall.stars
+        : `${copy.games.wordRecall.choose} ${copy.common.spokenChoices(round.options.map((w) => copy.words[w]))}`,
+  );
+
   if (step.kind === "showing") {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -91,7 +103,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
         >
           {copy.words[round.shown[step.index]!]}
         </p>
-        <BigButton label={copy.games.wordRecall.nextWord} icon="➡️" size="compact" onClick={nextWord} />
+        <BigButton label={copy.games.wordRecall.nextWord} icon={<ArrowRight />} size="compact" onClick={nextWord} />
       </div>
     );
   }
@@ -119,7 +131,10 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
                   (tapped ? "border-amber-500 bg-amber-100" : "border-gray-500 bg-white hover:bg-amber-50")
                 }
               >
-                <span aria-hidden="true">{tapped ? "⭐" : "☆"}</span>
+                <Star
+                  aria-hidden="true"
+                  className={`mx-auto size-10 ${tapped ? "fill-amber-400 text-amber-700" : "text-ink"}`}
+                />
               </button>
             );
           })}
@@ -128,12 +143,12 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
     );
   }
 
-  const wide = round.options.length > 10;
+  // At most 12 words (6 rows of 2) fit with Done on a phone; more would need 3 narrower columns.
+  const wide = round.options.length > 12;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-xl">{copy.games.wordRecall.choose}</p>
-      {/* Up to 16 words, each at least 64px tall: 3 columns (at the 20px minimum) once there
-          are more than 10, so the whole list and Done fit on a phone screen. */}
+      {/* Up to 12 words, each at least 64px tall, so the whole list and Done fit on a phone screen. */}
       <div
         className={`grid min-h-0 flex-1 gap-[6px] ${wide ? "grid-cols-3" : "grid-cols-2"}`}
         style={{ gridTemplateRows: `repeat(${Math.ceil(round.options.length / (wide ? 3 : 2))}, minmax(64px, 5rem))` }}
@@ -170,7 +185,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
           available
           onUse={() => setHintLetters(missingFirstLetters(round.shown, picked))}
         />
-        <BigButton label={copy.games.wordRecall.done} icon="✅" size="compact" onClick={done} />
+        <BigButton label={copy.games.wordRecall.done} icon={<Check />} size="compact" onClick={done} />
       </div>
     </div>
   );
@@ -180,6 +195,6 @@ export const wordRecall: GameDefinition = {
   type: "word_recall",
   title: copy.games.wordRecall.title,
   intro: copy.games.wordRecall.intro,
-  icon: "📝",
+  icon: BookOpen,
   Round: WordRecallRound,
 };

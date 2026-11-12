@@ -1,5 +1,7 @@
+import { CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import { listFamily } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AuthedImage } from "../../components/AuthedImage";
@@ -37,6 +39,7 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   useEffect(() => {
     askedAt.current = Date.now();
   }, [question]);
+  useSpeakOnChange(question ? `${question.prompt} ${copy.common.spokenChoices(question.options)}` : "");
 
   if (!question) return <p className="text-2xl">{copy.common.loading}</p>;
 
@@ -65,7 +68,7 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
       )}
       <div className="flex flex-col gap-3">
         {question.options.map((option) => (
-          <BigButton key={option} label={option} icon="👉" variant="secondary" size="compact" onClick={() => answer(option)} />
+          <BigButton key={option} label={option} variant="secondary" size="compact" onClick={() => answer(option)} />
         ))}
       </div>
     </div>
@@ -76,6 +79,6 @@ export const dailyOrientation: GameDefinition = {
   type: "daily_orientation",
   title: copy.games.orientation.title,
   intro: copy.games.orientation.intro,
-  icon: "📅",
+  icon: CalendarDays,
   Round: DailyOrientationRound,
 };

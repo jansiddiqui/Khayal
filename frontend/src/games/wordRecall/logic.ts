@@ -12,6 +12,8 @@ export const WORDS = Object.keys(copy.words) as WordId[];
 export const STAR_COUNT = 5;
 /** Short "Lovely!" pause after the last star, before the word list appears. */
 export const STARS_DONE_PAUSE_MS = 800;
+/** The pick list never has more than this many words (CLAUDE.md section 7). */
+export const MAX_OPTIONS = 12;
 /** Share of the shown words that must be recalled (after subtracting wrong picks). */
 export const PASS_SCORE = 0.8;
 
@@ -23,12 +25,12 @@ export function wordCount(level: number): number {
 
 export interface WordRound {
   shown: WordId[];
-  /** The shown words plus the same number of new ones, shuffled. */
+  /** The shown words plus new ones (as many as were shown, up to MAX_OPTIONS in all), shuffled. */
   options: WordId[];
 }
 
 export function buildWordRound(count: number, rng: Rng): WordRound {
-  const picked = shuffle(WORDS, rng).slice(0, count * 2);
+  const picked = shuffle(WORDS, rng).slice(0, Math.max(count, Math.min(count * 2, MAX_OPTIONS)));
   const shown = picked.slice(0, count);
   return { shown, options: shuffle(picked, rng) };
 }

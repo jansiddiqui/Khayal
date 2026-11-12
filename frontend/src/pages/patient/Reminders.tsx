@@ -1,3 +1,5 @@
+import { RotateCcw, Check } from "lucide-react";
+import { ReminderIcon } from "../../components/ReminderIcon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getTodayReminders, markReminderDone, type TodayReminder } from "../../api/client";
 import { BigButton } from "../../components/BigButton";
@@ -13,7 +15,7 @@ function ReminderLine({ reminder }: { reminder: TodayReminder }) {
   const r = copy.reminders;
   return (
     <p className="flex flex-wrap items-baseline gap-x-3 text-2xl">
-      <span aria-hidden="true">{r.icons[reminder.type]}</span>
+      <ReminderIcon type={reminder.type} className="size-8 shrink-0" />
       <span className="font-semibold">{r.time(reminder.time_of_day)}</span>
       <span>{reminder.title}</span>
       <span className="text-xl text-gray-700">({r.types[reminder.type]})</span>
@@ -46,7 +48,7 @@ export function Reminders() {
       <Layout title={r.title}>
         <Card>
           <p className="mb-6 text-2xl">{r.loadFailed}</p>
-          <BigButton label={r.retry} icon="🔄" onClick={() => void today.refetch()} />
+          <BigButton label={r.retry} icon={<RotateCcw />} onClick={() => void today.refetch()} />
         </Card>
       </Layout>
     );
@@ -76,7 +78,6 @@ export function Reminders() {
       {intro && (
         <Card>
           <p className="text-2xl">
-            <span aria-hidden="true">🌼 </span>
             {intro}
           </p>
         </Card>
@@ -96,7 +97,7 @@ export function Reminders() {
             >
               <ReminderLine reminder={reminder} />
               <p className="text-xl">{reminder.status === "missed" ? r.letsDoItNow : r.timeForThis}</p>
-              <BigButton label={r.done} icon="✅" onClick={() => done.mutate(reminder.id)} />
+              <BigButton label={r.done} icon={<Check />} onClick={() => done.mutate(reminder.id)} />
             </section>
           ))}
         </section>

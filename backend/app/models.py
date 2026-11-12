@@ -184,6 +184,21 @@ class Alert(Base):
     acknowledged: Mapped[bool] = mapped_column(default=False)
 
 
+class PairingCode(Base):
+    """A one-time 6-digit code a caregiver shows so a patient's device can sign in."""
+
+    __tablename__ = "pairing_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # Keyed hash of the code; the code itself is never stored.
+    code_hash: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
 class FamilyMember(Base):
     """A person in the patient's life, with private photos for "Who is this?"."""
 

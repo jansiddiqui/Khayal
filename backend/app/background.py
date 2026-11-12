@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 
 from app import config
 from app.db import SessionLocal
@@ -16,15 +17,18 @@ def check_missed_reminders_once() -> int:
         return reminders.sweep_all(db, utc_now())
 
 
-async def missed_reminder_loop(interval_seconds: float) -> None:
-    """Check right away, then every `interval_seconds`. One failed run never stops the loop."""
+async def missed_reminder_loop(
+    interval_seconds: float, sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
+) -> None:
+    """Check right away, then every `interval_seconds`. One failed run never stops the loop.
+    `sleep` is injectable so tests can run the loop on a fake clock."""
     while True:
         try:
             count = await asyncio.to_thread(check_missed_reminders_once)
             log.info("Missed-reminder check done for %d patient(s)", count)
         except Exception:
             log.exception("Missed-reminder check failed")
-        await asyncio.sleep(interval_seconds)
+        await sleep(interval_seconds)
 
 
 def start_background_tasks() -> list[asyncio.Task[None]]:

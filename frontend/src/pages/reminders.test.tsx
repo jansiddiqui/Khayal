@@ -253,6 +253,6 @@ describe("caregiver reminders and alerts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
     await waitFor(() => expect(api.acknowledgeAlert.mock.calls[0]?.[0]).toBe(3));
     expect(await screen.findByText("Acknowledged (1)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Reminders →" })).toHaveAttribute("href", "/caregiver/patients/2/reminders");
+    expect(screen.getByRole("link", { name: "Reminders" })).toHaveAttribute("href", "/caregiver/patients/2/reminders");
   });
 });

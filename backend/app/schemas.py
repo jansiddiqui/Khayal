@@ -48,6 +48,15 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+class PairIn(BaseModel):
+    code: Annotated[str, Field(pattern=r"^\d{6}$")]
+
+
+class PairingCodeOut(BaseModel):
+    code: str
+    expires_at: datetime
+
+
 class LinkPatientIn(BaseModel):
     patient_email: Email
 

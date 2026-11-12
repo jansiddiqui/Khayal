@@ -1,5 +1,7 @@
+import { CircleDot } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { copy } from "../../copy";
+import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import type { GameDefinition, RoundProps } from "../types";
 import { RED_FROM_LEVEL, redChance, RESPONSE_WINDOW_MS, TOO_EARLY_PAUSE_MS, waitMs } from "./logic";
 
@@ -18,7 +20,7 @@ const circleStyle: Record<Circle, string> = {
  * Reaction time = time from the colour change to the tap; null when nothing was tapped.
  * Tapping while waiting shows "Wait for green" and the trial starts again (it doesn't count).
  */
-export function ReactionTapRound({ level, onComplete, rng = Math.random }: RoundProps) {
+export function ReactionTapRound({ level, roundIndex, onComplete, rng = Math.random }: RoundProps) {
   const [circle, setCircle] = useState<Circle>("waiting");
   const [trial, setTrial] = useState(0);
   const shownAt = useRef(0);
@@ -73,10 +75,13 @@ export function ReactionTapRound({ level, onComplete, rng = Math.random }: Round
 
   const t = copy.games.reactionTap;
   const label = { waiting: t.waiting, green: t.green, red: t.red, tooEarly: t.tooEarly }[circle];
+  const instructions = level >= RED_FROM_LEVEL ? t.instructionsWithRed : t.instructions;
+  // Instructions once, at the start; speaking during a trial would delay the tap.
+  useSpeakOnChange(circle === "tooEarly" ? t.tooEarly : roundIndex === 0 ? instructions : "");
 
   return (
     <div className="flex flex-col items-center gap-8">
-      <p className="self-start text-2xl">{level >= RED_FROM_LEVEL ? t.instructionsWithRed : t.instructions}</p>
+      <p className="self-start text-2xl">{instructions}</p>
       <button
         type="button"
         onClick={tap}
@@ -93,6 +98,6 @@ export const reactionTap: GameDefinition = {
   type: "reaction_tap",
   title: copy.games.reactionTap.title,
   intro: copy.games.reactionTap.intro,
-  icon: "🟢",
+  icon: CircleDot,
   Round: ReactionTapRound,
 };

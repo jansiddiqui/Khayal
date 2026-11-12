@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
@@ -226,8 +227,9 @@ export function CaregiverFamily() {
 
   return (
     <CaregiverLayout title={`Family photos${patient ? ` · ${patient.name}` : ""}`}>
-      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-block text-brand-dark underline">
-        ← Back to patient
+      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 text-brand-dark underline">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Back to patient
       </Link>
       <p className="mb-4 text-gray-600">
         These photos are private: they are only shown to this patient and their linked caregivers.

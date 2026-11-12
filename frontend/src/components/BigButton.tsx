@@ -36,7 +36,11 @@ export function BigButton({ label, icon, variant = "primary", size = "normal", n
   const className = `${base} ${sizes[size]} ${variants[variant]}`;
   const content = (
     <>
-      {icon && <span aria-hidden="true">{icon}</span>}
+      {icon && (
+        <span aria-hidden="true" className="flex shrink-0 [&>svg]:size-[1.2em]">
+          {icon}
+        </span>
+      )}
       {note ? (
         <span className="flex flex-col items-center leading-tight">
           <span>{label}</span>

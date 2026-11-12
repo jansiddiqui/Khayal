@@ -34,8 +34,10 @@ def test_sweep_all_logs_missed_reminders_for_every_patient(db: Session) -> None:
     assert len(db.scalars(select(Alert)).all()) == 2  # 3 missed each -> one warning each
 
 
-def test_background_loop_runs_now_and_survives_errors(monkeypatch: pytest.MonkeyPatch, db_session_factory: sessionmaker[Session]) -> None:
+def test_background_loop_runs_now_and_survives_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Runs on a fake clock: no real waiting, so it cannot be flaky under load."""
     calls: list[int] = []
+    slept: list[float] = []
 
     def fake_check() -> int:
         calls.append(1)
@@ -43,17 +45,20 @@ def test_background_loop_runs_now_and_survives_errors(monkeypatch: pytest.Monkey
             raise RuntimeError("database busy")
         return 0
 
+    class Stop(Exception):
+        pass
+
+    async def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+        if len(slept) == 3:
+            raise Stop  # end the endless loop after three checks
+
     monkeypatch.setattr(background, "check_missed_reminders_once", fake_check)
+    with pytest.raises(Stop):
+        asyncio.run(background.missed_reminder_loop(900, sleep=fake_sleep))
 
-    async def run() -> None:
-        task = asyncio.create_task(background.missed_reminder_loop(0.01))
-        await asyncio.sleep(0.1)
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
-
-    asyncio.run(run())
-    assert len(calls) >= 2  # the first failure did not stop the loop
+    assert len(calls) == 3  # checked at once, then after each wait; the first failure did not stop it
+    assert slept == [900, 900, 900]
 
 
 def test_background_check_uses_a_real_session(monkeypatch: pytest.MonkeyPatch, db_session_factory: sessionmaker[Session]) -> None:

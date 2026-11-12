@@ -1,3 +1,4 @@
+import { UserPlus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { errorStatus, type Role } from "../api/client";
@@ -79,7 +80,7 @@ export function Register() {
         )}
         {/* Pinned to the bottom of the screen so "Create account" is always visible on a phone. */}
         <div className="sticky bottom-0 -mx-4 border-t-2 border-gray-300 bg-paper px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:p-0">
-          <BigButton type="submit" label={submitting ? copy.register.submitting : copy.register.submit} icon="✅" />
+          <BigButton type="submit" label={submitting ? copy.register.submitting : copy.register.submit} icon={<UserPlus />} />
         </div>
       </form>
       <Link to="/login" className="text-xl text-brand-dark underline">

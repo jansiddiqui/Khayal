@@ -1,3 +1,4 @@
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { listFamily, type FamilyMember, type FamilyPhoto } from "../../api/client";
@@ -38,7 +39,7 @@ export function WhoIsThis() {
           {member.note && <p className="text-2xl">{member.note}</p>}
         </div>
         <div className="mt-auto">
-          <BigButton label={w.back} icon="⬅️" onClick={() => setOpen(null)} />
+          <BigButton label={w.back} icon={<ArrowLeft />} onClick={() => setOpen(null)} />
         </div>
       </Layout>
     );
@@ -52,13 +53,12 @@ export function WhoIsThis() {
       {family.isError && (
         <Card>
           <p className="mb-6 text-2xl">{w.loadFailed}</p>
-          <BigButton label={copy.games.retry} icon="🔄" onClick={() => void family.refetch()} />
+          <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={() => void family.refetch()} />
         </Card>
       )}
       {family.isSuccess && tiles.length === 0 && (
         <Card>
           <p className="text-2xl">
-            <span aria-hidden="true">👪 </span>
             {w.empty}
           </p>
         </Card>

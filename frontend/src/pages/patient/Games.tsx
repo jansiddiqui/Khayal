@@ -1,3 +1,4 @@
+import { RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getTodaysGames } from "../../api/client";
 import { BigButton } from "../../components/BigButton";
@@ -17,7 +18,7 @@ export function Games() {
       {today.isError && (
         <Card>
           <p className="mb-6 text-2xl">{copy.games.listFailed}</p>
-          <BigButton label={copy.games.retry} icon="🔄" onClick={() => void today.refetch()} />
+          <BigButton label={copy.games.retry} icon={<RotateCcw />} onClick={() => void today.refetch()} />
         </Card>
       )}
       {today.isSuccess && (
@@ -29,7 +30,7 @@ export function Games() {
               <BigButton
                 key={game.type}
                 to={`/patient/games/${game.type}`}
-                icon={game.icon}
+                icon={<game.icon />}
                 label={game.title}
                 note={done_today ? copy.games.doneToday : undefined}
                 variant={done_today ? "secondary" : "primary"}

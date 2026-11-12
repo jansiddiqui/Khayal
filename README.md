@@ -71,7 +71,7 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 | Role | Email |
 |---|---|
 | Caregiver | `caregiver@khayal.test` (linked to all three patients) |
-| Patient | `kamala@khayal.test` (has demo reminders and 3 demo family members with placeholder pictures), `rahim@khayal.test`, `shanti@khayal.test` |
+| Patient | `kamala@khayal.test` (has demo reminders and 3 demo family members with silhouette placeholder photos), `rahim@khayal.test`, `shanti@khayal.test` |
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
@@ -161,6 +161,19 @@ npm run typecheck # tsc strict
 - Patient-scoped backend routes must call `ensure_patient_access` (`backend/app/deps.py`).
 - Never commit `data/`, `.env`, uploads or model weights.
 
+## Device pairing (patient sign-in)
+
+Patients never type an email or password:
+
+1. On the caregiver's patient page, under Settings, "Pair a device" shows a 6-digit code. It is valid for 10 minutes and works once; a new code replaces the old one.
+2. On the patient's phone or tablet, open Khayal. A device that isn't signed in starts at "Set up this device". Type the code.
+3. The device stays signed in as that patient for 90 days.
+
+- **Caregivers:** they still sign in with email ("Family member or doctor? Sign in with email").
+- **Wrong codes:** after 10 wrong codes from one address within 10 minutes, pairing pauses.
+- **Storage:** codes are stored only as a keyed hash.
+- **API:** `POST /api/patients/{id}/pairing-code` (linked caregiver), `POST /api/auth/pair` `{code}`.
+
 ## Reminders
 
 - A reminder repeats on chosen weekdays at a local time. The patient's Today screen shows a Done button for reminders whose time has come (at most 3 at once), lists later ones without buttons, and lists finished ones with ✓ Done. Wording stays positive: an overdue reminder says "Let's do this now."
@@ -212,4 +225,5 @@ Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, c
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
+- **Pairing limit kept in memory:** the wrong-code counter for device pairing lives in the server process, so it resets when the server restarts and isn't shared between several server processes.
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.

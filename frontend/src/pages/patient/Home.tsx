@@ -1,3 +1,4 @@
+import { AlarmClock, ClipboardList, Puzzle, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getTodayReminders, type TodayReminder } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -28,17 +29,17 @@ export function PatientHome() {
         className="rounded-2xl border-4 border-calm bg-emerald-50 p-6"
       >
         <h2 id="next-reminder" className="flex items-center gap-3 text-2xl font-bold">
-          <span aria-hidden="true">⏰</span>
+          <AlarmClock aria-hidden="true" className="size-8 shrink-0 text-calm" />
           {copy.patientHome.nextReminderLabel}
         </h2>
         <p className="mt-2 text-2xl">
           {reminders.isPending ? copy.common.loading : nextReminderText(reminders.data)}
         </p>
       </section>
-      <nav aria-label="Main actions" className="flex flex-col gap-5">
-        <BigButton to="/patient/games" icon="🧩" label={copy.patientHome.playGames} />
-        <BigButton to="/patient/reminders" icon="📋" label={copy.patientHome.todaysReminders} />
-        <BigButton to="/patient/who-is-this" icon="👪" label={copy.patientHome.whoIsThis} />
+      <nav aria-label="Main actions" className="flex flex-col gap-4">
+        <BigButton to="/patient/games" icon={<Puzzle />} label={copy.patientHome.playGames} />
+        <BigButton to="/patient/reminders" icon={<ClipboardList />} label={copy.patientHome.todaysReminders} />
+        <BigButton to="/patient/who-is-this" icon={<Users />} label={copy.patientHome.whoIsThis} />
       </nav>
     </Layout>
   );

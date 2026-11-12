@@ -9,6 +9,8 @@ interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
+  /** Sign this device in as a patient with a caregiver's pairing code. */
+  pair: (code: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state,
       login: async (email, password) => accept(await apiClient.login(email, password)),
       register: async (input) => accept(await apiClient.register(input)),
+      pair: async (code) => accept(await apiClient.pairDevice(code)),
       logout: () => {
         apiClient.tokenStore.set(null);
         queryClient.clear();

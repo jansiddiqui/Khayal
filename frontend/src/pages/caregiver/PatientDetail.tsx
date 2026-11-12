@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
@@ -14,6 +15,7 @@ import {
   type Signals,
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
 import { GAME_NAMES, GameTrendChart, IndexChart } from "../../components/caregiver/TrendCharts";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
@@ -293,14 +295,17 @@ export function PatientDetail() {
   return (
     <CaregiverLayout title={patient?.name ?? "Patient"}>
       <nav className="mb-4 flex gap-6">
-        <Link to="/caregiver" className="text-brand-dark underline">
-          ← All patients
+        <Link to="/caregiver" className="inline-flex items-center gap-1 text-brand-dark underline">
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          All patients
         </Link>
-        <Link to={`/caregiver/patients/${patientId}/reminders`} className="text-brand-dark underline">
-          Reminders →
+        <Link to={`/caregiver/patients/${patientId}/reminders`} className="inline-flex items-center gap-1 text-brand-dark underline">
+          Reminders
+          <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
-        <Link to={`/caregiver/patients/${patientId}/family`} className="text-brand-dark underline">
-          Family photos →
+        <Link to={`/caregiver/patients/${patientId}/family`} className="inline-flex items-center gap-1 text-brand-dark underline">
+          Family photos
+          <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </nav>
 
@@ -393,6 +398,7 @@ export function PatientDetail() {
 
       {patient && (
         <section className="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-4" aria-label="Settings">
+          <PairDevicePanel patientId={patient.id} patientName={patient.name} />
           <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
           <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />
         </section>

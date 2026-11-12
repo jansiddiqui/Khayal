@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
@@ -181,8 +182,9 @@ export function CaregiverReminders() {
 
   return (
     <CaregiverLayout title={`Reminders${patient ? ` · ${patient.name}` : ""}`}>
-      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-block text-brand-dark underline">
-        ← Back to patient
+      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 text-brand-dark underline">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Back to patient
       </Link>
 
       {failed && (

@@ -84,6 +84,22 @@ export async function register(input: RegisterInput): Promise<TokenResponse> {
   return data;
 }
 
+/** A patient's device signs in with the caregiver's 6-digit code (stays signed in for 90 days). */
+export async function pairDevice(code: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/pair", { code });
+  return data;
+}
+
+export interface PairingCode {
+  code: string;
+  expires_at: string;
+}
+
+export async function createPairingCode(patientId: number): Promise<PairingCode> {
+  const { data } = await api.post<PairingCode>(`/patients/${patientId}/pairing-code`);
+  return data;
+}
+
 export async function getMe(): Promise<User> {
   const { data } = await api.get<User>("/auth/me");
   return data;
