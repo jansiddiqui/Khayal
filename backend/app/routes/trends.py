@@ -17,6 +17,7 @@ def get_trend(patient_id: int, user: CurrentUser, db: DbSession, now: Now, game_
         GameTrendOut(
             game_type=game,
             status=r.status,
+            trend_status=decline.shared_status(r.z),
             z=r.z,
             score=r.score,
             baseline_mean=r.baseline_mean,

@@ -390,7 +390,10 @@ export interface TrendPoint {
 
 export interface GameTrend {
   game_type: GameType;
+  /** Alert status (warning/critical thresholds). */
   status: DeclineStatus;
+  /** The shared display scale, the same as the overall index. */
+  trend_status: IndexStatus;
   z: number | null;
   score: number | null;
   baseline_mean: number | null;

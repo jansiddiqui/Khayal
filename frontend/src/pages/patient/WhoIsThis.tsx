@@ -73,7 +73,7 @@ export function WhoIsThis() {
                 type="button"
                 onClick={() => setOpen(tile)}
                 aria-label={`${tile.member.name}, ${tile.member.relation}`}
-                className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-white text-left hover:border-brand-dark"
+                className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left hover:border-brand-dark"
               >
                 <AuthedImage src={tile.photo.url} alt="" className="aspect-square w-full object-cover" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>

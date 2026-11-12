@@ -31,15 +31,15 @@ function AdherenceSummary({ patientId, patientName }: { patientId: number; patie
   if (!adherence.isSuccess) return null;
   const a = adherence.data;
   return (
-    <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4" aria-labelledby="adherence-heading">
+    <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="adherence-heading">
       <h2 id="adherence-heading" className="text-lg font-semibold">
         Adherence, last {a.days} days
       </h2>
       <p className="text-3xl font-semibold">{a.rate === null ? "—" : `${Math.round(a.rate * 100)}%`}</p>
-      <p className="text-gray-700">
+      <p className="text-ink-soft">
         {a.done_by_patient} done by {patientName} · {a.done_by_caregiver} done by caregiver · {a.missed} missed
       </p>
-      <p className="text-gray-500">Only reminders the patient marked done themself count toward the rate.</p>
+      <p className="text-ink-muted">Only reminders the patient marked done themself count toward the rate.</p>
     </section>
   );
 }
@@ -79,21 +79,21 @@ function ReminderForm({
     <form onSubmit={submit} className="flex flex-col gap-3" aria-label={submitLabel}>
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-gray-700">Title</span>
+          <span className="text-ink-soft">Title</span>
           <input
             value={form.title}
             maxLength={120}
             required
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            className="w-64 rounded-md border border-gray-400 px-3 py-2"
+            className="w-64 rounded-md border border-line-strong px-3 py-2"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-gray-700">Type</span>
+          <span className="text-ink-soft">Type</span>
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value as ReminderType })}
-            className="rounded-md border border-gray-400 bg-white px-3 py-2"
+            className="rounded-md border border-line-strong bg-surface px-3 py-2"
           >
             {TYPES.map((t) => (
               <option key={t} value={t}>
@@ -103,13 +103,13 @@ function ReminderForm({
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-gray-700">Time</span>
+          <span className="text-ink-soft">Time</span>
           <input
             type="time"
             required
             value={form.time_of_day}
             onChange={(e) => setForm({ ...form, time_of_day: e.target.value })}
-            className="rounded-md border border-gray-400 px-3 py-2"
+            className="rounded-md border border-line-strong px-3 py-2"
           />
         </label>
         <label className="flex items-center gap-2 self-end pb-2">
@@ -118,25 +118,25 @@ function ReminderForm({
         </label>
       </div>
       <fieldset className="flex flex-wrap items-center gap-2">
-        <legend className="mb-1 text-gray-700">Days</legend>
+        <legend className="mb-1 text-ink-soft">Days</legend>
         {WEEKDAYS.map((name, day) => (
-          <label key={name} className="flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1">
+          <label key={name} className="flex items-center gap-1 rounded-md border border-line px-2 py-1">
             <input type="checkbox" checked={form.days_of_week.includes(day)} onChange={() => toggleDay(day)} />
             {name}
           </label>
         ))}
       </fieldset>
-      {form.days_of_week.length === 0 && <p className="text-amber-800">Choose at least one day.</p>}
+      {form.days_of_week.length === 0 && <p className="text-accent-strong">Choose at least one day.</p>}
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={!valid || busy}
-          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
         >
           {submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-md border border-gray-400 px-4 py-2 hover:bg-gray-100">
+          <button type="button" onClick={onCancel} className="rounded-md border border-line-strong px-4 py-2 hover:bg-sunken">
             Cancel
           </button>
         )}
@@ -188,26 +188,26 @@ export function CaregiverReminders() {
       </Link>
 
       {failed && (
-        <p role="alert" className="mb-4 text-red-700">
+        <p role="alert" className="mb-4 text-danger">
           Could not save the change. Try again.
         </p>
       )}
 
       <AdherenceSummary patientId={patientId} patientName={patient?.name.split(" ")[0] ?? "patient"} />
 
-      <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+      <section className="mb-6 rounded-lg border border-line bg-surface p-4">
         <h2 className="mb-3 text-lg font-semibold">Add a reminder</h2>
         <ReminderForm key={formKey} initial={EMPTY} submitLabel="Add reminder" busy={create.isPending} onSubmit={(input) => create.mutate(input)} />
       </section>
 
-      <section className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4">
+      <section className="overflow-x-auto rounded-lg border border-line bg-surface p-4">
         <h2 className="mb-3 text-lg font-semibold">All reminders</h2>
-        {reminders.isPending && <p className="text-gray-600">Loading reminders…</p>}
-        {reminders.isError && <p className="text-red-700">Could not load reminders.</p>}
-        {reminders.isSuccess && reminders.data.length === 0 && <p className="text-gray-600">No reminders yet.</p>}
+        {reminders.isPending && <p className="text-ink-muted">Loading reminders…</p>}
+        {reminders.isError && <p className="text-danger">Could not load reminders.</p>}
+        {reminders.isSuccess && reminders.data.length === 0 && <p className="text-ink-muted">No reminders yet.</p>}
         {reminders.isSuccess && reminders.data.length > 0 && (
           <table className="w-full text-left">
-            <thead className="border-b border-gray-200 text-gray-600">
+            <thead className="border-b border-line text-ink-muted">
               <tr>
                 <th className="py-2 pr-3 font-medium">Time</th>
                 <th className="py-2 pr-3 font-medium">Title</th>
@@ -220,7 +220,7 @@ export function CaregiverReminders() {
             <tbody>
               {reminders.data.map((r) =>
                 editing === r.id ? (
-                  <tr key={r.id} className="border-b border-gray-100">
+                  <tr key={r.id} className="border-b border-line">
                     <td colSpan={6} className="py-3">
                       <ReminderForm
                         initial={toInput(r)}
@@ -232,7 +232,7 @@ export function CaregiverReminders() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={r.id} className={`border-b border-gray-100 last:border-0 ${r.active ? "" : "text-gray-500"}`}>
+                  <tr key={r.id} className={`border-b border-line last:border-0 ${r.active ? "" : "text-ink-muted"}`}>
                     <td className="py-2 pr-3">{copy.reminders.time(r.time_of_day)}</td>
                     <td className="py-2 pr-3">
                       {r.title}
@@ -240,7 +240,7 @@ export function CaregiverReminders() {
                     </td>
                     <td className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
                     <td className="py-2 pr-3">{daysLabel(r.days_of_week)}</td>
-                    <td className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-amber-800" : ""}`}>
+                    <td className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-accent-strong" : ""}`}>
                       {todayLabel(r)}
                     </td>
                     <td className="flex gap-2 py-2">
@@ -252,7 +252,7 @@ export function CaregiverReminders() {
                         onClick={() => {
                           if (window.confirm(`Delete the reminder "${r.title}"?`)) remove.mutate(r.id);
                         }}
-                        className="text-red-700 underline"
+                        className="text-danger underline"
                       >
                         Delete
                       </button>

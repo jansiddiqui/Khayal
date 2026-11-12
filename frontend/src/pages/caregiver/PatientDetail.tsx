@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChartLine, Info, OctagonAlert, TriangleAlert } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import {
   acknowledgeAlert,
@@ -16,7 +16,7 @@ import {
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
-import { GAME_NAMES, GameTrendChart, IndexChart } from "../../components/caregiver/TrendCharts";
+import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
 const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"];
@@ -51,7 +51,7 @@ function CityForm({ patientId, city }: { patientId: number; city: string | null 
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <label htmlFor="patient-city" className="text-gray-700">
+        <label htmlFor="patient-city" className="text-ink-soft">
           Home city (used in Daily Orientation)
         </label>
         <input
@@ -60,36 +60,41 @@ function CityForm({ patientId, city }: { patientId: number; city: string | null 
           maxLength={80}
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. Pune"
-          className="rounded-md border border-gray-400 px-3 py-2"
+          className="rounded-md border border-line-strong px-3 py-2"
         />
       </div>
       <button
         type="submit"
         disabled={save.isPending}
-        className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+        className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
       >
         {save.isPending ? "Saving…" : "Save city"}
       </button>
       {save.isSuccess && <span className="text-calm">Saved.</span>}
       {save.isError && (
-        <span role="alert" className="text-red-700">
+        <span role="alert" className="text-danger">
           Could not save the city.
         </span>
       )}
       {!city && !save.isSuccess && (
-        <p className="w-full text-gray-600">No city set: Daily Orientation asks for the year instead.</p>
+        <p className="w-full text-ink-muted">No city set: Daily Orientation asks for the year instead.</p>
       )}
     </form>
   );
 }
 
 const SEVERITY_STYLE = {
-  info: "border-blue-300 bg-blue-50",
-  warning: "border-amber-400 bg-amber-50",
-  critical: "border-red-500 bg-red-50",
+  info: { box: "border-brand bg-brand-soft", icon: Info, iconClass: "text-brand" },
+  warning: { box: "border-accent bg-accent-soft", icon: TriangleAlert, iconClass: "text-accent-strong" },
+  critical: { box: "border-danger bg-danger-soft", icon: OctagonAlert, iconClass: "text-danger" },
 } as const;
 
 const ALERTS_SHOWN = 3;
+/** How long a chart stays highlighted after an alert links to it. */
+export const HIGHLIGHT_MS = 2000;
+
+const alertTime = (iso: string) =>
+  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 const ALERT_TYPE_LABEL = {
   decline: "Decline",
@@ -102,7 +107,13 @@ export function alertLines(message: string): string[] {
   return message.split(/(?<=\)\.)\s+/).filter(Boolean);
 }
 
-function AlertsPanel({ patientId }: { patientId: number }) {
+/** The game an alert line is about ("Word Recall average dropped …"), if any. */
+export function gameOfLine(line: string): GameType | null {
+  const hit = (Object.entries(GAME_NAMES) as [GameType, string][]).find(([, name]) => line.startsWith(`${name} `));
+  return hit ? hit[0] : null;
+}
+
+function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame: (game: GameType) => void }) {
   const queryClient = useQueryClient();
   const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
   const ack = useMutation({
@@ -115,37 +126,57 @@ function AlertsPanel({ patientId }: { patientId: number }) {
   const past = alerts.data?.filter((a) => a.acknowledged) ?? [];
 
   return (
-    <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4" aria-labelledby="alerts-heading">
+    <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="alerts-heading">
       <h2 id="alerts-heading" className="mb-3 text-lg font-semibold">
         Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
       </h2>
-      {alerts.isPending && <p className="text-gray-600">Loading alerts…</p>}
-      {alerts.isError && <p className="text-red-700">Could not load alerts.</p>}
-      {alerts.isSuccess && alerts.data.length === 0 && <p className="text-gray-600">No alerts.</p>}
+      {alerts.isPending && <p className="text-ink-muted">Loading alerts…</p>}
+      {alerts.isError && <p className="text-danger">Could not load alerts.</p>}
+      {alerts.isSuccess && alerts.data.length === 0 && <p className="text-ink-muted">No alerts.</p>}
       <ul className="flex flex-col gap-2">
-        {shown.map((a) => (
-          <li key={a.id} className={`flex flex-wrap items-start gap-3 rounded-md border-l-4 p-3 ${SEVERITY_STYLE[a.severity]}`}>
+        {shown.map((a) => {
+          const look = SEVERITY_STYLE[a.severity];
+          const lines = alertLines(a.message);
+          return (
+          <li key={a.id} className={`flex flex-wrap items-start gap-3 rounded-md border p-3 ${look.box}`}>
+            <look.icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${look.iconClass}`} />
             <div className="min-w-0 flex-1">
               <p className="mb-1">
                 <span className="font-semibold capitalize">{a.severity}</span>
-                <span className="text-gray-600"> · {ALERT_TYPE_LABEL[a.type]} · {new Date(a.created_at).toLocaleString()}</span>
+                <span className="text-ink-muted"> · {ALERT_TYPE_LABEL[a.type]} · {alertTime(a.created_at)}</span>
               </p>
-              <ul className="list-disc pl-5">
-                {alertLines(a.message).map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
+              <ul className={lines.length > 1 ? "flex list-disc flex-col gap-1 pl-5" : "flex flex-col gap-1"}>
+                {lines.map((line) => {
+                  const game = gameOfLine(line);
+                  return (
+                    <li key={line}>
+                      {line}{" "}
+                      {game && (
+                        <button
+                          type="button"
+                          onClick={() => onShowGame(game)}
+                          className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-brand-dark underline underline-offset-2"
+                        >
+                          <ChartLine aria-hidden="true" className="size-4" />
+                          See {GAME_NAMES[game]} chart
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <button
               type="button"
               onClick={() => ack.mutate(a.id)}
               disabled={ack.isPending}
-              className="rounded-md border border-gray-400 bg-white px-3 py-1 hover:bg-gray-100"
+              className="rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken"
             >
               Acknowledge
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {open.length > ALERTS_SHOWN && (
         <button type="button" onClick={() => setShowAll(!showAll)} className="mt-2 text-brand-dark underline">
@@ -154,11 +185,11 @@ function AlertsPanel({ patientId }: { patientId: number }) {
       )}
       {past.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-gray-700">Acknowledged ({past.length})</summary>
-          <ul className="mt-2 flex flex-col gap-1 text-gray-600">
+          <summary className="cursor-pointer text-ink-soft">Acknowledged ({past.length})</summary>
+          <ul className="mt-2 flex flex-col gap-1 text-ink-muted">
             {past.map((a) => (
               <li key={a.id}>
-                {new Date(a.created_at).toLocaleString()} · {a.message}
+                {alertTime(a.created_at)} · {a.message}
               </li>
             ))}
           </ul>
@@ -185,14 +216,14 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
 
   const select = (id: string, label: string, value: GameType, onChange: (g: GameType) => void) => (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-gray-700">
+      <label htmlFor={id} className="text-ink-soft">
         {label}
       </label>
       <select
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value as GameType)}
-        className="rounded-md border border-gray-400 bg-white px-3 py-2"
+        className="rounded-md border border-line-strong bg-surface px-3 py-2"
       >
         {LEVELLED_GAMES.map((g) => (
           <option key={g} value={g}>
@@ -206,7 +237,7 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">Pin games</h2>
-      <p className="text-gray-600">
+      <p className="text-ink-muted">
         {pinned
           ? `Pinned: About Today, ${GAME_NAMES[pinned[0]!]}, ${GAME_NAMES[pinned[1]!]}.`
           : "Automatic: About Today plus the two games played least recently."}
@@ -217,7 +248,7 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
         <button
           type="submit"
           disabled={save.isPending || first === second}
-          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
         >
           Pin these games
         </button>
@@ -226,15 +257,15 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
             type="button"
             onClick={() => save.mutate(null)}
             disabled={save.isPending}
-            className="rounded-md border border-gray-400 px-4 py-2 hover:bg-gray-100"
+            className="rounded-md border border-line-strong px-4 py-2 hover:bg-sunken"
           >
             Unpin (automatic)
           </button>
         )}
       </div>
-      {first === second && <p className="text-amber-800">Choose two different games.</p>}
+      {first === second && <p className="text-accent-strong">Choose two different games.</p>}
       {save.isError && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className="text-danger">
           Could not save the pinned games.
         </p>
       )}
@@ -262,14 +293,14 @@ function SignalTiles({ signals }: { signals: Signals }) {
   ];
   return (
     <section aria-labelledby="signals-heading" className="flex flex-col gap-3">
-      <h2 id="signals-heading" className="text-sm font-medium text-gray-600">
+      <h2 id="signals-heading" className="text-sm font-medium text-ink-muted">
         Last {signals.days} days · for context, no alerts
       </h2>
       {tiles.map((t) => (
-        <div key={t.label} className="rounded-lg border border-gray-200 bg-white p-4" role="group" aria-label={t.label}>
-          <p className="text-gray-600">{t.label}</p>
+        <div key={t.label} className="rounded-lg border border-line bg-surface p-4" role="group" aria-label={t.label}>
+          <p className="text-ink-muted">{t.label}</p>
           <p className="text-2xl font-semibold">{t.value}</p>
-          <p className="text-sm text-gray-500">{t.note}</p>
+          <p className="text-sm text-ink-muted">{t.note}</p>
         </div>
       ))}
     </section>
@@ -284,6 +315,20 @@ export function PatientDetail() {
   const signals = useQuery({ queryKey: ["signals", patientId], queryFn: () => getSignals(patientId) });
   const patient = patients.data?.find((p) => p.id === patientId);
   const [allRows, setAllRows] = useState(false);
+
+  // An alert's "See … chart" scrolls to that game's chart and rings it for 2 seconds.
+  const [highlighted, setHighlighted] = useState<GameType | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(highlightTimer.current), []);
+  function showGame(game: GameType) {
+    const chart = document.getElementById(trendChartId(game));
+    const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    chart?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "center" });
+    chart?.focus({ preventScroll: true });
+    setHighlighted(game);
+    clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS);
+  }
 
   // Sessions arrive newest first, so the first one per game holds the current level.
   const currentLevels = LEVELLED_GAMES.map((type) => {
@@ -309,54 +354,59 @@ export function PatientDetail() {
         </Link>
       </nav>
 
-      <AlertsPanel patientId={patientId} />
+      <AlertsPanel patientId={patientId} onShowGame={showGame} />
 
       <section className="mb-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
-        {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-gray-600">Loading trends…</p>}
+        {trend.isSuccess ? <IndexChart trend={trend.data} /> : <p className="text-ink-muted">Loading trends…</p>}
         {signals.isSuccess && <SignalTiles signals={signals.data} />}
       </section>
-      {trend.isError && <p className="mb-4 text-red-700">Could not load the trends.</p>}
+      {trend.isError && <p className="mb-4 text-danger">Could not load the trends.</p>}
 
       {trend.isSuccess && (
         <section aria-labelledby="games-heading" className="mb-6">
           <h2 id="games-heading" className="mb-1 text-lg font-semibold">
             Games
           </h2>
-          <p className="mb-3 text-sm text-gray-600">
+          <p className="mb-3 text-sm text-ink-muted">
             Composite score per completed session. Dashed line: baseline (sessions 6–15; the first 5 are warm-up); shaded band: ±1.5 standard
             deviations.
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
             {trend.data.games.map((g) => (
-              <GameTrendChart key={g.game_type} trend={g} />
+              <GameTrendChart
+                key={g.game_type}
+                trend={g}
+                overall={trend.data.cognitive_status}
+                highlighted={highlighted === g.game_type}
+              />
             ))}
           </div>
         </section>
       )}
 
-      {sessions.isPending && <p className="text-gray-600">Loading sessions…</p>}
-      {sessions.isError && <p className="text-red-700">Could not load sessions for this patient.</p>}
+      {sessions.isPending && <p className="text-ink-muted">Loading sessions…</p>}
+      {sessions.isError && <p className="text-danger">Could not load sessions for this patient.</p>}
 
       {sessions.isSuccess && (
         <div className="mb-6 flex flex-col gap-6">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {currentLevels.map(({ type, level, played }) => (
-              <div key={type} className="rounded-lg border border-gray-200 bg-white p-4">
-                <p className="text-gray-600">{GAME_NAMES[type]}</p>
+              <div key={type} className="rounded-lg border border-line bg-surface p-4">
+                <p className="text-ink-muted">{GAME_NAMES[type]}</p>
                 <p className="text-2xl font-semibold">Level {level} / 10</p>
-                {!played && <p className="text-gray-500">Not played yet (starting level)</p>}
+                {!played && <p className="text-ink-muted">Not played yet (starting level)</p>}
               </div>
             ))}
           </section>
 
-          <section className="overflow-x-auto rounded-lg border border-gray-200 bg-white p-4">
+          <section className="overflow-x-auto rounded-lg border border-line bg-surface p-4">
             <h2 className="mb-3 text-lg font-semibold">Session history</h2>
             {sessions.data.length === 0 ? (
-              <p className="text-gray-600">No games played yet.</p>
+              <p className="text-ink-muted">No games played yet.</p>
             ) : (
               <>
                 <table className="w-full text-left">
-                  <thead className="border-b border-gray-200 text-gray-600">
+                  <thead className="border-b border-line text-ink-muted">
                     <tr>
                       <th className="py-2 pr-3 font-medium">Date</th>
                       <th className="py-2 pr-3 font-medium">Game</th>
@@ -369,10 +419,10 @@ export function PatientDetail() {
                   </thead>
                   <tbody>
                     {rows.map((s) => (
-                      <tr key={s.id} className="border-b border-gray-100 last:border-0">
-                        <td className="py-2 pr-3">{new Date(s.started_at).toLocaleString()}</td>
+                      <tr key={s.id} className="border-b border-line last:border-0">
+                        <td className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
                         <td className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
-                        <td className={`py-2 pr-3 ${s.completed ? "" : "text-amber-800"}`}>{statusCell(s)}</td>
+                        <td className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
                         <td className="py-2 pr-3">{levelCell(s)}</td>
                         <td className="py-2 pr-3">
                           {s.rounds_correct} / {s.rounds_played}
@@ -397,7 +447,7 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <section className="flex flex-col gap-6 rounded-lg border border-gray-200 bg-white p-4" aria-label="Settings">
+        <section className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
           <PairDevicePanel patientId={patient.id} patientName={patient.name} />
           <CityForm key={patient.city ?? ""} patientId={patient.id} city={patient.city} />
           <PinForm key={(patient.pinned_games ?? []).join()} patientId={patient.id} pinned={patient.pinned_games} />

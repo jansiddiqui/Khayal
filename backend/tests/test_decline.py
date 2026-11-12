@@ -149,7 +149,8 @@ def test_trend_and_signals_api(client: TestClient, register: Register, clock: Cl
     trend = client.get(f"/api/patients/{pid}/trend", params={"game_type": "daily_orientation"}, headers=cg).json()
     assert trend["cognitive_status"] == "declining"
     (game,) = trend["games"]
-    assert game["status"] == "critical"
+    assert game["status"] == "critical"  # alert scale
+    assert game["trend_status"] == "declining"  # the shared display scale, same as the overall
     assert len(game["points"]) == NEEDED + 5
     assert game["points"][NEEDED - 2]["z"] is None and game["points"][NEEDED - 1]["z"] is not None
     assert game["baseline_mean"] == 0.9

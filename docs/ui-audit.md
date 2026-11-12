@@ -289,3 +289,52 @@ The full-page caregiver images (24–26) were rendered from the page's DOM with 
 - **Audit side effect.** Playing one round of each game left four "Stopped early" sessions and one completed About Today session in Kamala's history for 12 Nov (visible in screenshot 24).
 - **Critique questions skipped:** you asked for a single report and then a stop, so the critique's follow-up questions weren't asked, and no `.impeccable/critique` snapshot was written.
 - **Not tested:** real touch gestures (taps were synthesised), screen readers, and caregiver screens at phone width.
+
+---
+
+## Re-audit after batches 1–3 (12 Nov 2026)
+
+`/impeccable audit` and `/impeccable critique` were re-run on the same screens and sizes as the first audit: patient at 375 × 812, caregiver at 1280 × 800.
+- **Critique:** two separate assessments, as before: a design review from the screenshots and source, and the detector (`impeccable detect`, all rules plus the type scope).
+- **Technical audit:** measured in the live app (text contrast, smallest text, button heights, fold, horizontal scroll) plus the detector.
+- **Screenshots:** before and after shots are in [`ui-audit/batch3/`](ui-audit/batch3/).
+
+| | First audit | After batches 1–3 | Change |
+|---|---|---|---|
+| **Technical audit** (`/impeccable audit`) | 13 / 20 Acceptable | **17 / 20 Good** | +4 |
+| · Accessibility | 3 | 3 | Patient text is now at least 20px with contrast of at least 8.7 : 1 on every screen, and read-aloud covers questions, choices and replies. The caregiver Reminders form still has day checkboxes and inline links under 24 px. |
+| · Performance | 3 | 3 | Fonts are self-hosted with the Latin subset only; the JS bundle is still one chunk. |
+| · Theming | 2 | 4 | One token file (`theme.css`) for both sides, light mode only by decision. Raw colours remain only in game content and the chart palette. |
+| · Responsive | 2 | 3 | Every game board and commit button fits 375 × 812. Patient Home ends at y = 804 of 812, and 375 × 667 is untested. |
+| · Implementation integrity | 3 | 4 | The detector is clean (0 findings, from 1), and the system is coherent. |
+| **Critique, patient side** (Nielsen) | 26 / 40 | **28 / 40 Good** | +2 |
+| **Critique, caregiver side** (Nielsen) | 26 / 40 | **27 / 40** | +1 |
+
+### What the re-audit credits
+
+**Patient side**
+- Every game fits on a phone, with no hidden timers.
+- Sequence Recall's lit tile is visible, and a missed sequence is replayed.
+- Read aloud speaks the task: questions, choices and replies.
+- Device pairing replaces passwords.
+- The family photo is full width.
+- End screens are warm, with "Next game".
+- Games have plain names, and there are no emoji: icons from one set, plus Khayal's own card art.
+- Warm paper, a calm indigo and marigold, with Atkinson Hyperlegible.
+
+**Caregiver side**
+- One status scale ("This game: Watch" / "Overall: Watch", with the reason when they differ).
+- Each alert links to its chart and highlights it.
+- Indian date format, clearer disabled buttons, and Inter.
+
+### What still holds the scores back (next candidates)
+
+1. **[P1] Home and the games list barely fit at 812 px.** On a 375 × 667 phone the third Home button would fall below the fold. `/impeccable adapt`
+2. **[P1] Caregiver charts show only the jagged raw score, not the 5-session average that alerts are based on.** The captions also lead with statistics. `/impeccable clarify`
+3. **[P2] The patient page is about 4,400 px with no summary strip or tabs.** Pairing and pins sit at the bottom, and the dashboard lacks last-played and new-alert columns. `/impeccable layout`
+4. **[P2] Small slips in the patient games.**
+   - Day and month answers are in shuffled order.
+   - The question style varies between games.
+   - The lit tile turns white rather than "lighting up".
+   - The design review flags Reaction Tap's red "Don't tap" disc against PRODUCT.md's "no red error language". It is the game's agreed stop signal, not error language, so this one needs your call.
+5. **[P2] No "Say it again" for read aloud, no one-line description per game, and no "2 of 3 games done today" on Home.** `/impeccable onboard`

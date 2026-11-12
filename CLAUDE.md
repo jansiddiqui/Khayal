@@ -146,6 +146,10 @@ The caregiver UI can be a normal dense dashboard.
 
 **Overall cognitive index** = mean of the latest z across the games that have a baseline. The caregiver patient list shows it as a status dot (Stable / Watch / Declining).
 
+**One status scale on caregiver screens (decided):** each game and the overall index use the same words and thresholds (Stable at −0.5 or above, Watch below −0.5, Declining below −1.5, Learning before a baseline), labelled "This game: …" and "Overall: …", with a one-line explanation when they differ. Alerts keep their own thresholds (warning below −1.5, critical below −2.5). Each alert line about a game links to that game's chart and highlights it for 2 seconds.
+
+**Theme (decided):** all colours and fonts come from `frontend/src/theme.css`. Light mode only. One calm primary (deep indigo), one warm accent (marigold); warm paper + Atkinson Hyperlegible on the patient side, near-white + Inter on the caregiver side.
+
 **Secondary signals** (shown on the dashboard, no alerts yet): stopped-early rate and hint rate over the last 14 days, and reminder adherence (patient-marked only).
 
 Each decline alert carries a plain explanation, e.g. "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."

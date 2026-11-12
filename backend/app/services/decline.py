@@ -56,6 +56,11 @@ def overview(db: Session, patient_id: int, until: datetime | None = None) -> Ove
     return Overview(index=index, status=zscore.index_status(index), games=games)
 
 
+def shared_status(z: float | None) -> zscore.IndexStatus:
+    """One scale for a game and for the overall index: Stable / Watch / Declining."""
+    return zscore.index_status(z)
+
+
 def _empty(game: GameType) -> zscore.DeclineResult:
     name = zscore.GAME_NAMES.get(game.value, game.value)
     return zscore.DeclineResult(

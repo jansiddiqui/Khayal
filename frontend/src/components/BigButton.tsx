@@ -16,7 +16,7 @@ const sizes: Record<Size, string> = {
 
 const variants: Record<Variant, string> = {
   primary: "bg-brand text-white hover:bg-brand-dark",
-  secondary: "border-4 border-brand bg-white text-brand-dark hover:bg-blue-50",
+  secondary: "border-4 border-brand bg-surface text-brand-dark hover:bg-brand-soft",
 };
 
 interface CommonProps {

@@ -18,7 +18,7 @@ function ReminderLine({ reminder }: { reminder: TodayReminder }) {
       <ReminderIcon type={reminder.type} className="size-8 shrink-0" />
       <span className="font-semibold">{r.time(reminder.time_of_day)}</span>
       <span>{reminder.title}</span>
-      <span className="text-xl text-gray-700">({r.types[reminder.type]})</span>
+      <span className="text-xl text-ink-soft">({r.types[reminder.type]})</span>
     </p>
   );
 }
@@ -65,12 +65,12 @@ export function Reminders() {
   return (
     <Layout title={r.title} spokenIntro={intro}>
       {done.isSuccess && !done.isPending && (
-        <p role="status" className="rounded-xl border-4 border-calm bg-emerald-50 p-4 text-2xl">
+        <p role="status" className="rounded-xl border-4 border-calm bg-calm-soft p-4 text-2xl">
           {r.thanks}
         </p>
       )}
       {done.isError && (
-        <p role="alert" className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-2xl">
+        <p role="alert" className="rounded-xl border-4 border-accent bg-accent-soft p-4 text-2xl">
           {r.saveFailed}
         </p>
       )}
@@ -93,7 +93,7 @@ export function Reminders() {
             <section
               key={reminder.id}
               aria-label={reminder.title}
-              className="flex flex-col gap-4 rounded-2xl border-4 border-brand bg-white p-5"
+              className="flex flex-col gap-4 rounded-2xl border-4 border-brand bg-surface p-5"
             >
               <ReminderLine reminder={reminder} />
               <p className="text-xl">{reminder.status === "missed" ? r.letsDoItNow : r.timeForThis}</p>
@@ -110,7 +110,7 @@ export function Reminders() {
           </h2>
           <ul className="flex flex-col gap-3">
             {later.map((reminder) => (
-              <li key={reminder.id} className="rounded-2xl border-2 border-gray-400 bg-white p-4">
+              <li key={reminder.id} className="rounded-2xl border-2 border-line-strong bg-surface p-4">
                 <ReminderLine reminder={reminder} />
               </li>
             ))}
@@ -125,7 +125,7 @@ export function Reminders() {
           </h2>
           <ul className="flex flex-col gap-3">
             {finished.map((reminder) => (
-              <li key={reminder.id} className="rounded-2xl border-2 border-calm bg-emerald-50 p-4">
+              <li key={reminder.id} className="rounded-2xl border-2 border-calm bg-calm-soft p-4">
                 <ReminderLine reminder={reminder} />
                 <p className="mt-1 text-xl font-semibold text-calm">{r.doneMark}</p>
               </li>

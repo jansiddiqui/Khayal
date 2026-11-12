@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
 import type { GameTrend, Trend, User } from "../api/client";
@@ -22,10 +22,17 @@ const api = vi.mocked(apiClient);
 const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null };
 const base = { email: "x@khayal.test", city: null, pinned_games: null };
 
-function game(game_type: GameTrend["game_type"], status: GameTrend["status"], z: number | null, explanation: string): GameTrend {
+function game(
+  game_type: GameTrend["game_type"],
+  status: GameTrend["status"],
+  trend_status: GameTrend["trend_status"],
+  z: number | null,
+  explanation: string,
+): GameTrend {
   return {
     game_type,
     status,
+    trend_status,
     z,
     score: z === null ? null : 0.41,
     baseline_mean: z === null ? null : 0.62,
@@ -49,9 +56,9 @@ const trend: Trend = {
     { date: "2026-09-02", index: -1.9 },
   ],
   games: [
-    game("memory_match", "critical", -2.7, "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."),
-    game("word_recall", "stable", -1.1, "Word Recall average is 0.55 over the last 5 sessions, against a baseline of 0.62 (z = −1.1)."),
-    game("reaction_tap", "insufficient", null, "Learning this patient's normal (8/15 sessions)"),
+    game("memory_match", "critical", "declining", -2.7, "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."),
+    game("word_recall", "stable", "watch", -1.1, "Word Recall average is 0.55 over the last 5 sessions, against a baseline of 0.62 (z = −1.1)."),
+    game("reaction_tap", "insufficient", "insufficient", null, "Learning this patient's normal (8/15 sessions)"),
   ],
 };
 
@@ -84,7 +91,7 @@ it("patient list shows a status dot with a word and the index", async () => {
   expect((await row("Kamala")).getByText("Watch")).toBeInTheDocument();
   expect((await row("Kamala")).getByRole("cell", { name: "−0.9" })).toBeInTheDocument();
   expect((await row("Shanti")).getByText("Declining")).toBeInTheDocument();
-  expect((await row("New")).getByText("Not enough data")).toBeInTheDocument();
+  expect((await row("New")).getByText("Learning")).toBeInTheDocument();
 });
 
 it("patient page shows the index, game trends with explanations, and secondary signals", async () => {
@@ -93,10 +100,15 @@ it("patient page shows the index, game trends with explanations, and secondary s
 
   const index = within(await screen.findByRole("figure", { name: "Overall cognitive index trend" }));
   expect(index.getByText("−1.9")).toBeInTheDocument();
-  expect(index.getByText("Declining")).toBeInTheDocument();
+  expect(index.getByText("Overall:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("Overall: Declining");
 
+  // One scale for games and overall; a game that differs from the overall says why.
   const memory = within(screen.getByRole("figure", { name: "Memory Match trend" }));
-  expect(memory.getByText("Critical")).toBeInTheDocument();
+  expect(memory.getByText("This game:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("This game: Declining");
+  expect(memory.queryByText(/averages all games/)).toBeNull();
+  const word = within(screen.getByRole("figure", { name: "Word Recall trend" }));
+  expect(word.getByText("This game:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("This game: Watch");
+  expect(word.getByText(/steadier than the overall status \(Declining\)/)).toBeInTheDocument();
   expect(memory.getByText(trend.games[0]!.explanation)).toBeInTheDocument();
   const reaction = within(screen.getByRole("figure", { name: "Reaction Tap trend" }));
   expect(reaction.getByText("Learning")).toBeInTheDocument();
@@ -122,4 +134,38 @@ it("splits a multi-game decline alert into one line per game", async () => {
   expect(alertLines("Kamala Devi missed 3 reminders in the last 48 hours.")).toEqual([
     "Kamala Devi missed 3 reminders in the last 48 hours.",
   ]);
+});
+
+it("each alert line links to its game's chart, which is highlighted for 2 seconds", async () => {
+  const { HIGHLIGHT_MS } = await import("./caregiver/PatientDetail");
+  api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala", ...base, cognitive_index: -1.9, cognitive_status: "declining" }]);
+  api.listAlerts.mockResolvedValue([
+    {
+      id: 7,
+      patient_id: 2,
+      type: "decline",
+      severity: "warning",
+      created_at: "2026-11-10T09:00:00Z",
+      acknowledged: false,
+      message:
+        "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7). Word Recall average dropped from 0.5 to 0.3 over the last 5 sessions (z = −1.6).",
+    },
+    { id: 8, patient_id: 2, type: "missed_reminders", severity: "warning", created_at: "2026-11-10T09:00:00Z", acknowledged: false, message: "Kamala missed 3 reminders in the last 48 hours." },
+  ]);
+  const scrolled: string[] = [];
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this.id);
+  };
+  renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+  const link = await screen.findByRole("button", { name: "See Word Recall chart" });
+  expect(screen.getAllByRole("button", { name: /^See .* chart$/ })).toHaveLength(2); // none for missed reminders
+  vi.useFakeTimers();
+  fireEvent.click(link);
+  const chart = screen.getByRole("figure", { name: "Word Recall trend" });
+  expect(scrolled).toEqual(["trend-word_recall"]);
+  expect(chart.className).toContain("border-accent-strong");
+  act(() => vi.advanceTimersByTime(HIGHLIGHT_MS));
+  expect(chart.className).not.toContain("border-accent-strong");
+  vi.useRealTimers();
 });

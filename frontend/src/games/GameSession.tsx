@@ -159,7 +159,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     case "playing":
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <p className="text-xl text-gray-800">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
           <game.Round
             key={phase.round}
             level={level.data}
@@ -197,10 +197,10 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       return (
         // Kept compact so "Next game" is always on screen on a phone (CLAUDE.md section 4).
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 rounded-2xl border-2 border-gray-300 bg-white p-4" role="status">
+          <div className="flex flex-col gap-2 rounded-2xl border-2 border-line bg-surface p-4" role="status">
             {phase.lastFeedback && <p className="text-2xl">{phase.lastFeedback}</p>}
             <p className="flex items-start gap-2 text-2xl font-semibold">
-              <Sparkles aria-hidden="true" className="mt-1 size-7 shrink-0 text-amber-600" />
+              <Sparkles aria-hidden="true" className="mt-1 size-7 shrink-0 text-accent-strong" />
               <span>{ending.current.replace(copy.games.endUp, "").trim()}</span>
             </p>
             {ending.current.includes(copy.games.endUp) && <p className="text-xl">{copy.games.endUp}</p>}

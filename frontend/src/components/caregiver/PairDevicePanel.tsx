@@ -17,7 +17,7 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
         <Smartphone aria-hidden="true" className="size-5" />
         Pair a device
       </h2>
-      <p className="text-sm text-gray-700">
+      <p className="text-sm text-ink-soft">
         Sign in {patientName}'s own phone or tablet without a password. Open Khayal on that device, then type the
         code shown here. The device stays signed in for 90 days.
       </p>
@@ -25,15 +25,15 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <output
             aria-label="Pairing code"
-            className="rounded-md border border-gray-300 bg-gray-50 px-3 py-1 font-mono text-3xl tracking-[0.3em] tabular-nums"
+            className="rounded-md border border-line bg-sunken px-3 py-1 font-mono text-3xl tracking-[0.3em] tabular-nums"
           >
             {code.data.code}
           </output>
-          <span className="text-sm text-gray-700">Valid until {timeOf(code.data.expires_at)}, one use only.</span>
+          <span className="text-sm text-ink-soft">Valid until {timeOf(code.data.expires_at)}, one use only.</span>
         </div>
       )}
       {code.isError && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className="text-danger">
           Could not create a code. Please try again.
         </p>
       )}
@@ -42,7 +42,7 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
           type="button"
           onClick={() => code.mutate()}
           disabled={code.isPending}
-          className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
         >
           {code.isSuccess ? "New code" : "Show pairing code"}
         </button>

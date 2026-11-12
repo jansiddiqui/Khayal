@@ -46,7 +46,7 @@ export function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && (
-          <p role="alert" className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-xl">
+          <p role="alert" className="rounded-xl border-4 border-accent bg-accent-soft p-4 text-xl">
             {error}
           </p>
         )}

@@ -116,9 +116,9 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
               className={
                 "flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-2xl border-4 p-1 text-center transition-colors " +
                 (matched.has(index)
-                  ? "border-calm bg-emerald-50"
+                  ? "border-calm bg-calm-soft"
                   : faceUp
-                    ? "border-brand bg-white"
+                    ? "border-brand bg-surface"
                     : "border-brand-dark bg-brand hover:bg-brand-dark")
               }
             >

@@ -14,7 +14,7 @@ export function TextField({ label, ...inputProps }: TextFieldProps) {
       </label>
       <input
         id={id}
-        className="min-h-16 rounded-xl border-4 border-gray-500 bg-white px-4 text-2xl focus:border-brand"
+        className="min-h-16 rounded-xl border-4 border-line-strong bg-surface px-4 text-2xl focus:border-brand"
         {...inputProps}
       />
     </div>

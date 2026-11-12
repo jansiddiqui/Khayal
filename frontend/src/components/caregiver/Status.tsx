@@ -1,5 +1,5 @@
-import { CircleArrowDown, CircleCheck, CircleDashed, OctagonAlert, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { DeclineStatus, IndexStatus } from "../../api/client";
+import { CircleArrowDown, CircleCheck, CircleDashed, TriangleAlert, type LucideIcon } from "lucide-react";
+import type { IndexStatus } from "../../api/client";
 
 /**
  * Reserved status colours (dataviz reference palette) - always shown with an icon and a
@@ -18,35 +18,41 @@ interface StatusLook {
   icon: LucideIcon;
 }
 
-const INDEX_STATUS: Record<IndexStatus, StatusLook> = {
+/**
+ * One scale for every game and for the overall index (z of the last 5 sessions against the
+ * patient's own baseline): Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
+ */
+export const STATUS_SCALE_TEXT = "Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.";
+
+const STATUS: Record<IndexStatus, StatusLook> = {
   stable: { label: "Stable", color: STATUS_COLORS.good, icon: CircleCheck },
   watch: { label: "Watch", color: STATUS_COLORS.warning, icon: TriangleAlert },
   declining: { label: "Declining", color: STATUS_COLORS.critical, icon: CircleArrowDown },
-  insufficient: { label: "Not enough data", color: STATUS_COLORS.none, icon: CircleDashed },
-};
-
-const GAME_STATUS: Record<DeclineStatus, StatusLook> = {
-  stable: { label: "Stable", color: STATUS_COLORS.good, icon: CircleCheck },
-  warning: { label: "Warning", color: STATUS_COLORS.warning, icon: TriangleAlert },
-  critical: { label: "Critical", color: STATUS_COLORS.critical, icon: OctagonAlert },
   insufficient: { label: "Learning", color: STATUS_COLORS.none, icon: CircleDashed },
 };
 
-function Badge({ label, color, icon: Icon }: StatusLook) {
+const RANK: Record<IndexStatus, number> = { stable: 0, watch: 1, declining: 2, insufficient: -1 };
+
+/** "Overall: Watch" or "This game: Stable", with a shape and a colour beside the words. */
+export function StatusBadge({ status, scope }: { status: IndexStatus; scope?: "Overall" | "This game" }) {
+  const { label, color, icon: Icon } = STATUS[status];
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-gray-800">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-ink-soft">
       <Icon aria-hidden="true" style={{ color }} className="size-4 shrink-0" strokeWidth={2.5} />
-      <span>{label}</span>
+      <span>
+        {scope && <span className="text-ink-muted">{scope}: </span>}
+        <span className="font-medium text-ink">{label}</span>
+      </span>
     </span>
   );
 }
 
-export function IndexStatusBadge({ status }: { status: IndexStatus }) {
-  return <Badge {...INDEX_STATUS[status]} />;
-}
-
-export function GameStatusBadge({ status }: { status: DeclineStatus }) {
-  return <Badge {...GAME_STATUS[status]} />;
+/** One line saying why a game's status differs from the overall one, or null when they agree. */
+export function statusDifference(game: IndexStatus, overall: IndexStatus): string | null {
+  if (game === overall || game === "insufficient" || overall === "insufficient") return null;
+  return RANK[game] < RANK[overall]
+    ? `This game is steadier than the overall status (${STATUS[overall].label}), which averages all games.`
+    : `This game is lower than the overall status (${STATUS[overall].label}), which averages all games.`;
 }
 
 /** "−1.2" with a real minus sign. */

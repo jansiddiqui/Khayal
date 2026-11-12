@@ -8,10 +8,10 @@ import { RED_FROM_LEVEL, redChance, RESPONSE_WINDOW_MS, TOO_EARLY_PAUSE_MS, wait
 type Circle = "waiting" | "green" | "red" | "tooEarly";
 
 const circleStyle: Record<Circle, string> = {
-  waiting: "border-gray-500 bg-gray-200 text-ink",
+  waiting: "border-line-strong bg-sunken text-ink",
   green: "border-green-900 bg-green-600 text-white",
   red: "border-red-900 bg-red-700 text-white",
-  tooEarly: "border-amber-600 bg-amber-100 text-ink",
+  tooEarly: "border-accent-strong bg-accent-soft text-ink",
 };
 
 /**

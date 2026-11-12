@@ -23,8 +23,8 @@ interface LayoutProps {
 
 const topBarButton =
   // Icon sits above the words on phones so both top-bar buttons fit on one row.
-  "flex min-h-16 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-4 border-ink bg-white " +
-  "px-3 py-1 text-xl leading-tight font-bold text-ink hover:bg-gray-100 sm:flex-row sm:gap-3 sm:px-5 sm:text-2xl";
+  "flex min-h-16 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl border-4 border-ink bg-surface " +
+  "px-3 py-1 text-xl leading-tight font-bold text-ink hover:bg-sunken sm:flex-row sm:gap-3 sm:px-5 sm:text-2xl";
 
 /**
  * Accessible patient layout. The top bar (Home + Read aloud) is identical on every

@@ -61,12 +61,12 @@ function MemberForm({
     <form onSubmit={submit} aria-label={submitLabel} className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-gray-700">Name</span>
-          <input value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} className="w-56 rounded-md border border-gray-400 px-3 py-2" />
+          <span className="text-ink-soft">Name</span>
+          <input value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} className="w-56 rounded-md border border-line-strong px-3 py-2" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-gray-700">Relation</span>
-          <select value={choice} onChange={(e) => setChoice(e.target.value)} className="rounded-md border border-gray-400 bg-white px-3 py-2">
+          <span className="text-ink-soft">Relation</span>
+          <select value={choice} onChange={(e) => setChoice(e.target.value)} className="rounded-md border border-line-strong bg-surface px-3 py-2">
             {RELATIONS.map((r) => (
               <option key={r} value={r}>
                 {r}
@@ -76,33 +76,33 @@ function MemberForm({
         </label>
         {choice === OTHER && (
           <label className="flex flex-col gap-1">
-            <span className="text-gray-700">Relation (your words)</span>
+            <span className="text-ink-soft">Relation (your words)</span>
             <input
               value={custom}
               maxLength={40}
               placeholder="e.g. Neighbour"
               onChange={(e) => setCustom(e.target.value)}
-              className="w-48 rounded-md border border-gray-400 px-3 py-2"
+              className="w-48 rounded-md border border-line-strong px-3 py-2"
             />
           </label>
         )}
       </div>
       <label className="flex flex-col gap-1">
-        <span className="text-gray-700">Note (optional, read aloud to the patient)</span>
+        <span className="text-ink-soft">Note (optional, read aloud to the patient)</span>
         <input
           value={note}
           maxLength={300}
           placeholder="e.g. Lives in Pune, visits on Sundays."
           onChange={(e) => setNote(e.target.value)}
-          className="max-w-xl rounded-md border border-gray-400 px-3 py-2"
+          className="max-w-xl rounded-md border border-line-strong px-3 py-2"
         />
       </label>
       <div className="flex gap-3">
-        <button type="submit" disabled={!valid || busy} className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60">
+        <button type="submit" disabled={!valid || busy} className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted">
           {submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-md border border-gray-400 px-4 py-2 hover:bg-gray-100">
+          <button type="button" onClick={onCancel} className="rounded-md border border-line-strong px-4 py-2 hover:bg-sunken">
             Cancel
           </button>
         )}
@@ -144,7 +144,7 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
   const full = member.photos.length >= MAX_PHOTOS;
 
   return (
-    <li className="rounded-lg border border-gray-200 bg-white p-4" aria-label={member.name}>
+    <li className="rounded-lg border border-line bg-surface p-4" aria-label={member.name}>
       {editing ? (
         <MemberForm
           initial={{ name: member.name, relation: member.relation, note: member.note }}
@@ -157,9 +157,9 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex-1">
             <p className="text-lg font-semibold">
-              {member.name} <span className="font-normal text-gray-600">· {member.relation}</span>
+              {member.name} <span className="font-normal text-ink-muted">· {member.relation}</span>
             </p>
-            {member.note && <p className="text-gray-700">{member.note}</p>}
+            {member.note && <p className="text-ink-soft">{member.note}</p>}
           </div>
           <button type="button" onClick={() => setEditing(true)} className="text-brand-dark underline">
             Edit
@@ -169,7 +169,7 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
             onClick={() => {
               if (window.confirm(`Delete ${member.name} and all their photos?`)) remove.mutate();
             }}
-            className="text-red-700 underline"
+            className="text-danger underline"
           >
             Delete
           </button>
@@ -184,7 +184,7 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
               type="button"
               onClick={() => removePhoto.mutate(photo.id)}
               aria-label={`Remove ${member.name} photo ${i + 1}`}
-              className="text-sm text-red-700 underline"
+              className="text-sm text-danger underline"
             >
               Remove
             </button>
@@ -192,16 +192,16 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
         ))}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <label className={`rounded-md border border-gray-400 px-3 py-1 ${full ? "opacity-60" : "cursor-pointer hover:bg-gray-100"}`}>
+        <label className={`rounded-md border border-line-strong px-3 py-1 ${full ? "opacity-60" : "cursor-pointer hover:bg-sunken"}`}>
           {upload.isPending ? "Uploading…" : "Add photo"}
           <input type="file" accept="image/jpeg,image/png" className="sr-only" disabled={full || upload.isPending} onChange={onFile} />
         </label>
-        <span className="text-gray-600">
+        <span className="text-ink-muted">
           {member.photos.length} / {MAX_PHOTOS} photos · JPG or PNG, up to 5 MB
         </span>
       </div>
       {problem && (
-        <p role="alert" className="mt-2 text-red-700">
+        <p role="alert" className="mt-2 text-danger">
           {problem}
         </p>
       )}
@@ -231,23 +231,23 @@ export function CaregiverFamily() {
         <ArrowLeft aria-hidden="true" className="size-4" />
         Back to patient
       </Link>
-      <p className="mb-4 text-gray-600">
+      <p className="mb-4 text-ink-muted">
         These photos are private: they are only shown to this patient and their linked caregivers.
       </p>
 
-      <section className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+      <section className="mb-6 rounded-lg border border-line bg-surface p-4">
         <h2 className="mb-3 text-lg font-semibold">Add a person</h2>
         <MemberForm key={formKey} initial={{ name: "", relation: "Son", note: null }} submitLabel="Add person" busy={create.isPending} onSubmit={(input) => create.mutate(input)} />
         {create.isError && (
-          <p role="alert" className="mt-2 text-red-700">
+          <p role="alert" className="mt-2 text-danger">
             Could not add the person.
           </p>
         )}
       </section>
 
-      {family.isPending && <p className="text-gray-600">Loading family…</p>}
-      {family.isError && <p className="text-red-700">Could not load the family list.</p>}
-      {family.isSuccess && family.data.length === 0 && <p className="text-gray-600">No one added yet.</p>}
+      {family.isPending && <p className="text-ink-muted">Loading family…</p>}
+      {family.isError && <p className="text-danger">Could not load the family list.</p>}
+      {family.isSuccess && family.data.length === 0 && <p className="text-ink-muted">No one added yet.</p>}
       {family.isSuccess && family.data.length > 0 && (
         <ul className="flex flex-col gap-4">
           {family.data.map((member) => (

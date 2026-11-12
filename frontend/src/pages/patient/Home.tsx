@@ -26,7 +26,7 @@ export function PatientHome() {
     <Layout title={copy.patientHome.greeting(firstName)}>
       <section
         aria-labelledby="next-reminder"
-        className="rounded-2xl border-4 border-calm bg-emerald-50 p-6"
+        className="rounded-2xl border-4 border-calm bg-calm-soft p-6"
       >
         <h2 id="next-reminder" className="flex items-center gap-3 text-2xl font-bold">
           <AlarmClock aria-hidden="true" className="size-8 shrink-0 text-calm" />

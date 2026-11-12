@@ -98,7 +98,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-2xl">{copy.games.wordRecall.remember}</p>
         <p
-          className="flex min-h-[10rem] items-center justify-center rounded-2xl border-4 border-brand bg-white text-center text-5xl font-bold"
+          className="flex min-h-[10rem] items-center justify-center rounded-2xl border-4 border-brand bg-surface text-center text-5xl font-bold"
           aria-live="polite"
         >
           {copy.words[round.shown[step.index]!]}
@@ -128,12 +128,12 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
                 aria-label={tapped ? copy.games.wordRecall.starTapped(n) : copy.games.wordRecall.star(n)}
                 className={
                   "aspect-square min-h-[64px] rounded-full border-4 text-4xl transition-colors " +
-                  (tapped ? "border-amber-500 bg-amber-100" : "border-gray-500 bg-white hover:bg-amber-50")
+                  (tapped ? "border-accent bg-accent-soft" : "border-line-strong bg-surface hover:bg-accent-soft")
                 }
               >
                 <Star
                   aria-hidden="true"
-                  className={`mx-auto size-10 ${tapped ? "fill-amber-400 text-amber-700" : "text-ink"}`}
+                  className={`mx-auto size-10 ${tapped ? "fill-accent text-accent-strong" : "text-ink"}`}
                 />
               </button>
             );
@@ -164,7 +164,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
               className={
                 "flex min-h-[64px] items-center justify-center gap-1 rounded-2xl border-4 px-1 font-semibold " +
                 (wide ? "text-base " : "text-2xl ") +
-                (on ? "border-calm bg-emerald-50 text-ink" : "border-gray-500 bg-white text-ink hover:bg-gray-50")
+                (on ? "border-calm bg-calm-soft text-ink" : "border-line-strong bg-surface text-ink hover:bg-sunken")
               }
             >
               {on && <span aria-hidden="true">✓</span>}
@@ -176,7 +176,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
       <div className="flex shrink-0 flex-col gap-2">
         {/* The hint letters appear where the hint button was, so nothing else moves. */}
         {hintLetters && hintLetters.length > 0 && (
-          <p className="rounded-xl border-4 border-amber-500 bg-amber-50 px-3 py-1 text-xl leading-tight" role="status">
+          <p className="rounded-xl border-4 border-accent bg-accent-soft px-3 py-1 text-xl leading-tight" role="status">
             {copy.games.wordRecall.hintLetters(hintLetters.join(", "))}
           </p>
         )}

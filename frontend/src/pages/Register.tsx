@@ -47,7 +47,7 @@ export function Register() {
           {roleOptions.map((option) => (
             <label
               key={option.value}
-              className="flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border-4 border-gray-500 bg-white px-4 text-xl has-[:checked]:border-brand"
+              className="flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border-4 border-line-strong bg-surface px-4 text-xl has-[:checked]:border-brand"
             >
               <input
                 type="radio"
@@ -74,12 +74,12 @@ export function Register() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && (
-          <p role="alert" className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-xl">
+          <p role="alert" className="rounded-xl border-4 border-accent bg-accent-soft p-4 text-xl">
             {error}
           </p>
         )}
         {/* Pinned to the bottom of the screen so "Create account" is always visible on a phone. */}
-        <div className="sticky bottom-0 -mx-4 border-t-2 border-gray-300 bg-paper px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:p-0">
+        <div className="sticky bottom-0 -mx-4 border-t-2 border-line bg-paper px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:p-0">
           <BigButton type="submit" label={submitting ? copy.register.submitting : copy.register.submit} icon={<UserPlus />} />
         </div>
       </form>

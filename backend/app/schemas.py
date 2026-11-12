@@ -269,7 +269,10 @@ class TrendPointOut(BaseModel):
 
 class GameTrendOut(BaseModel):
     game_type: GameType
+    # Alert status (warning/critical thresholds, CLAUDE.md section 6).
     status: DeclineStatus
+    # The same words and thresholds as the overall index (Stable / Watch / Declining), for display.
+    trend_status: IndexStatus
     z: float | None
     score: float | None
     baseline_mean: float | None

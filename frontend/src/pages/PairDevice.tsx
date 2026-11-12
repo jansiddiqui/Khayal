@@ -52,11 +52,11 @@ export function PairDevice() {
             autoComplete="one-time-code"
             pattern="\d{6}"
             required
-            className="min-h-20 rounded-2xl border-4 border-gray-500 bg-white px-4 text-center font-mono text-5xl tracking-[0.3em] text-ink"
+            className="min-h-20 rounded-2xl border-4 border-line-strong bg-surface px-4 text-center font-mono text-5xl tracking-[0.3em] text-ink"
           />
         </label>
         {error && (
-          <p role="alert" className="rounded-xl border-4 border-amber-500 bg-amber-50 p-4 text-xl">
+          <p role="alert" className="rounded-xl border-4 border-accent bg-accent-soft p-4 text-xl">
             {error}
           </p>
         )}

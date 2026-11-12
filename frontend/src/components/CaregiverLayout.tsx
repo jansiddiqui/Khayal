@@ -2,23 +2,23 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 
-/** Caregiver UI is a normal, denser dashboard layout. */
+/** Caregiver UI: a calm, denser dashboard in Inter on a quiet near-white canvas (theme.css). */
 export function CaregiverLayout({ title, children }: { title: string; children: ReactNode }) {
   const { state, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 text-sm">
-      <header className="border-b border-gray-200 bg-white">
+    <div className="caregiver min-h-screen bg-desk text-sm text-ink">
+      <header className="border-b border-line bg-surface">
         <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-          <Link to="/caregiver" className="text-lg font-bold text-brand-dark">
+          <Link to="/caregiver" className="whitespace-nowrap text-lg font-bold text-brand-dark">
             Khayal · Caregiver
           </Link>
-          <Link to="/caregiver" className="text-gray-700 hover:text-ink">
+          <Link to="/caregiver" className="text-ink-soft hover:text-ink">
             Dashboard
           </Link>
           <div className="ml-auto flex items-center gap-4">
-            {state.status === "authenticated" && <span className="text-gray-700">{state.user.name}</span>}
-            <button type="button" onClick={logout} className="rounded-md border border-gray-300 px-3 py-1 hover:bg-gray-100">
+            {state.status === "authenticated" && <span className="whitespace-nowrap text-ink-soft">{state.user.name}</span>}
+            <button type="button" onClick={logout} className="whitespace-nowrap rounded-md border border-line-strong px-3 py-1 hover:bg-sunken">
               Sign out
             </button>
           </div>
