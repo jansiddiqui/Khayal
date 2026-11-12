@@ -87,6 +87,16 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - Then exactly 3 big buttons: "Play a game", "Today's reminders", "Who is this?".
 - The weekly voice task is not on Home. It appears inside the games list as "Tell me about a picture", and only when it is due.
 
+**Patient UI decisions (decided after the UI audit, `docs/ui-audit.md`):**
+
+- Game pieces (cards, tiles, answer options, word choices) never count toward the 3-button rule. The rule covers navigation and actions.
+- No important button below the fold at 375 × 812: every game board, every answer and every commit button ("Done", "Create account") is visible without scrolling. Game screens use a compact play mode for this.
+- No hidden timers (see section 7). Reaction Tap is the only game that measures speed.
+- **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
+- **Fonts (approved dependencies):** `@fontsource/atkinson-hyperlegible` on the patient side, `@fontsource/inter` on the caregiver side.
+- **Patient game names:** "Find the Pairs" (Memory Match), "Follow the Colours" (Sequence Recall), "Remember the Words" (Word Recall), "About Today" (Daily Orientation), "Tap When Green" (Reaction Tap). Caregiver screens keep the clinical names.
+- Demo family photos are plain coloured silhouettes, with no names or initials, so they never give away an answer.
+
 The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
@@ -94,7 +104,7 @@ The caregiver UI can be a normal dense dashboard.
 - **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
-- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool)
+- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
 - **PlayerLevel**: patient_id, game_type, current_level (1–10), updated_at
 - **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, days_of_week, active
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
@@ -163,6 +173,13 @@ Each game is a self-contained component: it receives `level`, reports each round
 3. **Word Recall**: show 3–8 everyday words, a short distraction, then pick the ones seen from a list.
 4. **Daily Orientation**: day, date, season, and "Which of these is your grandson?" using family photos. No difficulty levels; results go to the trend only.
 5. **Reaction Tap**: tap when the circle turns green. The only game with timing.
+
+**No hidden timers (decided):** apart from Reaction Tap, nothing on a game screen ends by itself.
+
+- **Memory Match:** the preview stays until the patient taps "I've looked — hide the cards". Difficulty = number of pairs only (there is no preview time any more).
+- **Word Recall:** each word stays until the patient taps "Next word". The star distraction ends once 5 stars are tapped.
+- **Sequence Recall:** after a wrong tap, the game gently replays the right order ("Here's how it went") before moving on.
+- Each round records how long the patient looked before playing as `study_ms` on `GameRound` (nullable: Memory Match preview time, Word Recall total word-viewing time; empty for the other games). It is stored for the decline analysis but is not part of the composite score yet.
 
 **Today's games (decided):** the patient's games list shows exactly 3 games per day, chosen by the server (`GET /me/games/today`, logic in `backend/app/services/today_games.py`).
 
