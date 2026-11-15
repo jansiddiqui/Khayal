@@ -129,3 +129,14 @@ DEMO_MAX_CAREGIVERS = int(os.getenv("KHAYAL_DEMO_MAX_CAREGIVERS", "200"))
 
 # Shown on the landing page's footer and privacy text, e.g. hello@khayal.example. Unset = no address shown.
 CONTACT_EMAIL = os.getenv("KHAYAL_CONTACT_EMAIL", "").strip() or None
+
+# Real pilot (CLAUDE.md section 11, Phase B).
+# Admins: these emails may create an account without an invite and see the admin page.
+ADMIN_EMAILS = frozenset(e.strip().lower() for e in os.getenv("KHAYAL_ADMIN_EMAILS", "").split(",") if e.strip())
+# Sign-up invite links and family share links stay valid this long; reset links for RESET_HOURS.
+INVITE_DAYS = 14
+SHARE_DAYS = 14
+RESET_HOURS = 48
+PASSWORD_MIN_LENGTH = 10
+# Version of the privacy policy and terms that consents are recorded against (frontend/src/pages/landing/legal.ts).
+POLICY_VERSION = "2026-11-draft-1"

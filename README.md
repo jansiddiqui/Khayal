@@ -313,9 +313,22 @@ The frontend reads the backend address from `VITE_API_URL` at build time (unset 
 
 To try demo mode locally without touching `data/khayal.db`, create a separate database and start the backend with `KHAYAL_DEMO_MODE=1 KHAYAL_STORAGE=db KHAYAL_DATABASE_URL=sqlite:///…/data/demo-preview.db` (the `backend-demo` entry in `.claude/launch.json` does this).
 
+## Real pilot (Phase B)
+
+Khayal is an invite-only pilot (CLAUDE.md section 11). Deploy order and settings: [docs/DEPLOY-VOROA.md](docs/DEPLOY-VOROA.md).
+
+- **Invite-only sign-up:** a landing-page request → an admin approves it on `/admin` → a single-use invite link (14 days) the admin copies and sends. Admins (`KHAYAL_ADMIN_EMAILS`) create their own account at `/setup`.
+- **Elders are added, not linked:** a caregiver adds the person they look after (name, city, optional photo; no email), confirms they are family or guardian and on what basis, and pairs the elder's device with a 6-digit code. A second family member joins through a single-use share link.
+- **Consent (DPDP Act 2023):** at sign-up (policy and terms), when adding an elder, and separate opt-ins for family photos and voice recordings, each stored with the policy version and time. Withdrawing photos or voice deletes that data.
+- **Privacy policy and Terms** at `/privacy` and `/terms`: plain-language drafts for India, marked "Draft — pending review". "Not a medical device, does not diagnose" is repeated in the terms, on the dashboard and under every alert.
+- **Account and security:** change password (signs out other sessions), admin-made reset links (48 hours), Export my data (zip: JSON + photos and recordings), Delete my account (type DELETE; removes the caregiver and every elder no one else looks after), signed-in devices per elder with Revoke and "Sign out all devices". Passwords need 10 characters.
+- **Demo mode** (`KHAYAL_DEMO_MODE=1`) stays for local development; with it off nothing expires on its own, and the admin page removes leftover demo accounts once.
+- **Settings:** `KHAYAL_ADMIN_EMAILS`, `KHAYAL_CONTACT_EMAIL` (grievance contact), `KHAYAL_DEMO_MODE=0` in production.
+- **Backups:** run `scripts\backup-voroa.ps1` **weekly** (keeps 8 dumps in `data/backups/voroa/`); restore guide: [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md).
+- **Screenshots:** `docs/pilot/`.
+
 ## Known limitations (prototype)
 
-- **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
-- **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
+- **No email service:** invite, share and password-reset links are copied by the admin or caregiver and sent by hand (WhatsApp or email).
 - **Rate limits kept in memory:** the pairing wrong-code counter and the demo rate limits live in the server process, so they reset when the server restarts and aren't shared between several server processes (run one instance).
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.

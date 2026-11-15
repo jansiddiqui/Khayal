@@ -54,11 +54,45 @@ class TickOut(BaseModel):
     skipped: bool
 
 
+# Passwords: at least 10 characters (bcrypt reads at most 72 bytes).
+Password = Annotated[str, Field(min_length=10, max_length=72)]
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+LinkToken = Annotated[str, StringConstraints(strip_whitespace=True, min_length=20, max_length=100)]
+
+
 class RegisterIn(BaseModel):
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    """Caregiver sign-up: only with an invite link (or a family share link), except for admins."""
+
+    name: Name
     email: Email
-    password: Annotated[str, Field(min_length=8, max_length=72)]
-    role: Role
+    password: Password
+    # The token from an invite link (/join/<token>) or a family share link (/share/<token>).
+    invite_token: LinkToken | None = None
+    # Must be true: agreement to the privacy policy and terms (recorded with the policy version).
+    consent: Literal[True]
+
+
+class InviteCheckOut(BaseModel):
+    """What an invite or share link is, before signing up with it."""
+
+    kind: Literal["signup", "share"]
+    # Share links: the elder's first name, so the person knows whom they are joining.
+    elder_name: str | None = None
+    expires_at: datetime
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: Password
+
+
+class ResetPasswordIn(BaseModel):
+    token: LinkToken
+    new_password: Password
+
+
+class ShareAcceptIn(BaseModel):
+    token: LinkToken
 
 
 class LoginIn(BaseModel):
@@ -71,7 +105,7 @@ class UserOut(BaseModel):
 
     id: int
     name: str
-    email: str
+    email: str | None = None
     role: Role
     created_at: datetime
     city: str | None = None
@@ -80,6 +114,11 @@ class UserOut(BaseModel):
     voice_consent_at: datetime | None = None
     # Public demo only: when this account and its data are deleted.
     demo_expires_at: datetime | None = None
+    # Patients only: the separate opt-in for family photos (and the elder's own photo).
+    photos_enabled: bool = False
+    has_photo: bool = False
+    # Caregivers only: may open the admin page (KHAYAL_ADMIN_EMAILS).
+    is_admin: bool = False
 
 
 class TokenOut(BaseModel):
@@ -105,8 +144,17 @@ class DemoStartOut(TokenOut):
     pairing: PairingCodeOut
 
 
-class LinkPatientIn(BaseModel):
-    patient_email: Email
+class AddElderIn(BaseModel):
+    """A caregiver adds the elder they look after. No email or password: the elder's device pairs with a code."""
+
+    name: Name
+    city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+    # The caregiver confirms they are family or guardian, and on what basis they act for the elder.
+    is_family_or_guardian: Literal[True]
+    basis: Literal["elder_agreed", "legal_authority"]
+    # Separate, optional opt-ins.
+    photos: bool = False
+    voice: bool = False
 
 
 class PatientOut(BaseModel):
@@ -114,11 +162,114 @@ class PatientOut(BaseModel):
 
     id: int
     name: str
-    email: str
     city: str | None = None
     pinned_games: list[GameType] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
+    photos_enabled: bool = False
+    has_photo: bool = False
+
+
+class ConsentToggleIn(BaseModel):
+    kind: Literal["photos", "voice"]
+    granted: bool
+
+
+class ConsentToggleOut(BaseModel):
+    patient: PatientOut
+    # Files or recordings deleted by a withdrawal.
+    deleted: int
+
+
+class ConsentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    basis: str | None
+    policy_version: str
+    granted_at: datetime
+    withdrawn_at: datetime | None
+    patient_id: int | None
+
+
+class DeviceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    device_label: str
+    created_at: datetime
+    last_seen_at: datetime
+
+
+class LinkOut(BaseModel):
+    """A secret link's token, shown once; the frontend builds the full address."""
+
+    id: int
+    token: str
+    expires_at: datetime
+
+
+class ShareOut(BaseModel):
+    id: int
+    created_at: datetime
+    expires_at: datetime
+    state: Literal["open", "used", "revoked", "expired"]
+
+
+class DeleteAccountIn(BaseModel):
+    confirm: Literal["DELETE"]
+    password: str
+
+
+class AdminInviteRequestOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    city: str
+    message: str | None
+    status: str
+    created_at: datetime
+
+
+class AdminInviteIn(BaseModel):
+    """Invite someone directly (without a landing-page request)."""
+
+    note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+
+
+class AdminInviteOut(BaseModel):
+    id: int
+    note: str
+    created_at: datetime
+    expires_at: datetime
+    state: Literal["open", "used", "revoked", "expired"]
+    used_by_email: str | None = None
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    name: str
+    email: str | None
+    role: Role
+    created_at: datetime
+    is_admin: bool
+    is_demo: bool
+    elders: int
+
+
+class DemoAccountsOut(BaseModel):
+    count: int
+
+
+class DemoRemoveIn(BaseModel):
+    # The count the admin saw, typed back: removes only if it still matches.
+    confirm_count: int
+
+
+class RemovedOut(BaseModel):
+    removed: int
 
 
 class PatientUpdateIn(BaseModel):

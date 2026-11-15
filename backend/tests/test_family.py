@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.services import family
-from tests.conftest import Register, bearer
+from tests.conftest import Register, bearer, link_patient
 
 
 def image_bytes(fmt: str = "JPEG", size: tuple[int, int] = (1600, 1200), mode: str = "RGB") -> bytes:
@@ -22,7 +22,10 @@ class Setup:
         payload = register("Kamala", "k@example.com", "patient")
         self.patient = bearer(payload)
         self.pid: int = payload["user"]["id"]  # type: ignore[index]
-        client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=self.cg)
+        link_patient(client, "k@example.com", self.cg)
+        # Family photos need the separate photos opt-in (CLAUDE.md section 11).
+        opt_in = client.post(f"/api/patients/{self.pid}/consents", json={"kind": "photos", "granted": True}, headers=self.cg)
+        assert opt_in.status_code == 200, opt_in.text
         self.base = f"/api/patients/{self.pid}/family"
 
     def add(self, name: str = "Rahul", relation: str = "Grandson", note: str | None = "Lives in Pune") -> dict[str, Any]:

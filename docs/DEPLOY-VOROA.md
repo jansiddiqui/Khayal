@@ -1,4 +1,4 @@
-# Deploying the public demo on Voroa (free tier)
+# Deploying Khayal on Voroa (free tier): the invite-only pilot
 
 Khayal runs on Voroa as three pieces:
 
@@ -11,9 +11,12 @@ Khayal runs on Voroa as three pieces:
 Voroa has no config file: everything below is typed into the dashboard. Labels in the
 dashboard may differ slightly from the ones here; the values are what matters.
 
-The public demo is a **demo**: it shows a banner on every screen (except during a game,
-where the board needs the whole phone screen), rate-limits sign-up, sign-in and pairing,
-and deletes every account and its data 7 days after it was made.
+Khayal is an **invite-only pilot** (CLAUDE.md section 11): sign-up only through an invite
+link, consent records, a privacy policy and terms, delete-my-account and export, and an admin
+page. Demo mode (banner, "Try the demo", 7-day auto-delete) is **off** in production
+(`KHAYAL_DEMO_MODE=0`) and kept for local development.
+
+Already running the old public demo? Skip to **[Switching from the demo to the pilot](#switching-from-the-demo-to-the-pilot)**.
 
 ---
 
@@ -88,8 +91,10 @@ uses and keeps `?sslmode=require`.
     | `KHAYAL_JWT_SECRET` | *(first secret from step 0)* | At least 32 characters. The backend refuses to start in production without it. |
     | `KHAYAL_CORS_ORIGINS` | `https://khayal-web.example.app` | The frontend's address, no trailing slash. You get it in step 4; until then put any placeholder and change it later. Several addresses: comma-separated. |
     | `KHAYAL_TIMEZONE` | `Asia/Kolkata` | The clock for "today" (reminders, today's games). |
-    | `KHAYAL_DEMO_MODE` | `1` | Banner, "Try the demo", smaller uploads, 7-day clean-up. |
-    | `KHAYAL_TICK_SECRET` | *(second secret from step 0)* | Optional; only needed for the external cron in step 6. Without it `/api/internal/tick` does not exist. |
+    | `KHAYAL_DEMO_MODE` | `0` | The pilot: no demo banner, no "Try the demo", nothing expires on its own. (`1` turns the old public demo back on: local development only.) |
+    | `KHAYAL_ADMIN_EMAILS` | `you@example.com` | Comma-separated. These addresses may create an account without an invite (at `/setup`) and see the Admin page. Use an address only you control. |
+    | `KHAYAL_CONTACT_EMAIL` | `hello@example.com` | Shown in the footer, the privacy policy (grievance contact) and the terms. Required for the pilot. |
+    | `KHAYAL_TICK_SECRET` | *(second secret from step 0)* | For the external cron in step 6 (recommended). Without it `/api/internal/tick` does not exist. |
 
     Optional, with their defaults (leave them out unless you want to change them):
 
@@ -101,7 +106,6 @@ uses and keeps `?sslmode=require`.
     | `KHAYAL_REMINDER_CHECK_MINUTES` | `15` | How often the server checks for missed reminders and expired demo accounts while awake. |
     | `KHAYAL_DB_POOL_SIZE` / `KHAYAL_DB_MAX_OVERFLOW` | `3` / `2` | Database connections: at most 5 per instance. |
     | `KHAYAL_ALERT_RULE` | `persistence` | Decline alert rule B (see CLAUDE.md section 6). |
-    | `KHAYAL_CONTACT_EMAIL` | none | An address shown in the landing page footer (e.g. a team inbox). Unset: no address is shown. |
 
 11. **Create Web Service**.
 
@@ -165,11 +169,11 @@ match the frontend's address exactly (`https`, spelling, no slash at the end).
 
 ---
 
-## 6. Optional: an external cron every 30 minutes
+## 6. An external cron every 30 minutes (recommended for real users)
 
-The free backend sleeps after 15 minutes without traffic, so its own 15-minute loop stops.
-It also runs the missed-reminder check and the demo clean-up **at startup and after each
-sign-in**, which is enough for a demo. If you also want them on a schedule:
+The free backend sleeps after 15 minutes without traffic, so its own 15-minute loop stops,
+and missed medicine reminders would only be noticed when someone next signs in. With real
+families relying on missed-reminder alerts, wake it every 30 minutes:
 
 1. Make sure `KHAYAL_TICK_SECRET` is set on the backend (step 2).
 2. Create a free account at [cron-job.org](https://cron-job.org) → **Create cronjob**.
@@ -182,8 +186,8 @@ sign-in**, which is enough for a demo. If you also want them on a schedule:
    `{"reminder_patients":...,"accounts_removed":...,"skipped":false}`. A `403` means the
    header value is wrong; `404` means `KHAYAL_TICK_SECRET` is not set.
 
-Note: each tick wakes the sleeping service, so it uses more of the free tier's running
-hours. Skip this step if that matters.
+Each tick wakes the sleeping service, so it uses more of the free tier's running hours; for
+the pilot that is worth it. With demo mode off, `accounts_removed` is always 0 (nothing expires).
 
 ---
 
@@ -222,17 +226,49 @@ fail for the same reason.
 
 ---
 
-## What the public demo limits
+## Switching from the demo to the pilot
+
+Do these in this order (the admin must not be created while demo mode is still on, or their
+account would be a demo account):
+
+1. **Settings first.** On `khayal-api` → Environment: set `KHAYAL_DEMO_MODE` to `0`, and add
+   `KHAYAL_ADMIN_EMAILS` and `KHAYAL_CONTACT_EMAIL` (step 2). Make sure `KHAYAL_TICK_SECRET`
+   is set and the cron from step 6 exists.
+2. **Deploy.** Merge into `main` and push; both services redeploy (the backend's pre-deploy
+   applies the new migrations). Check `https://khayal-api.onvoroa.com/api/config`: it says
+   `"demo_mode":false`. The site shows no demo banner and no "Try the demo".
+3. **Back up.** Run the weekly backup once now ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)).
+4. **Sign in as admin.** Open `https://khayal-web.onvoroa.com/setup`, create your account with
+   the email in `KHAYAL_ADMIN_EMAILS` (a password of at least 10 characters), and accept the
+   policy. The caregiver header now shows **Admin**.
+5. **Remove the demo accounts.** Admin → **Demo accounts** shows how many there are; press
+   **Remove all demo accounts…**, read the count, confirm. They and all their data are gone;
+   real accounts are not touched.
+6. **Invite people.** Admin → **Invite requests**: **Approve** gives a single-use link (14 days)
+   to copy and send yourself by WhatsApp or email. Or invite someone directly under **Invite
+   links**. A family member who signs up adds their elder and pairs the elder's phone with a
+   6-digit code; they can share the elder with another family member from the elder's page.
+
+**Password resets:** there is no email service yet. Admin → **Users** → **Reset link** gives a
+48-hour link to send the person; using it signs out their other sessions.
+
+**Backups:** run `scripts\backup-voroa.ps1` weekly ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)).
+
+## Limits
 
 | What | Limit |
 |---|---|
-| Sign-up | 5 accounts per address per hour |
-| "Try the demo" | 5 per address per hour |
+| Sign-up | Only with an invite or share link (admins: `/setup`); 5 tries per address per hour |
+| Passwords | At least 10 characters; changing one signs out other sessions |
+| Invite requests (landing form) | 5 per address per hour |
 | Sign-in | 10 tries per address per 5 minutes |
 | Pairing codes | 20 tries per address per 10 minutes, and 10 wrong codes per 10 minutes |
-| Family photos | 1 MB each after resizing (the app resizes to 800 px) |
-| Voice recordings | 2 minutes (stops by itself), 2 MB |
-| Accounts | deleted with all their data 7 days after they were made (both "Try the demo" and normal sign-up) |
+| Family photos | Only with the photos consent; JPG/PNG up to 5 MB, resized to 800 px |
+| Voice recordings | Only with the voice consent; stop by themselves after 3 minutes, 10 MB |
+| Invite and share links | Single use, 14 days; reset links 48 hours |
+
+With `KHAYAL_DEMO_MODE=1` (local development) the old demo limits apply instead: photos 1 MB
+after resizing, recordings 2 minutes and 2 MB, accounts deleted after 7 days.
 
 ## Running the backend tests on Postgres
 

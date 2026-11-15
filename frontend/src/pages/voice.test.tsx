@@ -18,6 +18,7 @@ vi.mock("../api/client", async (importOriginal) => {
     uploadRecording: vi.fn(),
     listRecordings: vi.fn(),
     updatePatient: vi.fn(),
+    setElderConsent: vi.fn(),
     fetchAudioBlob: vi.fn(),
   };
 });
@@ -176,7 +177,8 @@ describe("caregiver voice recordings", () => {
   const kamala: Patient = {
     id: 2,
     name: "Kamala Devi",
-    email: "kamala@khayal.test",
+    photos_enabled: false,
+    has_photo: false,
     city: null,
     pinned_games: null,
     voice_task_enabled: false,
@@ -185,13 +187,13 @@ describe("caregiver voice recordings", () => {
 
   it("turns the voice task on with consent", async () => {
     api.listRecordings.mockResolvedValue([]);
-    api.updatePatient.mockResolvedValue({ ...kamala, voice_task_enabled: true, voice_consent_at: "2026-11-04T05:00:00Z" });
+    api.setElderConsent.mockResolvedValue({ patient: { ...kamala, voice_task_enabled: true, voice_consent_at: "2026-11-04T05:00:00Z" }, deleted: 0 });
     renderWithProviders(<VoiceRecordings patient={kamala} />);
-    const toggle = screen.getByRole("checkbox", { name: "Voice task enabled" });
+    const toggle = await screen.findByRole("checkbox", { name: /Voice task enabled/ });
     expect(toggle).not.toBeChecked();
     expect(await screen.findByText("No recordings yet.")).toBeInTheDocument();
     fireEvent.click(toggle);
-    await waitFor(() => expect(api.updatePatient).toHaveBeenCalledWith(2, { voice_task_enabled: true }));
+    await waitFor(() => expect(api.setElderConsent).toHaveBeenCalledWith(2, "voice", true));
   });
 
   it("lists recordings with date and length, plays them on request, and shows no score", async () => {

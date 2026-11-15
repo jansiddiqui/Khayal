@@ -220,7 +220,7 @@ Each game is a self-contained component: it receives `level`, reports each round
 ## 8. API (prefix `/api`)
 
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
-- `GET /patients` (caregiver's patients), `POST /patients/link`
+- `GET /patients` (caregiver's patients), `POST /patients` (add an elder; replaces linking by email, Phase B)
 - `GET /games/{game_type}/level`, `POST /sessions` (session + rounds, returns the new level), `GET /patients/{id}/sessions`
 - `GET /patients/{id}/trend?game_type=` (scores + z-scores for charts)
 - `GET/POST/PUT/DELETE /patients/{id}/reminders`, `POST /reminders/{id}/log`, `GET /me/reminders/today`
@@ -267,5 +267,11 @@ Khayal moves from a public demo to a **real product: an invite-only pilot**. Thi
   - Visual world: an Indian courtyard home (lime-plaster ivory, painted teal doors, marigold, jaali light). The direction contract is in the Impeccable surface brief.
   - Motion with the `motion` library (approved): gentle and 150–400 ms ease-out, off under prefers-reduced-motion.
   - Demo mode keeps working behind `KHAYAL_DEMO_MODE`.
-- **Phase B: real pilot**: invite-only sign-up, consent, privacy policy and terms, delete account, an admin page (including reviewing invite requests), demo mode off.
+- **Phase B: real pilot** (branch `real-pilot`, decided):
+  - Sign-up only through a single-use invite link (14 days) made on the admin page (`KHAYAL_ADMIN_EMAILS`; admins use `/setup`), or a family share link. Links are stored as hashes and shown once.
+  - Elders have no email or password: a caregiver adds them and pairs their device; each paired device is a revocable session.
+  - Consent records (DPDP Act 2023) with policy version and time: sign-up, adding an elder (family/guardian; elder agreed or legally authorised), separate photos and voice opt-ins. Withdrawing photos or voice deletes that data.
+  - Privacy policy and Terms drafts ("Draft — pending review"); "not a medical device" in the terms, on the dashboard and under every alert.
+  - Change password (signs out other sessions), admin reset links (48 h), export my data (zip), delete my account (type DELETE). Passwords at least 10 characters.
+  - Demo mode off in production; nothing expires on its own; the admin removes demo accounts once. Weekly backups with `scripts/backup-voroa.ps1`.
 - **Phase C: redesign of the patient and caregiver UI for daily use, with motion** (section 4 rules still hold).

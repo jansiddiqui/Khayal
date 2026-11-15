@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe("public demo", () => {
-  it("shows the banner and the Try the demo button only in demo mode", () => {
+  it("shows the banner and the Try the demo button only in demo mode", async () => {
     const { unmount } = renderWithProviders(<App />, { route: "/login" });
     expect(screen.queryByText(copy.demo.banner)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: copy.demo.tryIt })).not.toBeInTheDocument();
@@ -50,22 +50,22 @@ describe("public demo", () => {
 
     setTestAppConfig({ config: DEMO });
     renderWithProviders(<App />, { route: "/login" });
+    expect(await screen.findByRole("link", { name: copy.demo.tryIt })).toHaveAttribute("href", "/demo");
     expect(screen.getByRole("note")).toHaveTextContent(copy.demo.banner);
-    expect(screen.getByRole("link", { name: copy.demo.tryIt })).toHaveAttribute("href", "/demo");
   });
 
-  it("the banner is on patient screens too", () => {
+  it("the banner is on patient screens too", async () => {
     setTestAppConfig({ config: DEMO });
     renderWithProviders(<App />, { route: "/pair" });
+    expect(await screen.findByRole("link", { name: copy.demo.pairLink })).toHaveAttribute("href", "/demo");
     expect(screen.getByRole("note")).toHaveTextContent(copy.demo.banner);
-    expect(screen.getByRole("link", { name: copy.demo.pairLink })).toHaveAttribute("href", "/demo");
   });
 
   it("Try the demo signs in and shows the pairing code for the patient side", async () => {
     setTestAppConfig({ config: DEMO });
     api.startDemo.mockResolvedValue(started);
     renderWithProviders(<App />, { route: "/demo" });
-    expect(screen.getByText(copy.demo.deleted(7))).toBeInTheDocument();
+    expect(await screen.findByText(copy.demo.deleted(7))).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: copy.demo.start }));
     expect(await screen.findByRole("heading", { name: copy.demo.readyTitle })).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe("public demo", () => {
     setTestAppConfig({ config: DEMO });
     api.startDemo.mockRejectedValue({ isAxiosError: true, response: { status: 429 } });
     renderWithProviders(<App />, { route: "/demo" });
-    fireEvent.click(screen.getByRole("button", { name: copy.demo.start }));
+    fireEvent.click(await screen.findByRole("button", { name: copy.demo.start }));
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByText(copy.demo.tooMany)).toBeInTheDocument();
   });

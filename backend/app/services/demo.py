@@ -57,6 +57,7 @@ def _email(tag: str, label: str) -> str:
 
 def _add_care_plan(db: Session, patient: User, now: datetime) -> None:
     """Kamala's demo reminders, family (placeholder silhouettes) and voice task, as in app.seed."""
+    patient.photos_enabled = True
     for title, kind, at, days in seed.DEMO_REMINDERS:
         db.add(Reminder(patient_id=patient.id, title=title, type=kind, time_of_day=at, days_of_week=days, created_at=now))
     for name, relation, note, colour in seed.DEMO_FAMILY:

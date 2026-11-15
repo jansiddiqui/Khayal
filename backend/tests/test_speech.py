@@ -9,7 +9,7 @@ from app.services import auth, speech
 from app.services.clock import LOCAL_TZ
 from app.services.today_games import todays_games
 from ml.speech import stub
-from tests.conftest import Clock, Register, bearer
+from tests.conftest import Clock, Register, bearer, link_patient
 
 WEBM = b"\x1a\x45\xdf\xa3" + b"\x00" * 2000
 OGG = b"OggS" + b"\x00" * 2000
@@ -27,7 +27,7 @@ class Setup:
         payload = register("Kamala", "k@example.com", "patient")
         self.patient = bearer(payload)
         self.pid: int = payload["user"]["id"]  # type: ignore[index]
-        client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=self.cg)
+        link_patient(client, "k@example.com", self.cg)
 
     def enable(self, on: bool = True) -> dict[str, object]:
         response = self.client.patch(f"/api/patients/{self.pid}", json={"voice_task_enabled": on}, headers=self.cg)

@@ -163,7 +163,7 @@ describe("caregiver reminders and alerts", () => {
 
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "k@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listReminders.mockResolvedValue([reminder]);
     api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
   });
@@ -256,6 +256,8 @@ describe("caregiver reminders and alerts", () => {
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     const panel = within(await screen.findByRole("region", { name: "Alerts (1 new)" }));
+    // Under every alert: Khayal is not a medical device (CLAUDE.md section 11).
+    expect(panel.getByText(/not a medical device and does not diagnose/)).toBeInTheDocument();
     expect(panel.getByText(alert.message)).toBeInTheDocument();
     // The summary card at the top repeats the latest new alert.
     expect(within(screen.getByRole("region", { name: "Summary" })).getByText(alert.message)).toBeInTheDocument();

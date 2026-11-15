@@ -199,6 +199,9 @@ export default function Landing() {
   useEffect(() => {
     document.title = t.title;
     void loadSections(); // fetch the rest now, so anchor links never wait
+    // Arriving with an anchor (e.g. /#invite from the sign-in page): go there once it has loaded.
+    const target = window.location.hash.slice(1);
+    if (target) goToSection(target);
   }, []);
 
   return (

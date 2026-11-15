@@ -91,7 +91,8 @@ export type Role = "patient" | "caregiver";
 export interface User {
   id: number;
   name: string;
-  email: string;
+  /** Caregivers only: elders added by a caregiver have no email (they pair a device instead). */
+  email: string | null;
   role: Role;
   created_at: string;
   /** Patients only: home city used by Daily Orientation. */
@@ -104,6 +105,11 @@ export interface User {
   voice_consent_at: string | null;
   /** Public demo only: when this account and its data are deleted. */
   demo_expires_at?: string | null;
+  /** Patients only: family photos (and the elder's own photo) are opted in. */
+  photos_enabled?: boolean;
+  has_photo?: boolean;
+  /** Caregivers only: may open the admin page. */
+  is_admin?: boolean;
 }
 
 export interface TokenResponse {
@@ -115,18 +121,60 @@ export interface TokenResponse {
 export interface Patient {
   id: number;
   name: string;
-  email: string;
   city: string | null;
   pinned_games: GameType[] | null;
   voice_task_enabled: boolean;
   voice_consent_at: string | null;
+  photos_enabled: boolean;
+  has_photo: boolean;
 }
 
+/** Caregiver sign-up: with an invite link or a family share link (admins need none). */
 export interface RegisterInput {
   name: string;
   email: string;
   password: string;
-  role: Role;
+  invite_token?: string;
+  /** Agreement to the privacy policy and terms; recorded with the policy version. */
+  consent: true;
+}
+
+/** Passwords need at least this many characters (the backend checks it too). */
+export const PASSWORD_MIN = 10;
+
+export interface InviteCheck {
+  kind: "signup" | "share";
+  elder_name: string | null;
+  expires_at: string;
+}
+
+export async function checkInvite(token: string): Promise<InviteCheck> {
+  const { data } = await api.get<InviteCheck>(`/auth/invite/${encodeURIComponent(token)}`);
+  return data;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/password", { current_password: currentPassword, new_password: newPassword });
+  return data;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<TokenResponse> {
+  const { data } = await api.post<TokenResponse>("/auth/reset", { token, new_password: newPassword });
+  return data;
+}
+
+/** A secret link's token (shown once); the page builds the full address. */
+export interface SecretLink {
+  id: number;
+  token: string;
+  expires_at: string;
+}
+
+export type LinkState = "open" | "used" | "revoked" | "expired";
+
+/** The full address of an invite, share or reset link on this site. */
+export function linkUrl(kind: "join" | "share" | "reset", token: string): string {
+  return `${window.location.origin}/${kind}/${token}`;
 }
 
 export interface Health {
@@ -229,10 +277,165 @@ export async function listPatients(): Promise<PatientSummary[]> {
   return data;
 }
 
-export async function linkPatient(patientEmail: string): Promise<Patient> {
-  const { data } = await api.post<Patient>("/patients/link", { patient_email: patientEmail });
+/** Adding the elder a caregiver looks after: no email needed, with the consents given in the same form. */
+export interface AddElderInput {
+  name: string;
+  city?: string;
+  is_family_or_guardian: true;
+  basis: "elder_agreed" | "legal_authority";
+  photos: boolean;
+  voice: boolean;
+}
+
+export async function addElder(input: AddElderInput): Promise<Patient> {
+  const { data } = await api.post<Patient>("/patients", input);
   return data;
 }
+
+export async function uploadElderPhoto(patientId: number, file: File): Promise<Patient> {
+  const { data } = await api.post<Patient>(`/patients/${patientId}/photo`, file, { headers: { "Content-Type": file.type } });
+  return data;
+}
+
+export async function deleteElderPhoto(patientId: number): Promise<Patient> {
+  const { data } = await api.delete<Patient>(`/patients/${patientId}/photo`);
+  return data;
+}
+
+export interface ConsentRecord {
+  id: number;
+  kind: "processing" | "elder_on_behalf" | "photos" | "voice";
+  basis: string | null;
+  policy_version: string;
+  granted_at: string;
+  withdrawn_at: string | null;
+  patient_id: number | null;
+}
+
+export async function listElderConsents(patientId: number): Promise<ConsentRecord[]> {
+  const { data } = await api.get<ConsentRecord[]>(`/patients/${patientId}/consents`);
+  return data;
+}
+
+/** Opt in to, or withdraw, family photos or voice recordings. Withdrawing deletes that data. */
+export async function setElderConsent(patientId: number, kind: "photos" | "voice", granted: boolean): Promise<{ patient: Patient; deleted: number }> {
+  const { data } = await api.post<{ patient: Patient; deleted: number }>(`/patients/${patientId}/consents`, { kind, granted });
+  return data;
+}
+
+export interface Device {
+  id: number;
+  device_label: string;
+  created_at: string;
+  last_seen_at: string;
+}
+
+export async function listDevices(patientId: number): Promise<Device[]> {
+  const { data } = await api.get<Device[]>(`/patients/${patientId}/devices`);
+  return data;
+}
+
+export async function revokeDevice(patientId: number, deviceId: number): Promise<void> {
+  await api.post(`/patients/${patientId}/devices/${deviceId}/revoke`);
+}
+
+export async function signOutAllDevices(patientId: number): Promise<void> {
+  await api.post(`/patients/${patientId}/devices/sign-out-all`);
+}
+
+export interface Share {
+  id: number;
+  created_at: string;
+  expires_at: string;
+  state: LinkState;
+}
+
+export async function createShare(patientId: number): Promise<SecretLink> {
+  const { data } = await api.post<SecretLink>(`/patients/${patientId}/shares`);
+  return data;
+}
+
+export async function listShares(patientId: number): Promise<Share[]> {
+  const { data } = await api.get<Share[]>(`/patients/${patientId}/shares`);
+  return data;
+}
+
+export async function revokeShare(patientId: number, shareId: number): Promise<void> {
+  await api.post(`/patients/${patientId}/shares/${shareId}/revoke`);
+}
+
+export async function acceptShare(token: string): Promise<Patient> {
+  const { data } = await api.post<Patient>("/shares/accept", { token });
+  return data;
+}
+
+// --- my account ---
+
+export async function myConsents(): Promise<ConsentRecord[]> {
+  const { data } = await api.get<ConsentRecord[]>("/me/consents");
+  return data;
+}
+
+export async function exportMyData(): Promise<Blob> {
+  const { data } = await api.get<Blob>("/me/export", { responseType: "blob" });
+  return data;
+}
+
+export async function deleteMyAccount(password: string): Promise<{ removed: number }> {
+  const { data } = await api.post<{ removed: number }>("/me/delete", { confirm: "DELETE", password });
+  return data;
+}
+
+// --- admin ---
+
+export interface AdminInviteRequest {
+  id: number;
+  name: string;
+  email: string;
+  role: "family" | "doctor" | "care_home";
+  city: string;
+  message: string | null;
+  status: "new" | "invited" | "declined";
+  created_at: string;
+}
+
+export interface AdminInvite {
+  id: number;
+  note: string;
+  created_at: string;
+  expires_at: string;
+  state: LinkState;
+  used_by_email: string | null;
+}
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string | null;
+  role: Role;
+  created_at: string;
+  is_admin: boolean;
+  is_demo: boolean;
+  elders: number;
+}
+
+export const admin = {
+  requests: async () => (await api.get<AdminInviteRequest[]>("/admin/invite-requests")).data,
+  approve: async (id: number) => (await api.post<SecretLink>(`/admin/invite-requests/${id}/approve`)).data,
+  reject: async (id: number) => {
+    await api.post(`/admin/invite-requests/${id}/reject`);
+  },
+  invites: async () => (await api.get<AdminInvite[]>("/admin/invites")).data,
+  invite: async (note: string) => (await api.post<SecretLink>("/admin/invites", { note })).data,
+  revokeInvite: async (id: number) => {
+    await api.post(`/admin/invites/${id}/revoke`);
+  },
+  users: async () => (await api.get<AdminUser[]>("/admin/users")).data,
+  resetLink: async (userId: number) => (await api.post<SecretLink>(`/admin/users/${userId}/reset-link`)).data,
+  demoCount: async () => (await api.get<{ count: number }>("/admin/demo-accounts")).data.count,
+  removeDemo: async (confirmCount: number) =>
+    (await api.post<{ removed: number }>("/admin/demo-accounts/remove", { confirm_count: confirmCount })).data.removed,
+};
 
 export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap";
 

@@ -7,7 +7,7 @@ from app.deps import ensure_patient_access
 from app.models import Role
 from app.services import auth
 from app.seed import DEMO_PASSWORD, PATIENTS, placeholder_photo, refresh_demo_photos, seed
-from tests.conftest import Register, bearer
+from tests.conftest import Register, bearer, link_patient
 
 
 def test_caregiver_links_and_lists_patients(client: TestClient, register: Register) -> None:
@@ -18,28 +18,18 @@ def test_caregiver_links_and_lists_patients(client: TestClient, register: Regist
     assert client.get("/api/patients", headers=bearer(cg)).json() == []
 
     for email in ("rahim@example.com", "kamala@example.com", "Kamala@example.com"):
-        response = client.post("/api/patients/link", json={"patient_email": email}, headers=bearer(cg))
+        response = link_patient(client, email, bearer(cg))
         assert response.status_code == 201
 
     names = [p["name"] for p in client.get("/api/patients", headers=bearer(cg)).json()]
     assert names == ["Kamala", "Rahim"]  # sorted, no duplicate link
 
 
-def test_link_errors(client: TestClient, register: Register) -> None:
-    cg = register("Priya", "priya@example.com", "caregiver")
-    register("Other", "other@example.com", "caregiver")
-
-    missing = client.post("/api/patients/link", json={"patient_email": "nobody@example.com"}, headers=bearer(cg))
-    assert missing.status_code == 404
-    not_patient = client.post("/api/patients/link", json={"patient_email": "other@example.com"}, headers=bearer(cg))
-    assert not_patient.status_code == 400
-
-
 def test_patient_cannot_use_caregiver_routes(client: TestClient, register: Register) -> None:
     patient = register("Kamala", "kamala@example.com", "patient")
     assert client.get("/api/patients", headers=bearer(patient)).status_code == 403
-    response = client.post("/api/patients/link", json={"patient_email": "kamala@example.com"}, headers=bearer(patient))
-    assert response.status_code == 403
+    body = {"name": "X", "is_family_or_guardian": True, "basis": "elder_agreed"}
+    assert client.post("/api/patients", json=body, headers=bearer(patient)).status_code == 403
 
 
 def test_patient_routes_require_auth(client: TestClient) -> None:
@@ -100,7 +90,7 @@ def test_caregiver_sets_patient_city(client: TestClient, register: Register) -> 
     url = f"/api/patients/{patient_id}"
 
     assert client.patch(url, json={"city": "Pune"}, headers=cg).status_code == 403  # not linked yet
-    client.post("/api/patients/link", json={"patient_email": "kamala@example.com"}, headers=cg)
+    link_patient(client, "kamala@example.com", cg)
 
     updated = client.patch(url, json={"city": "  Pune  "}, headers=cg)
     assert updated.status_code == 200

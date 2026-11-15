@@ -1,16 +1,9 @@
 import {
-  AudioLines,
-  BellRing,
   ChevronDown,
-  CircleCheck,
-  Gamepad2,
   Info,
-  LayoutDashboard,
   Lock,
   MapPin,
   Trash2,
-  TriangleAlert,
-  Users,
   UserRoundSearch,
   type LucideIcon,
 } from "lucide-react";
@@ -20,38 +13,13 @@ import { Jaali } from "../../components/brand/Jaali";
 import { Logo } from "../../components/brand/Logo";
 import { landing as t, NAV } from "./content";
 import { InviteForm } from "./InviteForm";
+import { GameScreen, RemindersScreen, TrendPanel } from "./ProductScreens";
 import { goToSection, Reveal } from "./motion";
 
 const wrap = "mx-auto max-w-[72rem] px-5 lg:px-10";
 const sectionTitle = "text-[clamp(1.8rem,1.2rem+2.2vw,3rem)] leading-[1.05] font-bold tracking-[-0.02em]";
 /** Section anchors sit below the sticky header. */
 const anchor = "scroll-mt-[4.2rem] outline-none";
-
-/** A small, labelled illustration of one line of the caregiver dashboard: status in words, then a plain sentence. */
-function FamilyView() {
-  const v = t.familyView;
-  return (
-    <figure className="mt-5 max-w-[22rem] text-left">
-      <div className="rounded-2xl border border-line bg-surface p-4 shadow-[0_16px_32px_-24px_rgb(16_35_37_/_0.6)]" style={{ fontFamily: "var(--font-caregiver)" }}>
-        <div className="flex items-baseline justify-between gap-3 text-[0.8rem]">
-          <span className="font-semibold">{v.patient}</span>
-          <span className="flex items-center gap-1.5 text-success">
-            <CircleCheck className="size-[1.1em]" aria-hidden="true" />
-            {v.overall}
-          </span>
-        </div>
-        <div className="mt-3 rounded-xl bg-warning-soft px-3 py-2.5 text-[0.8rem]">
-          <p className="flex items-center gap-1.5 font-semibold text-warning">
-            <TriangleAlert className="size-[1.1em]" aria-hidden="true" />
-            {v.game} · {v.status}
-          </p>
-          <p className="mt-1 leading-snug text-ink">{v.sentence}</p>
-        </div>
-      </div>
-      <figcaption className="mt-2 text-[0.75rem] text-ink-muted">{v.label}</figcaption>
-    </figure>
-  );
-}
 
 function HowItWorks() {
   return (
@@ -77,7 +45,6 @@ function HowItWorks() {
               <div>
                 <h3 className="text-[1.25rem] leading-snug font-bold">{step.title}</h3>
                 <p className="mt-2 max-w-[34ch] leading-relaxed text-ink-soft">{step.text}</p>
-                {i === 2 && <FamilyView />}
               </div>
             </Reveal>
           ))}
@@ -136,41 +103,46 @@ function Audiences() {
   );
 }
 
-const FEATURE_ICONS: Record<string, LucideIcon> = {
-  games: Gamepad2,
-  reminders: BellRing,
-  who: Users,
-  voice: AudioLines,
-  dashboard: LayoutDashboard,
-};
-
-function Features() {
+/** Three real product screens, side by side: the elder's game and reminders, and the family's view. */
+function Screens() {
+  const s = t.screens;
+  const figures = [
+    { key: "game", node: <GameScreen />, ...s.game },
+    { key: "reminders", node: <RemindersScreen />, ...s.reminders },
+    { key: "trend", node: <TrendPanel />, ...s.trend },
+  ];
   return (
-    <section aria-labelledby="features-title" className="py-16 lg:py-24">
-      <div className={`${wrap} grid gap-10 lg:grid-cols-12`}>
-        <Reveal className="lg:col-span-4">
-          <div className="lg:sticky lg:top-24">
-            <h2 id="features-title" className={sectionTitle}>
-              {t.features.title}
-            </h2>
-          </div>
+    <section aria-labelledby="screens-title" className="py-16 lg:py-24">
+      <div className={wrap}>
+        <Reveal className="max-w-[44ch]">
+          <h2 id="screens-title" className={sectionTitle}>
+            {s.title}
+          </h2>
+          <p className="mt-3 text-[1.1rem] text-ink-soft">{s.intro}</p>
         </Reveal>
-        <ul className="divide-y divide-line border-y border-line lg:col-span-8">
-          {t.features.items.map((f, i) => {
-            const Icon = FEATURE_ICONS[f.icon]!;
-            return (
-              <Reveal as="li" key={f.title} delay={i * 50} from="right" className="grid grid-cols-[auto_1fr] gap-5 py-6">
-                <span className="flex size-[2.6rem] items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-                  <Icon className="size-[1.25rem]" aria-hidden="true" />
-                </span>
-                <div>
-                  <h3 className="text-[1.2rem] font-bold">{f.title}</h3>
-                  <p className="mt-1.5 max-w-[60ch] leading-relaxed text-ink-soft">{f.text}</p>
+        <div className="mt-12 grid items-end gap-12 md:grid-cols-3 md:gap-8">
+          {figures.map((f, i) => (
+            <Reveal key={f.key} delay={i * 90}>
+              <figure className="flex h-full flex-col">
+                <div role="img" aria-label={f.label} className="flex flex-1 items-end justify-center rounded-t-[8rem] bg-sunken px-4 pt-10 pb-6">
+                  {f.node}
                 </div>
-              </Reveal>
-            );
-          })}
-        </ul>
+                <figcaption className="mt-5">
+                  <h3 className="text-[1.25rem] font-bold">{f.title}</h3>
+                  <p className="mt-1.5 max-w-[36ch] leading-relaxed text-ink-soft">{f.text}</p>
+                </figcaption>
+              </figure>
+            </Reveal>
+          ))}
+        </div>
+        <div className="mt-12 grid gap-8 border-t border-line pt-8 md:grid-cols-2">
+          {s.more.map((m) => (
+            <Reveal key={m.title}>
+              <h3 className="text-[1.15rem] font-bold">{m.title}</h3>
+              <p className="mt-1.5 max-w-[52ch] leading-relaxed text-ink-soft">{m.text}</p>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -327,8 +299,8 @@ export default function Sections() {
   return (
     <>
       <HowItWorks />
+      <Screens />
       <Audiences />
-      <Features />
       <Science />
       <Privacy />
       <Faq />

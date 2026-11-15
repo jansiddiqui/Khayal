@@ -48,11 +48,15 @@ describe("landing page", () => {
 
   it("has every section the brief asks for, and the honest disclaimer", async () => {
     await openLanding();
-    for (const title of [t.how.title, t.audiences.title, t.features.title, t.science.title, t.privacy.title, t.faq.title]) {
+    for (const title of [t.how.title, t.screens.title, t.audiences.title, t.science.title, t.privacy.title, t.faq.title]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
     for (const card of t.audiences.cards) expect(screen.getByRole("heading", { name: card.title })).toBeInTheDocument();
-    for (const f of t.features.items) expect(screen.getByRole("heading", { name: f.title })).toBeInTheDocument();
+    // Real product screens, each described for screen readers, instead of an icon list.
+    for (const shot of [t.screens.game, t.screens.reminders, t.screens.trend]) {
+      expect(screen.getByRole("heading", { name: shot.title })).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: shot.label })).toBeInTheDocument();
+    }
     expect(screen.getByText(t.science.disclaimer)).toBeInTheDocument();
     expect(screen.getByText(t.science.evidence)).toBeInTheDocument();
     expect(document.querySelectorAll("details")).toHaveLength(t.faq.items.length);

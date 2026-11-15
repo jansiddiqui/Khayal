@@ -93,6 +93,10 @@ def seed(db: Session) -> tuple[User, list[User]]:
         for title, kind, at, days in DEMO_REMINDERS:
             db.add(Reminder(patient_id=patients[0].id, title=title, type=kind, time_of_day=at, days_of_week=days))
         db.commit()
+    # Demo data: Kamala's family photos are on (in the app this is a separate consent).
+    if not patients[0].photos_enabled:
+        patients[0].photos_enabled = True
+        db.commit()
     if not family.members_for(db, patients[0].id):
         for name, relation, note, colour in DEMO_FAMILY:
             member = FamilyMember(patient_id=patients[0].id, name=name, relation=relation, note=note)

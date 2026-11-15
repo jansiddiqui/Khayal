@@ -24,7 +24,9 @@ from app import models  # noqa: F401  (register tables)
 from app.db import Base, get_db, get_session_factory
 from app.deps import get_now
 from app.main import create_app
-from app.services import pairing, ratelimit
+from app.models import Role, User
+from app.presenters import user_out
+from app.services import auth, care, pairing, ratelimit
 from app.services.clock import utc_now
 
 TEST_DATABASE_URL = os.getenv("KHAYAL_TEST_DATABASE_URL", "").strip() or None
@@ -113,18 +115,42 @@ Register = Callable[..., dict[str, object]]
 
 
 @pytest.fixture
-def register(client: TestClient) -> Register:
-    """Register a user and return the login payload ({access_token, user})."""
+def register(client: TestClient, db_session_factory: sessionmaker[Session]) -> Register:
+    """Create an account and return the login payload ({access_token, user}).
+
+    Sign-up through the API is invite-only (test_pilot.py covers it), so tests create
+    accounts directly: caregivers with a password, patients like an elder a caregiver added."""
 
     def _register(name: str, email: str, role: str, password: str = "password123") -> dict[str, object]:
-        response = client.post(
-            "/api/auth/register", json={"name": name, "email": email, "password": password, "role": role}
-        )
-        assert response.status_code == 201, response.text
-        return response.json()
+        with db_session_factory() as session:
+            user = auth.register_user(
+                session, name=name, email=email, password=password if role == "caregiver" else None, role=Role(role)
+            )
+            return {"access_token": auth.token_for(user), "user": user_out(user).model_dump(mode="json")}
 
     return _register
 
 
 def bearer(token_payload: dict[str, object]) -> dict[str, str]:
     return {"Authorization": f"Bearer {token_payload['access_token']}"}
+
+
+@dataclass(frozen=True)
+class Done:
+    """Stands in for a response where tests used to call the removed link-by-email route."""
+
+    status_code: int
+
+
+def link_patient(client: TestClient, patient_email: str, headers: dict[str, str]) -> Done:
+    """Link the caregiver in `headers` to the patient with `patient_email`, straight in the test
+    database (the app now adds elders through POST /api/patients instead of linking by email)."""
+    factory = client.app.dependency_overrides[get_session_factory]()  # type: ignore[attr-defined]
+    claims = auth.decode_token(headers["Authorization"].removeprefix("Bearer "))
+    assert claims is not None
+    with factory() as session:
+        caregiver = session.get(User, claims.user_id)
+        patient = auth.get_user_by_email(session, patient_email)
+        assert caregiver is not None and patient is not None
+        care.link_patient(session, caregiver, patient)
+    return Done(201)

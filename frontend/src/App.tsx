@@ -1,23 +1,39 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { RequireRole, RootRedirect } from "./auth/RequireRole";
 import { DemoBanner } from "./components/DemoBanner";
-import { CaregiverDashboard } from "./pages/caregiver/Dashboard";
-import { CaregiverFamily } from "./pages/caregiver/Family";
-import { PatientDetail } from "./pages/caregiver/PatientDetail";
-import { CaregiverReminders } from "./pages/caregiver/Reminders";
-import { Demo } from "./pages/Demo";
-import { Login } from "./pages/Login";
-import { PairDevice } from "./pages/PairDevice";
-import { Games } from "./pages/patient/Games";
-import { PatientHome } from "./pages/patient/Home";
-import { PlayGame } from "./pages/patient/PlayGame";
-import { Reminders } from "./pages/patient/Reminders";
-import { VoiceTask } from "./pages/patient/VoiceTask";
-import { WhoIsThis } from "./pages/patient/WhoIsThis";
-import { Register } from "./pages/Register";
+import { copy } from "./copy";
 
+/**
+ * Every page is its own chunk (React.lazy): a signed-out visitor downloads the app shell and
+ * the landing page only, never the games or the caregiver charts.
+ */
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+
+const Login = page(() => import("./pages/Login"), "Login");
+const PairDevice = page(() => import("./pages/PairDevice"), "PairDevice");
+const Demo = page(() => import("./pages/Demo"), "Demo");
+const JoinPage = page(() => import("./pages/Join"), "JoinPage");
+const ResetPasswordPage = page(() => import("./pages/Join"), "ResetPasswordPage");
+const InviteOnlyPage = page(() => import("./pages/Join"), "InviteOnlyPage");
+const AdminSetupPage = page(() => import("./pages/Join"), "AdminSetupPage");
 const Legal = lazy(() => import("./pages/landing/Legal"));
+
+const PatientHome = page(() => import("./pages/patient/Home"), "PatientHome");
+const Games = page(() => import("./pages/patient/Games"), "Games");
+const PlayGame = page(() => import("./pages/patient/PlayGame"), "PlayGame");
+const Reminders = page(() => import("./pages/patient/Reminders"), "Reminders");
+const WhoIsThis = page(() => import("./pages/patient/WhoIsThis"), "WhoIsThis");
+const VoiceTask = page(() => import("./pages/patient/VoiceTask"), "VoiceTask");
+
+const CaregiverDashboard = page(() => import("./pages/caregiver/Dashboard"), "CaregiverDashboard");
+const PatientDetail = page(() => import("./pages/caregiver/PatientDetail"), "PatientDetail");
+const CaregiverReminders = page(() => import("./pages/caregiver/Reminders"), "CaregiverReminders");
+const CaregiverFamily = page(() => import("./pages/caregiver/Family"), "CaregiverFamily");
+const CaregiverAccount = page(() => import("./pages/caregiver/Account"), "CaregiverAccount");
+const AdminPage = page(() => import("./pages/admin/Admin"), "AdminPage");
 
 const patient = (element: ReactNode) => <RequireRole role="patient">{element}</RequireRole>;
 const caregiver = (element: ReactNode) => <RequireRole role="caregiver">{element}</RequireRole>;
@@ -26,7 +42,9 @@ export function App() {
   return (
     <>
       <DemoBanner />
-      <AppRoutes />
+      <Suspense fallback={<p className="p-8 text-2xl">{copy.common.loading}</p>}>
+        <AppRoutes />
+      </Suspense>
     </>
   );
 }
@@ -37,10 +55,14 @@ function AppRoutes() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/pair" element={<PairDevice />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<InviteOnlyPage />} />
+      <Route path="/setup" element={<AdminSetupPage />} />
+      <Route path="/join/:token" element={<JoinPage />} />
+      <Route path="/share/:token" element={<JoinPage />} />
+      <Route path="/reset/:token" element={<ResetPasswordPage />} />
       <Route path="/demo" element={<Demo />} />
-      <Route path="/privacy" element={<Suspense fallback={null}><Legal kind="privacy" /></Suspense>} />
-      <Route path="/terms" element={<Suspense fallback={null}><Legal kind="terms" /></Suspense>} />
+      <Route path="/privacy" element={<Legal kind="privacy" />} />
+      <Route path="/terms" element={<Legal kind="terms" />} />
 
       <Route path="/patient" element={patient(<PatientHome />)} />
       <Route path="/patient/games" element={patient(<Games />)} />
@@ -50,9 +72,11 @@ function AppRoutes() {
       <Route path="/patient/voice" element={patient(<VoiceTask />)} />
 
       <Route path="/caregiver" element={caregiver(<CaregiverDashboard />)} />
+      <Route path="/caregiver/account" element={caregiver(<CaregiverAccount />)} />
       <Route path="/caregiver/patients/:patientId" element={caregiver(<PatientDetail />)} />
       <Route path="/caregiver/patients/:patientId/reminders" element={caregiver(<CaregiverReminders />)} />
       <Route path="/caregiver/patients/:patientId/family" element={caregiver(<CaregiverFamily />)} />
+      <Route path="/admin" element={caregiver(<AdminPage />)} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

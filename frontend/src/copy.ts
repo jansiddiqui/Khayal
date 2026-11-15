@@ -275,7 +275,7 @@ export const copy = {
     submitting: "Signing in…",
     failed: "That email and password did not match. Let's try again.",
     unavailable: "We could not reach Khayal just now. Please try again in a moment.",
-    toRegister: "New here? Create an account",
+    toRegister: "New here? Khayal is invite-only: request an invite",
   },
   register: {
     title: "Create an account",

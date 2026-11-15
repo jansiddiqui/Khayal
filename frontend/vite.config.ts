@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
+      // Pages are lazy-loaded; their first compile under a full parallel run can be slow.
+      testTimeout: 20_000,
       css: false,
     },
   };

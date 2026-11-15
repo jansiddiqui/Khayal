@@ -8,7 +8,7 @@ from app.services import adaptive, auth
 from app.services.clock import LOCAL_TZ
 from app.services.today_games import TodayGame, least_recent, todays_games
 from ml.adaptive.rule_based import Round
-from tests.conftest import Register, bearer
+from tests.conftest import Register, bearer, link_patient
 
 TODAY = date(2026, 11, 4)
 
@@ -89,7 +89,7 @@ def test_pins_fix_slots_two_and_three(client: TestClient, register: Register) ->
     payload = register("Kamala", "k@example.com", "patient")
     patient = bearer(payload)
     pid = payload["user"]["id"]  # type: ignore[index]
-    client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=cg)
+    link_patient(client, "k@example.com", cg)
 
     auto = client.get("/api/me/games/today", headers=patient).json()
     assert auto["pinned"] is False
@@ -114,7 +114,7 @@ def test_pins_fix_slots_two_and_three(client: TestClient, register: Register) ->
 def test_invalid_pins_are_rejected(client: TestClient, register: Register) -> None:
     cg = bearer(register("Priya", "p@example.com", "caregiver"))
     pid = register("Kamala", "k@example.com", "patient")["user"]["id"]  # type: ignore[index]
-    client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=cg)
+    link_patient(client, "k@example.com", cg)
     for bad in (["memory_match"], ["memory_match", "memory_match"], ["memory_match", "daily_orientation"], ["a", "b"]):
         assert client.patch(f"/api/patients/{pid}", json={"pinned_games": bad}, headers=cg).status_code == 422, bad
 
