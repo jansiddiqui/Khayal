@@ -140,6 +140,11 @@ The API explorer (`/docs`) is turned off in production on purpose.
 
 Changing `VITE_API_URL` later needs a **new deploy of the frontend** (it is read at build time).
 
+**If the site keeps saying "Waking up the server…"** although the backend's `/api/health`
+answers: open the browser console. The message "Khayal: VITE_API_URL was empty when this
+frontend was built" means the variable was missing (or not marked build-time) during the
+build, so the site is asking itself instead of the backend. Set it and redeploy the frontend.
+
 ---
 
 ## 5. Connect the two (CORS)
