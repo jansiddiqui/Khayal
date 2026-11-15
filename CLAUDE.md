@@ -44,7 +44,7 @@ Out of scope for the prototype: mobile app, MRI, real push notifications (use in
 - **ML:** plain Python modules in `ml/` that the backend imports through `backend/app/services/`. NumPy/pandas only for now. No torch dependency until real models are added.
 - **Tests:** pytest + httpx (FastAPI TestClient) for backend + ml; Vitest + React Testing Library + jsdom + `@testing-library/jest-dom` for frontend.
 - **Package managers:** npm for frontend, `uv` or `pip` + `requirements.txt` for backend.
-- **Hosting (public demo, decided):** Voroa free tier, PostgreSQL through `psycopg[binary]` (approved), files in a database table (`KHAYAL_STORAGE=db`), `KHAYAL_DEMO_MODE=1`. Steps: `docs/DEPLOY-VOROA.md`.
+- **Hosting (public demo, decided):** Voroa free tier, PostgreSQL through `psycopg[binary]` (approved), files in a database table (`KHAYAL_STORAGE=db`), `KHAYAL_DEMO_MODE=1`. Steps: `docs/DEPLOY-VOROA.md`. The demo banner is on every screen except game boards in play mode, which must still fit 375 × 812 without scrolling (decided). Banner text: "Demo only: no real health info or photos.", 20px everywhere, at most 2 lines at 375px.
 
 ## 3. Repo structure
 

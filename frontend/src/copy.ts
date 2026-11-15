@@ -236,7 +236,7 @@ export const copy = {
     notOn: "This activity is not turned on yet. Your family member can turn it on.",
   },
   demo: {
-    banner: "Demo — please don't enter real health information or photos of real people.",
+    banner: "Demo only: no real health info or photos.",
     tryIt: "Try the demo",
     pairLink: "Just visiting? Try the demo",
     title: "Try Khayal",

@@ -13,7 +13,7 @@ export function DemoBanner() {
   return (
     <div
       role="note"
-      className="demo-banner flex items-center justify-center gap-2 border-b-2 border-accent bg-accent-soft px-4 py-1.5 text-base leading-snug font-semibold text-ink sm:py-2 sm:text-center sm:text-xl"
+      className="demo-banner flex items-center justify-center gap-2 border-b-2 border-accent bg-accent-soft px-4 py-2 text-center text-xl leading-snug font-semibold text-ink"
     >
       <Info aria-hidden="true" className="size-5 shrink-0" />
       <span>{copy.demo.banner}</span>
