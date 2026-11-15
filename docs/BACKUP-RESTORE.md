@@ -1,77 +1,66 @@
 # Backups and restore (Voroa free tier)
 
-The free Voroa database has no automatic backups you can rely on, so Khayal keeps its own:
-a weekly dump of the whole database, made on your computer, kept for 8 weeks. Photos and
-voice recordings live in the database (`KHAYAL_STORAGE=db`), so one dump holds everything.
+Khayal keeps a weekly backup of the whole pilot database, saved on your own computer and kept
+for 8 weeks. Photos and voice recordings live in the database (`KHAYAL_STORAGE=db`), so one
+backup holds everything.
 
-Backups contain personal data of families and elders. Keep them on your own computer
-(`data/` is never committed), and never share or upload them.
+The Voroa database (`khayal-db`) is **reachable only from apps inside the Voroa workspace** and
+runs **PostgreSQL 18**, so it cannot be backed up from a laptop with `pg_dump`. Backups are
+taken from Voroa's dashboard instead.
 
-## One-time setup
-
-The script uses the portable PostgreSQL 17 tools in `data/pgsql/` (gitignored), the same ones the
-Postgres tests use. If that folder is missing:
-
-1. Download the official "PostgreSQL 17 Windows x64 binaries" zip from EnterpriseDB
-   (get.enterprisedb.com/postgresql/, file `postgresql-17.x-windows-x64-binaries.zip`, about 330 MB)
-   into `data/downloads/`.
-2. Unpack it so that `data/pgsql/bin/pg_dump.exe` exists (the zip's top folder is `pgsql`).
+Backups contain personal data of families and elders. Keep them on your own computer (`data/`
+is never committed), and never share or upload them anywhere else.
 
 ## Make a backup (weekly)
 
-In PowerShell, from the repository folder:
+1. Voroa dashboard → **`khayal-db`** → **Backups**.
+2. Download the most recent backup (if there is none from today, create one there first).
+3. Save it in this repository under `data\backups\voroa\`, named with the date, for example
+   `data\backups\voroa\khayal-2026-11-22.<extension Voroa gives it>`.
+4. Keep the newest 8 and delete older ones by hand, one file at a time.
 
-```powershell
-$env:KHAYAL_BACKUP_DATABASE_URL = "postgres://USER:PASS@HOST:PORT/DB?sslmode=require"
-powershell -ExecutionPolicy Bypass -File scripts\backup-voroa.ps1
-```
+Same day every week, and once more before any big change (for example before merging a
+migration, which Voroa's pre-deploy applies to the live database).
 
-- Copy the address from Voroa: `khayal-db` → **Connection** → the **external** URL (your
-  computer is outside Voroa's network). Setting it with `$env:` keeps it in this window only;
-  it is never written to a file. Close the window afterwards.
-- The script writes `data\backups\voroa\khayal-YYYY-MM-DD.dump`, prints its size, and keeps the
-  newest 8 dumps (it deletes only older `khayal-*.dump` files in that folder).
-- A good habit: same day every week, and once more before any big change (for example before
-  merging a migration).
+## Check a backup
 
-## Check a backup (restore it locally)
+Now and then, make sure a downloaded backup is complete and readable:
 
-Do this now and then, so you know the backups work. It uses the throwaway local cluster in
-`data/pgtest` and never touches the live database:
-
-```powershell
-$bin = "data\pgsql\bin"
-& "$bin\pg_ctl.exe" -D data\pgtest -o "-p 55432 -c listen_addresses=127.0.0.1" -l data\pgtest.log -w start
-& "$bin\createdb.exe" -h 127.0.0.1 -p 55432 -U khayal khayal_restore_check
-& "$bin\pg_restore.exe" -h 127.0.0.1 -p 55432 -U khayal --no-owner -d khayal_restore_check data\backups\voroa\khayal-YYYY-MM-DD.dump
-& "$bin\psql.exe" -h 127.0.0.1 -p 55432 -U khayal -d khayal_restore_check -c "SELECT count(*) FROM users"
-& "$bin\dropdb.exe" -h 127.0.0.1 -p 55432 -U khayal khayal_restore_check
-& "$bin\pg_ctl.exe" -D data\pgtest -m fast -w stop
-```
-
-If `data\pgtest` does not exist yet, create it once with
-`& "$bin\initdb.exe" -D data\pgtest -U khayal -A trust -E UTF8 --locale=C` (it only listens on
-127.0.0.1).
+- The file is not tiny (with the demo data gone, expect at least tens of kilobytes; it grows
+  with the pilot) and its size is in line with last week's.
+- To look inside it, you need PostgreSQL **18** client tools: the portable PostgreSQL 17 tools
+  in `data\pgsql\` cannot read a version 18 backup. With version 18 tools installed, a custom-format
+  backup restores into a throwaway local database with `pg_restore --no-owner -d <local database> <file>`;
+  then check a few row counts (`users`, `game_sessions`). Never restore into the live database to "test".
 
 ## Restore the live database (after data loss)
 
-Only when the live data is lost or broken. It replaces what is in the database with the backup.
+Only when the live data is lost or broken; it replaces what is in the database.
 
 1. **Stop traffic:** in Voroa, suspend the `khayal-api` service, so nobody writes while you restore.
-2. **Make a backup of the current state first** (even if broken), with the script above.
-3. **Restore** (PowerShell, with the external URL in `$env:KHAYAL_BACKUP_DATABASE_URL`):
-
-   ```powershell
-   & "data\pgsql\bin\pg_restore.exe" --clean --if-exists --no-owner --no-privileges `
-     --dbname "$env:KHAYAL_BACKUP_DATABASE_URL" data\backups\voroa\khayal-YYYY-MM-DD.dump
-   ```
-
-4. **Resume** the `khayal-api` service. Its pre-deploy step (`alembic upgrade head`) runs on the
-   next deploy; if the backup is from before a migration, trigger a manual deploy so the schema is
-   brought up to date.
+2. **Keep the current state:** take one more backup in the dashboard, even if the data looks broken.
+3. **Restore** the chosen backup from Voroa's dashboard (`khayal-db` → **Backups**). Because the
+   database is reachable only from inside the workspace, the restore has to happen there, not
+   from your laptop. If the dashboard does not offer a restore for that backup, ask Voroa support
+   how to restore it into `khayal-db`.
+4. **Resume** the `khayal-api` service. If the backup is from before a migration, trigger a manual
+   deploy: its pre-deploy step (`alembic upgrade head`) brings the schema up to date.
 5. Open `/api/health`, sign in, and check that the people and their recent sessions are there.
    Anything done after the backup was made is lost; tell the families affected.
 
 If the database itself was deleted, create a new DB Nano in the **Mumbai** region, put its URL in
 `KHAYAL_DATABASE_URL` on the backend, deploy once (the pre-deploy creates the tables), then restore
-into it as above with `--clean --if-exists`.
+into it as above.
+
+## The script `scripts/backup-voroa.ps1`
+
+Kept for other setups: **only for databases reachable from outside, with a matching `pg_dump`
+version** (the portable tools in `data\pgsql\` are PostgreSQL 17). It does not work with the
+current Voroa database. For a database it can reach, it reads the address from
+`$env:KHAYAL_BACKUP_DATABASE_URL` (never stored in the repository), writes
+`data\backups\voroa\khayal-YYYY-MM-DD.dump` and keeps the newest 8:
+
+```powershell
+$env:KHAYAL_BACKUP_DATABASE_URL = "postgres://USER:PASS@HOST:PORT/DB?sslmode=require"
+powershell -ExecutionPolicy Bypass -File scripts\backup-voroa.ps1
+```

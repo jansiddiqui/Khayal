@@ -1,8 +1,14 @@
 <#
 .SYNOPSIS
-  Back up the Khayal pilot database (Voroa Postgres) to data\backups\voroa\khayal-YYYY-MM-DD.dump.
+  ONLY FOR DATABASES REACHABLE FROM OUTSIDE, WITH A MATCHING pg_dump VERSION.
+  Back up a Khayal Postgres database to data\backups\voroa\khayal-YYYY-MM-DD.dump.
 
 .DESCRIPTION
+  This does NOT work with the current Voroa database: it is reachable only from apps inside the
+  Voroa workspace and runs PostgreSQL 18, while the portable tools in data\pgsql are version 17.
+  For Voroa, download the weekly backup from the dashboard (khayal-db -> Backups) and save it
+  under data\backups\voroa\; see docs/BACKUP-RESTORE.md.
+
   Uses the portable pg_dump in data\pgsql (gitignored; see docs/BACKUP-RESTORE.md). The database
   address is read from an environment variable and never stored in the repository:
     $env:KHAYAL_BACKUP_DATABASE_URL  (preferred), or  $env:DATABASE_URL

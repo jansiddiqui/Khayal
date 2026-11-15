@@ -324,7 +324,7 @@ Khayal is an invite-only pilot (CLAUDE.md section 11). Deploy order and settings
 - **Account and security:** change password (signs out other sessions), admin-made reset links (48 hours), Export my data (zip: JSON + photos and recordings), Delete my account (type DELETE; removes the caregiver and every elder no one else looks after), signed-in devices per elder with Revoke and "Sign out all devices". Passwords need 10 characters.
 - **Demo mode** (`KHAYAL_DEMO_MODE=1`) stays for local development; with it off nothing expires on its own, and the admin page removes leftover demo accounts once.
 - **Settings:** `KHAYAL_ADMIN_EMAILS`, `KHAYAL_CONTACT_EMAIL` (grievance contact), `KHAYAL_DEMO_MODE=0` in production.
-- **Backups:** run `scripts\backup-voroa.ps1` **weekly** (keeps 8 dumps in `data/backups/voroa/`); restore guide: [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md).
+- **Backups (weekly):** in Voroa's dashboard, `khayal-db` → Backups → download, and save the file under `data/backups/voroa/` (keep the newest 8). The Voroa database is reachable only from inside the workspace and runs PostgreSQL 18, so `scripts/backup-voroa.ps1` does not apply to it: it is only for databases reachable from outside, with a matching `pg_dump` version. Guide: [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md).
 - **Screenshots:** `docs/pilot/`.
 
 ## Known limitations (prototype)

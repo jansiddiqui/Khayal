@@ -273,5 +273,5 @@ Khayal moves from a public demo to a **real product: an invite-only pilot**. Thi
   - Consent records (DPDP Act 2023) with policy version and time: sign-up, adding an elder (family/guardian; elder agreed or legally authorised), separate photos and voice opt-ins. Withdrawing photos or voice deletes that data.
   - Privacy policy and Terms drafts ("Draft — pending review"); "not a medical device" in the terms, on the dashboard and under every alert.
   - Change password (signs out other sessions), admin reset links (48 h), export my data (zip), delete my account (type DELETE). Passwords at least 10 characters.
-  - Demo mode off in production; nothing expires on its own; the admin removes demo accounts once. Weekly backups with `scripts/backup-voroa.ps1`.
+  - Demo mode off in production; nothing expires on its own; the admin removes demo accounts once. Weekly backups are downloaded from Voroa's dashboard (`khayal-db` → Backups) into `data/backups/voroa/`: the database is reachable only inside the Voroa workspace and runs PostgreSQL 18, so `scripts/backup-voroa.ps1` is only for databases reachable from outside with a matching `pg_dump` version.
 - **Phase C: redesign of the patient and caregiver UI for daily use, with motion** (section 4 rules still hold).
