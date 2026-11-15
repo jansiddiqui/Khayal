@@ -54,7 +54,7 @@ uses and keeps `?sslmode=require`.
 2. **Name:** `khayal-api`.
 3. **Root directory:** leave it empty (the repository root). The backend imports the
    `ml/` folder, so it must run from the root. The root has the two files Voroa's Python
-   detection looks for: `requirements.txt` (it includes `backend/requirements.txt`) and
+   detection looks for: `requirements.txt` (self-contained: the same pinned packages as `backend/requirements.txt`, checked by a test) and
    `.python-version` (`3.12`).
 4. **Runtime:** Python (native). Voroa should detect it; choose Python 3.12 if asked.
 5. **Build command:** leave Voroa's default (`pip install -r requirements.txt`).
@@ -194,6 +194,14 @@ hours. Skip this step if that matters.
 ---
 
 ## 8. Checking logs
+
+**If a backend deploy log says "Using Node.js"**: the service is not running as Python. The
+repository root has no `package.json` (only `frontend/` does), so check the backend service's
+settings: **Runtime** must be Python 3.12 and **Root directory** must be empty (the repository
+root). A Node runtime or a `frontend` root directory makes the build miss `backend/`, which
+shows up as errors about `backend/...` files not being found, and the start command would
+fail for the same reason.
+
 
 - Dashboard → `khayal-api` → **Logs**. Useful lines:
   - `Housekeeping: reminders checked for N patient(s), M expired account(s) removed`: the

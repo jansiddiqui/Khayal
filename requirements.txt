@@ -1,3 +1,21 @@
-# Voroa (and other hosts) install Python packages from the repository root.
-# The backend imports the ml/ package from this folder, so the root is the service root.
--r backend/requirements.txt
+# Hosts (Voroa) install Python packages from the repository root, which is the service root
+# because the backend imports the ml/ package from here. Self-contained on purpose: no
+# "-r backend/requirements.txt", so it installs even if a host only copies this file first.
+# Must list exactly the same pinned packages as backend/requirements.txt
+# (checked by backend/tests/test_requirements.py).
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+sqlalchemy==2.0.36
+alembic==1.14.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # passlib 1.7.4 is incompatible with bcrypt>=4.1
+numpy==2.2.1
+pandas==2.2.3
+pillow==11.0.0
+psycopg[binary]==3.2.3  # Postgres driver (KHAYAL_DATABASE_URL=postgres://...)
+
+# tests
+pytest==8.3.4
+httpx==0.28.1
