@@ -16,7 +16,8 @@ vi.mock("./api/client", async (importOriginal) => {
     register: vi.fn(),
     pairDevice: vi.fn(),
     listPatients: vi.fn(),
-    linkPatient: vi.fn(),
+    addElder: vi.fn(),
+    checkInvite: vi.fn(),
     listSessions: vi.fn(),
     getTrend: vi.fn(),
     getSignals: vi.fn(),
@@ -106,24 +107,40 @@ describe("signed out", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(copy.login.failed);
   });
 
-  it("registers a caregiver and lands on the dashboard", async () => {
+  it("/register explains that Khayal is invite-only", async () => {
+    renderWithProviders(<App />, { route: "/register" });
+    expect(await screen.findByRole("heading", { name: "Khayal is invite-only for now" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request an invite" })).toHaveAttribute("href", "/#invite");
+  });
+
+  it("an invite link creates a caregiver account with consent and lands on the dashboard", async () => {
+    api.checkInvite.mockResolvedValue({ kind: "signup", elder_name: null, expires_at: "2026-11-29T00:00:00Z" });
     api.register.mockResolvedValue({ access_token: "t", token_type: "bearer", user: priya });
     api.listPatients.mockResolvedValue([]);
-    renderWithProviders(<App />, { route: "/register" });
+    renderWithProviders(<App />, { route: "/join/invite-token-1234567890" });
 
-    fireEvent.change(screen.getByLabelText(copy.register.name), { target: { value: "Priya Sharma" } });
-    fireEvent.change(screen.getByLabelText(copy.register.email), { target: { value: "p@example.com" } });
-    fireEvent.change(screen.getByLabelText(copy.register.password), { target: { value: "password123" } });
-    fireEvent.click(screen.getByLabelText(copy.register.roleCaregiver));
-    fireEvent.click(screen.getByRole("button", { name: copy.register.submit }));
+    fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: "Priya Sharma" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "p@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Password/), { target: { value: "a-long-password" } });
+    const submit = screen.getByRole("button", { name: "Create account" });
+    expect(submit).toBeDisabled(); // consent first
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(submit);
 
     expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(api.register).toHaveBeenCalledWith({
       name: "Priya Sharma",
       email: "p@example.com",
-      password: "password123",
-      role: "caregiver",
+      password: "a-long-password",
+      invite_token: "invite-token-1234567890",
+      consent: true,
     });
+  });
+
+  it("an invalid invite link says so kindly", async () => {
+    api.checkInvite.mockRejectedValue({ isAxiosError: true, response: { status: 404 } });
+    renderWithProviders(<App />, { route: "/join/old-token-1234567890" });
+    expect(await screen.findByRole("heading", { name: "This link is not valid any more" })).toBeInTheDocument();
   });
 });
 
@@ -196,25 +213,39 @@ describe("patient", () => {
 describe("caregiver", () => {
   beforeEach(() => signInAs(priya));
 
-  it("lists linked patients and links a new one", async () => {
-    const rahim: Patient = { id: 3, name: "Rahim Khan", email: "rahim@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
-    api.listPatients.mockResolvedValueOnce([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }, { ...rahim, cognitive_index: null, cognitive_status: "insufficient" as const }]);
-    api.linkPatient.mockResolvedValue(rahim);
+  it("lists the people they look after and adds one with consent (no email)", async () => {
+    const rahim: Patient = { id: 3, name: "Rahim Khan", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
+    const kamala = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const };
+    api.listPatients.mockResolvedValueOnce([kamala]);
+    api.listPatients.mockResolvedValue([kamala, { ...rahim, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.addElder.mockResolvedValue(rahim);
 
     renderWithProviders(<App />, { route: "/caregiver" });
     expect(await screen.findByText("Kamala Devi")).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("not a medical device");
 
-    fireEvent.change(screen.getByLabelText("Patient's account email"), { target: { value: "rahim@khayal.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Link patient" }));
+    fireEvent.change(screen.getByLabelText("Their name"), { target: { value: "Rahim Khan" } });
+    fireEvent.change(screen.getByLabelText(/City/), { target: { value: "Pune" } });
+    const add = screen.getByRole("button", { name: "Add" });
+    expect(add).toBeDisabled(); // consent first
+    fireEvent.click(screen.getByLabelText("I am a family member or the legal guardian of this person."));
+    fireEvent.click(screen.getByLabelText("Rahim agreed to use Khayal."));
+    fireEvent.click(add);
 
-    expect(await screen.findByText("Linked Rahim Khan.")).toBeInTheDocument();
+    expect(await screen.findByText(/Added Rahim Khan\./)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("cell", { name: "Rahim Khan" })).toBeInTheDocument());
-    expect(api.linkPatient.mock.calls[0]?.[0]).toBe("rahim@khayal.test");
+    expect(api.addElder.mock.calls[0]?.[0]).toEqual({
+      name: "Rahim Khan",
+      city: "Pune",
+      is_family_or_guardian: true,
+      basis: "elder_agreed",
+      photos: false,
+      voice: false,
+    });
   });
 
   it("sees a patient's levels and session history", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 9,
@@ -242,7 +273,7 @@ describe("caregiver", () => {
   });
 
   it("shows stopped-early sessions and saves the patient's city", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 10,
@@ -259,7 +290,7 @@ describe("caregiver", () => {
         completed: false,
       },
     ]);
-    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null });
+    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null });
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByRole("cell", { name: "Stopped early (3/5 rounds)" })).toBeInTheDocument();
@@ -271,7 +302,7 @@ describe("caregiver", () => {
   });
 
   it("pins and unpins today's games for a patient", async () => {
-    const base = { id: 2, name: "Kamala Devi", email: "kamala@khayal.test", city: null, voice_task_enabled: false, voice_consent_at: null };
+    const base = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, voice_task_enabled: false, voice_consent_at: null };
     api.listPatients.mockResolvedValue([{ ...base, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([]);
     api.updatePatient.mockResolvedValue({ ...base, pinned_games: ["reaction_tap", "word_recall"] });

@@ -17,7 +17,9 @@ import {
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { LoadError } from "../../components/caregiver/LoadError";
+import { Disclaimer } from "../../components/caregiver/Disclaimer";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
+import { PrivacyPanel } from "../../components/caregiver/PrivacyPanel";
 import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
 import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
@@ -169,6 +171,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
                   );
                 })}
               </ul>
+              <Disclaimer compact />
             </div>
             <button
               type="button"
@@ -509,6 +512,12 @@ export function PatientDetail() {
           hint={patient.voice_task_enabled ? "Weekly picture description · on" : "Weekly picture description · off"}
         >
           <VoiceRecordings patient={patient} />
+        </Section>
+      )}
+
+      {patient && (
+        <Section id="privacy" title="Privacy, devices and family" hint="Photo, photo consent, signed-in devices, share links">
+          <PrivacyPanel patient={patient} />
         </Section>
       )}
 

@@ -59,14 +59,21 @@ def _active(db: Session, code: str, now: datetime) -> PairingCode | None:
     return next((r for r in rows if as_utc(r.expires_at) > now), None)
 
 
-def redeem(db: Session, code: str, now: datetime) -> User | None:
-    """The patient for a valid, unused code (marking it used), or None."""
+def redeem_code(db: Session, code: str, now: datetime) -> tuple[User, int] | None:
+    """(patient, id of the caregiver who made the code) for a valid, unused code (marking it used), or None."""
     row = _active(db, code, now)
     if row is None:
         return None
     row.used_at = now
     db.commit()
-    return db.get(User, row.patient_id)
+    patient = db.get(User, row.patient_id)
+    return (patient, row.created_by) if patient is not None else None
+
+
+def redeem(db: Session, code: str, now: datetime) -> User | None:
+    """The patient for a valid, unused code (marking it used), or None."""
+    redeemed = redeem_code(db, code, now)
+    return redeemed[0] if redeemed else None
 
 
 class FailureLimiter:

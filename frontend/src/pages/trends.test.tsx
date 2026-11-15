@@ -21,7 +21,7 @@ vi.mock("../api/client", async (importOriginal) => {
 const api = vi.mocked(apiClient);
 
 const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
-const base = { email: "x@khayal.test", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
+const base = { photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
 
 function game(
   game_type: GameTrend["game_type"],

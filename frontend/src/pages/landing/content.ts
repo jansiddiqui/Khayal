@@ -10,7 +10,7 @@ export const NAV = [
 ] as const;
 
 export const landing = {
-  title: "Khayal (خیال) — gentle brain games and early warnings for families",
+  title: "Khayal (خیال) — notice memory changes early, gently, at home",
   signIn: "Sign in",
   requestInvite: "Request an invite",
   menu: "Open menu",
@@ -18,9 +18,9 @@ export const landing = {
   skipToContent: "Skip to content",
 
   hero: {
-    headline: "Keep the mind active. Notice changes early.",
+    headline: "Notice memory changes early — gently, at home.",
     subline:
-      "Khayal gives elders with early memory loss a few gentle games and reminders each day, and shows their family how they are doing, measured against their own normal.",
+      "A few gentle brain games and reminders each day for elders with early memory loss. Their family sees how they are doing against their own normal, and hears early when something changes.",
     secondary: "See how it works",
     pilot: "Invite-only pilot in India",
     haveCode: "Setting up an elder's phone? Enter the 6-digit code",
@@ -92,6 +92,30 @@ export const landing = {
           "Not a diagnosis: questions worth asking at the next visit",
         ],
       },
+    ],
+  },
+
+  screens: {
+    title: "See it as they will",
+    intro: "The real screens, with a sample name and made-up numbers.",
+    game: {
+      title: "Gentle games",
+      text: "Find the Pairs is one of five. Each gets a little easier or harder to stay comfortable; nothing is timed except Tap When Green.",
+      label: "The Find the Pairs game on a phone: pairs found so far shown in soft green, a kind message below",
+    },
+    reminders: {
+      title: "Daily reminders",
+      text: "Medicine, meals and appointments, each with one big Done button. If three are missed in two days, the family is told.",
+      label: "Today's reminders on a phone: the blood pressure tablet marked done, lunch and an evening walk still to do",
+    },
+    trend: {
+      title: "What the family sees",
+      text: "Each game against the elder's own normal, the status in words, and a plain sentence about what changed.",
+      label: "A caregiver chart for Find the Pairs: the line stays in the band of her normal, then dips slightly; status Watch",
+    },
+    more: [
+      { title: "“Who is this?”", text: "Family photos with names and relations, read aloud, so faces and names stay together." },
+      { title: "Weekly voice task", text: "With the family's consent, the elder describes a picture once a week. The recordings are kept; their analysis is still being researched and is not shown." },
     ],
   },
 

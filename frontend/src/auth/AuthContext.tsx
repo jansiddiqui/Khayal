@@ -9,6 +9,8 @@ interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
+  /** Use a fresh token from the server (after a password change or reset). */
+  adopt: (response: TokenResponse) => User;
   /** Sign this device in as a patient with a caregiver's pairing code. */
   pair: (code: string) => Promise<User>;
   /** Public demo: make a fresh demo caregiver, sign in as them, and return the pairing code. */
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state,
       login: async (email, password) => accept(await apiClient.login(email, password)),
       register: async (input) => accept(await apiClient.register(input)),
+      adopt: accept,
       pair: async (code) => accept(await apiClient.pairDevice(code)),
       startDemo: async () => {
         const started = await apiClient.startDemo();

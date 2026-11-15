@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, ensure_patient_access
-from app.models import FamilyMember
+from app.models import FamilyMember, User
 from app.schemas import FamilyMemberIn, FamilyMemberOut, FamilyPhotoOut
 from app.services import family
 
@@ -70,6 +70,9 @@ async def upload_photo(
     """The request body is the image itself (Content-Type image/jpeg or image/png)."""
     ensure_patient_access(db, caregiver, patient_id)
     member = _member(db, patient_id, member_id)
+    patient = db.get(User, patient_id)
+    if patient is None or not patient.photos_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Turn on photos for this person first.")
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type not in PHOTO_TYPES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only JPG and PNG photos are allowed.")

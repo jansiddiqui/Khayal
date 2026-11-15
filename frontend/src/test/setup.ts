@@ -1,8 +1,20 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { cloneElement, type ReactElement } from "react";
+import { AxiosError } from "axios";
 import { afterEach, vi } from "vitest";
+import { api } from "../api/client";
 import { resetTestAppConfig } from "./appConfigState";
+
+// Every page is lazy-loaded (App.tsx); the first load of a page in a test run compiles it,
+// which can take longer than the default 1 s wait. Only failing waits get slower.
+configure({ asyncUtilTimeout: 8000 });
+
+// No real network in tests: a request no test mocked fails at once (as if offline) instead
+// of trying to reach a server. Tests that exercise the client pass their own adapter.
+api.defaults.adapter = async (config) => {
+  throw new AxiosError("No network in tests (mock this API call)", "ERR_NETWORK", config);
+};
 
 // jsdom has no object URLs; private photos are shown through them.
 URL.createObjectURL = () => "blob:test-photo";

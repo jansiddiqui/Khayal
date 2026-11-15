@@ -2,7 +2,7 @@ import { Play } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { LoadError } from "./LoadError";
-import { fetchAudioBlob, listRecordings, updatePatient, type Patient, type SpeechSample } from "../../api/client";
+import { fetchAudioBlob, listRecordings, setElderConsent, type Patient, type SpeechSample } from "../../api/client";
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -19,10 +19,17 @@ export function formatDuration(ms: number): string {
 export function VoiceRecordings({ patient }: { patient: Patient }) {
   const queryClient = useQueryClient();
   const recordings = useQuery({ queryKey: ["speech", patient.id], queryFn: () => listRecordings(patient.id) });
+  const [confirmOff, setConfirmOff] = useState(false);
   const toggle = useMutation({
-    mutationFn: (enabled: boolean) => updatePatient(patient.id, { voice_task_enabled: enabled }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["patients"] }),
+    mutationFn: (enabled: boolean) => setElderConsent(patient.id, "voice", enabled),
+    onSuccess: () => {
+      setConfirmOff(false);
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      void queryClient.invalidateQueries({ queryKey: ["speech", patient.id] });
+      void queryClient.invalidateQueries({ queryKey: ["consents", patient.id] });
+    },
   });
+  const count = recordings.data?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-4">
@@ -33,10 +40,24 @@ export function VoiceRecordings({ patient }: { patient: Patient }) {
             className="size-5 accent-brand"
             checked={patient.voice_task_enabled}
             disabled={toggle.isPending}
-            onChange={(e) => toggle.mutate(e.target.checked)}
+            onChange={(e) => (e.target.checked ? toggle.mutate(true) : setConfirmOff(true))}
           />
-          Voice task enabled
+          Voice task enabled (separate consent)
         </label>
+        {confirmOff && (
+          <div role="alertdialog" aria-label="Turn off the voice task" className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
+            <p className="min-w-0 flex-1">
+              Turning this off withdraws the consent and deletes {count === 1 ? "the 1 recording" : `all ${count} recordings`} for{" "}
+              {patient.name}. This cannot be undone.
+            </p>
+            <button type="button" onClick={() => toggle.mutate(false)} className="rounded-md bg-danger px-3 py-1 font-medium text-white">
+              Turn off and delete
+            </button>
+            <button type="button" onClick={() => setConfirmOff(false)} className="rounded-md border border-line-strong px-3 py-1">
+              Keep it on
+            </button>
+          </div>
+        )}
         <p className="text-ink-muted">
           {patient.voice_task_enabled && patient.voice_consent_at
             ? `Turned on ${when(patient.voice_consent_at)}. Once a week, ${patient.name} is asked to describe a picture out loud; it replaces the third game that day.`

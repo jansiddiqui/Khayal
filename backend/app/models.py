@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, LargeBinary, String, Time, UniqueConstraint, false
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, LargeBinary, String, Time, UniqueConstraint, false, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,8 +23,10 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
-    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
+    # Caregivers sign in with email + password. Elders (patients) added by a caregiver have
+    # neither: their devices sign in with a pairing code (CLAUDE.md section 11, Phase B).
+    email: Mapped[str | None] = mapped_column(String(254), unique=True, index=True, default=None)
+    password_hash: Mapped[str | None] = mapped_column(String(255), default=None)
     role: Mapped[Role] = mapped_column(SAEnum(Role, native_enum=False, length=16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     # Patients only: home city, set by a caregiver, used by Daily Orientation.
@@ -37,6 +39,12 @@ class User(Base):
     voice_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     # Public demo only: the account and all its data are deleted after this time. None = kept.
     demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, index=True)
+    # Bumped to sign out every existing session (password change, "sign out all devices").
+    token_version: Mapped[int] = mapped_column(default=0, server_default=text("0"))
+    # Patients only: family photos (and the elder's own photo) need a separate opt-in.
+    photos_enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Patients only: storage key of the elder's own photo (services/storage.py), if any.
+    photo_key: Mapped[str | None] = mapped_column(String(200), default=None)
 
 
 class CareLink(Base):
@@ -284,3 +292,99 @@ class InviteRequest(Base):
         SAEnum(InviteStatus, native_enum=False, length=16), default=InviteStatus.new
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class SignupInvite(Base):
+    """A single-use link that lets one person create a caregiver account (invite-only pilot).
+    Only a hash of the token is stored; the link is shown once to the admin who made it."""
+
+    __tablename__ = "signup_invites"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # The landing-page request it answers, if any.
+    invite_request_id: Mapped[int | None] = mapped_column(
+        ForeignKey("invite_requests.id", ondelete="SET NULL"), default=None, index=True
+    )
+    # Who it is for, in the admin's words (name or email), to recognise it in the list.
+    note: Mapped[str] = mapped_column(String(200))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    used_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class CareInvite(Base):
+    """A caregiver's share link: a second family member joins the same elder (single use)."""
+
+    __tablename__ = "care_invites"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    used_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class PasswordReset(Base):
+    """An admin-made, single-use password reset link (there is no email service yet)."""
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class ConsentKind(str, Enum):
+    # The caregiver agrees to Khayal processing their account data (privacy policy).
+    processing = "processing"
+    # Adding an elder: the caregiver is family or guardian, and the elder agreed or they are legally authorised.
+    elder_on_behalf = "elder_on_behalf"
+    # Optional features for one elder.
+    photos = "photos"
+    voice = "voice"
+
+
+class Consent(Base):
+    """A consent record (India DPDP Act 2023): who agreed to what, for whom, under which policy
+    version, and when it was withdrawn. Records are kept, never edited, except withdrawal."""
+
+    __tablename__ = "consents"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # The person who gave the consent (a caregiver).
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # The elder it is about, for elder_on_behalf, photos and voice.
+    patient_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), default=None, index=True)
+    kind: Mapped[ConsentKind] = mapped_column(SAEnum(ConsentKind, native_enum=False, length=24))
+    # elder_on_behalf only: "elder_agreed" or "legal_authority".
+    basis: Mapped[str | None] = mapped_column(String(40), default=None)
+    policy_version: Mapped[str] = mapped_column(String(40))
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class DeviceSession(Base):
+    """An elder's device signed in with a pairing code; the family can revoke it."""
+
+    __tablename__ = "device_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    paired_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # A short description of the browser, to tell devices apart ("Android phone, Chrome").
+    device_label: Mapped[str] = mapped_column(String(120), default="")
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

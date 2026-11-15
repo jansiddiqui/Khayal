@@ -27,7 +27,9 @@ export function Login() {
     try {
       const user = await login(email, password);
       const from = (location.state as { from?: string } | null)?.from;
-      navigate(from && from.startsWith(homePathFor(user)) ? from : homePathFor(user), { replace: true });
+      // Back to where they were going: their own pages, or a family share link to accept.
+      const back = from && (from.startsWith(homePathFor(user)) || from.startsWith("/share/"));
+      navigate(back ? from : homePathFor(user), { replace: true });
     } catch (err) {
       setError(errorStatus(err) === 401 ? copy.login.failed : copy.login.unavailable);
       setSubmitting(false);
@@ -55,7 +57,7 @@ export function Login() {
         <BigButton type="submit" label={submitting ? copy.login.submitting : copy.login.submit} icon={<LogIn />} />
       </form>
       {config?.demo_mode && <BigButton to="/demo" variant="secondary" label={copy.demo.tryIt} icon={<PlayCircle />} />}
-      <Link to="/register" className="text-xl text-brand-dark underline">
+      <Link to="/#invite" className="text-xl text-brand-dark underline">
         {copy.login.toRegister}
       </Link>
     </main>

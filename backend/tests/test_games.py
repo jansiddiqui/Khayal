@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import GameRound
 
-from tests.conftest import Register, bearer
+from tests.conftest import Register, bearer, link_patient
 
 
 def session_body(pattern: str, game_type: str = "memory_match", completed: bool | None = None) -> dict[str, Any]:
@@ -152,7 +152,7 @@ def test_session_history_access(client: TestClient, register: Register) -> None:
     rahim = bearer(register("Rahim", "r@example.com", "patient"))
     linked = bearer(register("Priya", "p@example.com", "caregiver"))
     stranger = bearer(register("Sam", "s@example.com", "caregiver"))
-    client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=linked)
+    link_patient(client, "k@example.com", linked)
 
     client.post("/api/sessions", json=session_body("11111"), headers=kamala)
     client.post("/api/sessions", json=session_body("11100", "sequence_recall"), headers=kamala)

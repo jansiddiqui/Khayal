@@ -16,6 +16,14 @@ export function CaregiverLayout({ title, children }: { title: string; children: 
           <Link to="/caregiver" className="text-ink-soft hover:text-ink">
             Dashboard
           </Link>
+          <Link to="/caregiver/account" className="text-ink-soft hover:text-ink">
+            Account
+          </Link>
+          {state.status === "authenticated" && state.user.is_admin && (
+            <Link to="/admin" className="text-ink-soft hover:text-ink">
+              Admin
+            </Link>
+          )}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
             {state.status === "authenticated" && <span className="whitespace-nowrap text-ink-soft">{state.user.name}</span>}
             <button type="button" onClick={logout} className="whitespace-nowrap rounded-md border border-line-strong px-3 py-1 hover:bg-sunken">

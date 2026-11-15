@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import Alert, AlertType, GameType, Role, User
 from app.services import adaptive, auth, care, decline
 from ml.adaptive.rule_based import Round
-from tests.conftest import Clock, Register, bearer
+from tests.conftest import Clock, Register, bearer, link_patient
 
 T0 = datetime(2026, 8, 1, 4, 30, tzinfo=timezone.utc)  # 10:00 IST
 
@@ -134,7 +134,7 @@ def test_trend_and_signals_api(client: TestClient, register: Register, clock: Cl
     payload = register("Kamala", "k@example.com", "patient")
     patient = bearer(payload)
     pid = payload["user"]["id"]  # type: ignore[index]
-    client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=cg)
+    link_patient(client, "k@example.com", cg)
 
     for d in range(NEEDED + 5):
         clock.now = T0 + timedelta(days=d, minutes=10)

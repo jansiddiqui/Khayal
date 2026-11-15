@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Role, User
-from app.services import auth, care, ratelimit
+from app.services import auth, care, devices, ratelimit
 from app.services.clock import utc_now
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -30,7 +30,10 @@ _bearer = HTTPBearer(auto_error=False)
 def get_current_user(
     db: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    now: Now,
 ) -> User:
+    """The signed-in user. A token stops working when the user's token version moved on
+    (password changed, "sign out all devices") or its paired device was revoked."""
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",
@@ -38,9 +41,11 @@ def get_current_user(
     )
     if credentials is None:
         raise unauthorized
-    user_id = auth.decode_access_token(credentials.credentials)
-    user = db.get(User, user_id) if user_id is not None else None
-    if user is None:
+    claims = auth.decode_token(credentials.credentials)
+    user = db.get(User, claims.user_id) if claims is not None else None
+    if user is None or claims is None or claims.version != user.token_version:
+        raise unauthorized
+    if claims.session_id is not None and not devices.is_active(db, claims.session_id, user.id, now):
         raise unauthorized
     return user
 
@@ -58,6 +63,15 @@ def require_role(role: Role) -> Callable[[User], User]:
 
 
 CurrentCaregiver = Annotated[User, Depends(require_role(Role.caregiver))]
+
+
+def require_admin(user: CurrentUser) -> User:
+    if not auth.is_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can do this")
+    return user
+
+
+CurrentAdmin = Annotated[User, Depends(require_admin)]
 CurrentPatient = Annotated[User, Depends(require_role(Role.patient))]
 
 

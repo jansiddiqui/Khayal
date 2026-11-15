@@ -7,7 +7,7 @@ from jose import jwt
 
 from app import config
 from app.services import pairing
-from tests.conftest import Clock, Register, bearer
+from tests.conftest import Clock, Register, bearer, link_patient
 
 
 @pytest.fixture(autouse=True)
@@ -20,7 +20,7 @@ def fresh_limiter() -> Iterator[None]:
 def setup(client: TestClient, register: Register) -> tuple[dict[str, str], int, dict[str, str]]:
     cg = bearer(register("Priya", "p@example.com", "caregiver"))
     patient = register("Kamala", "k@example.com", "patient")
-    client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=cg)
+    link_patient(client, "k@example.com", cg)
     stranger = bearer(register("Sam", "s@example.com", "caregiver"))
     return cg, int(patient["user"]["id"]), stranger  # type: ignore[index]
 
@@ -62,7 +62,7 @@ def test_code_expires_after_10_minutes_and_a_new_code_replaces_the_old(
 def test_only_linked_caregivers_make_codes(client: TestClient, register: Register) -> None:
     cg, pid, stranger = setup(client, register)
     assert client.post(f"/api/patients/{pid}/pairing-code", headers=stranger).status_code == 403
-    patient = bearer(client.post("/api/auth/login", json={"email": "k@example.com", "password": "password123"}).json())
+    patient = bearer(register("Ravi", "ravi@example.com", "patient"))
     assert client.post(f"/api/patients/{pid}/pairing-code", headers=patient).status_code == 403
     assert client.post(f"/api/patients/{pid}/pairing-code").status_code == 401
 

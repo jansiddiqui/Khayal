@@ -4,7 +4,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from app.services.clock import LOCAL_TZ
-from tests.conftest import Clock, Register, bearer
+from tests.conftest import Clock, Register, bearer, link_patient
 
 WED = date(2026, 11, 4)  # a Wednesday
 EVERY_DAY = list(range(7))
@@ -22,7 +22,7 @@ class Setup:
         payload = register("Kamala", "k@example.com", "patient")
         self.patient = bearer(payload)
         self.pid: int = payload["user"]["id"]  # type: ignore[index]
-        client.post("/api/patients/link", json={"patient_email": "k@example.com"}, headers=self.cg)
+        link_patient(client, "k@example.com", self.cg)
 
     def add(self, title: str, hhmm: str, days: list[int] = EVERY_DAY, kind: str = "medicine", **extra: Any) -> int:
         body = {"title": title, "type": kind, "time_of_day": hhmm, "days_of_week": days, **extra}

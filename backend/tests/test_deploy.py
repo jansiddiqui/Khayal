@@ -29,7 +29,7 @@ from app.models import (
     User,
 )
 from app.services import accounts, family, speech
-from tests.conftest import Clock, Register, bearer
+from tests.conftest import Clock, Register, bearer, link_patient
 
 BACKEND = Path(__file__).resolve().parents[1]
 WEBM = b"\x1a\x45\xdf\xa3" + b"\x00" * 64
@@ -55,7 +55,8 @@ def caregiver_with_patient(client: TestClient, register: Register) -> tuple[dict
     care = bearer(register("Priya", "priya@example.com", "caregiver"))
     patient_payload = register("Kamala", "kamala@example.com", "patient")
     pid = int(patient_payload["user"]["id"])  # type: ignore[index]
-    assert client.post("/api/patients/link", json={"patient_email": "kamala@example.com"}, headers=care).status_code == 201
+    assert link_patient(client, "kamala@example.com", care).status_code == 201
+    client.post(f"/api/patients/{pid}/consents", json={"kind": "photos", "granted": True}, headers=care)
     return care, bearer(patient_payload), pid
 
 
@@ -135,10 +136,9 @@ def test_login_register_and_pairing_are_rate_limited(client: TestClient, registe
     blocked = client.post("/api/auth/login", json={"email": "nobody@example.com", "password": "password123"})
     assert blocked.status_code == 429 and int(blocked.headers["Retry-After"]) > 0
 
-    for i in range(5):
-        register(f"U{i}", f"u{i}@example.com", "caregiver")
-    extra = client.post("/api/auth/register", json={"name": "U", "email": "u9@example.com", "password": "password123", "role": "caregiver"})
-    assert extra.status_code == 429
+    signup = {"name": "U", "password": "password1234", "consent": True}
+    codes = [client.post("/api/auth/register", json={**signup, "email": f"u{i}@example.com"}).status_code for i in range(6)]
+    assert codes == [403] * 5 + [429]  # invite-only, and rate-limited before that
 
     statuses = [client.post("/api/auth/pair", json={"code": "000000"}).status_code for _ in range(12)]
     assert statuses[:10] == [400] * 10 and statuses[10:] == [429, 429]
@@ -182,9 +182,11 @@ def test_try_the_demo_gives_a_private_copy_and_a_pairing_code(client: TestClient
 
 
 @pytest.mark.usefixtures("demo_mode")
-def test_open_sign_up_in_demo_mode_also_expires(client: TestClient, register: Register) -> None:
-    user = register("Visitor", "visitor@example.com", "caregiver")["user"]
-    assert user["demo_expires_at"] is not None  # type: ignore[index]
+def test_sign_up_in_demo_mode_also_expires(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "ADMIN_EMAILS", frozenset({"visitor@example.com"}))
+    body = {"name": "Visitor", "email": "visitor@example.com", "password": "password1234", "consent": True}
+    user = client.post("/api/auth/register", json=body).json()["user"]
+    assert user["demo_expires_at"] is not None
 
 
 # --- clean-up after 7 days -----------------------------------------------------------------
@@ -197,8 +199,10 @@ def test_expired_demo_accounts_and_all_their_data_are_deleted(
     demo = client.post("/api/demo/start").json()
     # An ordinary account made outside demo mode is never touched.
     monkeypatch.setattr(config, "DEMO_MODE", False)
-    keeper = client.post("/api/auth/register", json={"name": "Keep", "email": "keep@example.com", "password": "password123", "role": "caregiver"})
+    monkeypatch.setattr(config, "ADMIN_EMAILS", frozenset({"keep@example.com"}))
+    keeper = client.post("/api/auth/register", json={"name": "Keep", "email": "keep@example.com", "password": "password1234", "consent": True})
     keeper_id = keeper.json()["user"]["id"]
+    monkeypatch.setattr(config, "DEMO_MODE", True)
     assert count(db, GameSession) > 0 and count(db, StoredFile) == 3
 
     with db_session_factory() as session:

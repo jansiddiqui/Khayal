@@ -50,7 +50,9 @@
       "env": {
         "KHAYAL_DEMO_MODE": "0",
         "KHAYAL_STORAGE": "db",
-        "KHAYAL_DATABASE_URL": "sqlite:///D:/B.Tech/Sem7/CSE471/Khayal/data/demo-preview.db"
+        "KHAYAL_DATABASE_URL": "sqlite:///D:/B.Tech/Sem7/CSE471/Khayal/data/pilot-preview.db",
+        "KHAYAL_ADMIN_EMAILS": "caregiver@khayal.test",
+        "KHAYAL_CONTACT_EMAIL": "hello@khayal.example"
       },
       "port": 8000
     }
