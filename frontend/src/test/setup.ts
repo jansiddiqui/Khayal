@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { cloneElement, type ReactElement } from "react";
 import { afterEach, vi } from "vitest";
+import { resetTestAppConfig } from "./appConfigState";
 
 // jsdom has no object URLs; private photos are shown through them.
 URL.createObjectURL = () => "blob:test-photo";
@@ -16,9 +17,18 @@ vi.mock("recharts", async (importOriginal) => {
   return { ...actual, ResponsiveContainer };
 });
 
-// The backend's public settings: undefined (not loaded, so not the public demo) unless a
-// test sets them with vi.mocked(useAppConfig).mockReturnValue(...). No real requests.
-vi.mock("../api/useAppConfig", () => ({ useAppConfig: vi.fn() }));
+// The backend's public settings: loaded and not the public demo, unless a test calls
+// setTestAppConfig (test/appConfigState.ts). No real requests. Plain functions, not vi.fn,
+// so vi.resetAllMocks() in a test cannot wipe them.
+vi.mock("../api/useAppConfig", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/useAppConfig")>();
+  const { testAppConfigState } = await import("./appConfigState");
+  return {
+    ...actual,
+    useAppConfigState: () => testAppConfigState(),
+    useAppConfig: () => testAppConfigState().config,
+  };
+});
 
 // jsdom has no ResizeObserver; some components still ask for one.
 globalThis.ResizeObserver = class {
@@ -29,5 +39,6 @@ globalThis.ResizeObserver = class {
 
 afterEach(() => {
   cleanup();
+  resetTestAppConfig();
   localStorage.clear();
 });
