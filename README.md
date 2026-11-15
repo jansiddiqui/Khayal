@@ -75,7 +75,14 @@ Demo accounts created by the seed (password `khayal-demo` for all):
 
 The API is at http://127.0.0.1:8000 — health check: http://127.0.0.1:8000/api/health, docs: http://127.0.0.1:8000/docs.
 
-Config is read from environment variables (see `backend/app/config.py`): `KHAYAL_DATABASE_URL` (SQLite by default; set a PostgreSQL URL to switch), `KHAYAL_DATA_DIR`, `KHAYAL_CORS_ORIGINS`, `KHAYAL_JWT_SECRET` (set this anywhere other than local dev), `KHAYAL_TOKEN_MINUTES`, `KHAYAL_UTC_OFFSET_MINUTES` (the app's local clock for "today"; default 330 = IST), `KHAYAL_REMINDER_CHECK_MINUTES` (background missed-reminder check interval; default 15, 0 = off).
+Config is read from environment variables only (see `backend/app/config.py`):
+- `KHAYAL_ENV`: `development` (default) or `production` (refuses to start without `KHAYAL_JWT_SECRET` of 32+ characters; hides `/docs`).
+- `KHAYAL_DATABASE_URL` (or `DATABASE_URL` as a fallback): SQLite in `data/` by default; a `postgres://…?sslmode=require` URL switches to PostgreSQL (psycopg, small pool).
+- `KHAYAL_STORAGE`: where photos and recordings live, `disk` (`data/uploads`, development default) or `db` (a database table, production default).
+- `KHAYAL_JWT_SECRET`, `KHAYAL_TOKEN_MINUTES`, `KHAYAL_CORS_ORIGINS` (comma-separated frontend addresses), `KHAYAL_DATA_DIR`.
+- `KHAYAL_TIMEZONE` (e.g. `Asia/Kolkata`) or `KHAYAL_UTC_OFFSET_MINUTES` (default 330 = IST): the app's clock for "today".
+- `KHAYAL_REMINDER_CHECK_MINUTES`: housekeeping interval (missed reminders, demo clean-up); default 15, 0 = only at startup.
+- Public demo only: `KHAYAL_DEMO_MODE=1`, `KHAYAL_TICK_SECRET`, `KHAYAL_DEMO_ACCOUNT_DAYS` (7), `KHAYAL_DEMO_MAX_CAREGIVERS` (200). See [Public demo](#public-demo-voroa).
 
 The schema is managed by Alembic (`backend/migrations/`). The server refuses to start if the database is not at the latest migration and tells you to run `alembic upgrade head`. If you have a `data/khayal.db` created before Alembic was added (Milestone 5), run `alembic stamp 0001` once, then `alembic upgrade head`; your data is kept.
 
@@ -164,6 +171,10 @@ Backend + ML (from the repo root, with the backend venv active):
 ```powershell
 pytest
 ```
+
+The backend tests use in-memory SQLite. To run them on PostgreSQL as well, set
+`KHAYAL_TEST_DATABASE_URL` and `KHAYAL_TEST_MIGRATIONS_DATABASE_URL` to two empty test
+databases (see `backend/tests/conftest.py`); without them the two Postgres migration tests are skipped.
 
 Frontend:
 
@@ -274,9 +285,25 @@ The weekly picture description (rules in CLAUDE.md section 7):
 - **Tests:** they run without warnings; charts get a fixed size in jsdom, and every API call a test triggers is mocked.
 - **Report screenshots:** `docs/report-screenshots/`, numbered in order (patient screens at 375 px, caregiver screens at 1280 px).
 
+## Public demo (Voroa)
+
+The prototype can run as a public demo on Voroa's free tier: step-by-step instructions are in
+[docs/DEPLOY-VOROA.md](docs/DEPLOY-VOROA.md). With `KHAYAL_DEMO_MODE=1`:
+
+- **Banner** on every screen: "Demo — please don't enter real health information or photos of real people." It steps aside on game boards in play mode, which must fit a phone without scrolling.
+- **Try the demo** (`POST /api/demo/start`): a fresh demo caregiver with private copies of Kamala, Rahim and Shanti (90 days of simulated history, reminders, placeholder photos), signed in, with a pairing code for the patient side. The history and its alerts are replayed in memory with the app's own rule and cached per day, so this takes well under a second.
+- **Rate limits** (in memory) on sign-up, sign-in, pairing and Try the demo.
+- **Clean-up:** every account made in demo mode is deleted with all its data after 7 days (at startup, every 15 minutes while awake, after sign-ins, and from `POST /api/internal/tick` with the `X-Khayal-Tick-Secret` header).
+- **Smaller uploads:** photos at most 1 MB after resizing; recordings at most 2 minutes and 2 MB.
+- `GET /api/config` tells the frontend whether demo mode is on.
+
+The frontend reads the backend address from `VITE_API_URL` at build time (unset in development, where Vite proxies `/api`).
+
+To try demo mode locally without touching `data/khayal.db`, create a separate database and start the backend with `KHAYAL_DEMO_MODE=1 KHAYAL_STORAGE=db KHAYAL_DATABASE_URL=sqlite:///…/data/demo-preview.db` (the `backend-demo` entry in `.claude/launch.json` does this).
+
 ## Known limitations (prototype)
 
 - **Linking by email without confirmation:** a caregiver links a patient just by typing the patient's account email; the patient is not asked to approve.
 - **No caregiver verification:** anyone can register as a caregiver/doctor; there is no identity or credential check.
-- **Pairing limit kept in memory:** the wrong-code counter for device pairing lives in the server process, so it resets when the server restarts and isn't shared between several server processes.
+- **Rate limits kept in memory:** the pairing wrong-code counter and the demo rate limits live in the server process, so they reset when the server restarts and aren't shared between several server processes (run one instance).
 - **One clock for everyone:** "today" (today's games, reminders) uses a single app-wide UTC offset, not each patient's own time zone.

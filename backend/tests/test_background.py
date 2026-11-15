@@ -34,16 +34,16 @@ def test_sweep_all_logs_missed_reminders_for_every_patient(db: Session) -> None:
     assert len(db.scalars(select(Alert)).all()) == 2  # 3 missed each -> one warning each
 
 
-def test_background_loop_runs_now_and_survives_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_background_loop_runs_now_and_survives_errors() -> None:
     """Runs on a fake clock: no real waiting, so it cannot be flaky under load."""
     calls: list[int] = []
     slept: list[float] = []
 
-    def fake_check() -> int:
+    def fake_run() -> background.Housekeeping:
         calls.append(1)
         if len(calls) == 1:
             raise RuntimeError("database busy")
-        return 0
+        return background.Housekeeping(0, 0)
 
     class Stop(Exception):
         pass
@@ -53,19 +53,46 @@ def test_background_loop_runs_now_and_survives_errors(monkeypatch: pytest.Monkey
         if len(slept) == 3:
             raise Stop  # end the endless loop after three checks
 
-    monkeypatch.setattr(background, "check_missed_reminders_once", fake_check)
     with pytest.raises(Stop):
-        asyncio.run(background.missed_reminder_loop(900, sleep=fake_sleep))
+        asyncio.run(background.housekeeping_loop(900, sleep=fake_sleep, run=fake_run))
 
     assert len(calls) == 3  # checked at once, then after each wait; the first failure did not stop it
     assert slept == [900, 900, 900]
 
 
-def test_background_check_uses_a_real_session(monkeypatch: pytest.MonkeyPatch, db_session_factory: sessionmaker[Session]) -> None:
-    monkeypatch.setattr(background, "SessionLocal", db_session_factory)
-    assert background.check_missed_reminders_once() == 0
+def test_housekeeping_uses_a_real_session(db_session_factory: sessionmaker[Session]) -> None:
+    assert background.housekeeping_once(db_session_factory) == background.Housekeeping(0, 0)
 
 
-def test_background_check_can_be_turned_off(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_one_failing_step_does_not_stop_the_other(
+    monkeypatch: pytest.MonkeyPatch, db_session_factory: sessionmaker[Session]
+) -> None:
+    def broken(factory: object = None) -> int:
+        raise RuntimeError("database busy")
+
+    monkeypatch.setattr(background, "check_missed_reminders_once", broken)
+    assert background.housekeeping_once(db_session_factory) == background.Housekeeping(None, 0)
+
+
+def test_housekeeping_after_login_waits_between_runs(
+    monkeypatch: pytest.MonkeyPatch, db_session_factory: sessionmaker[Session]
+) -> None:
+    runs: list[int] = []
+    monkeypatch.setattr(background, "remove_expired_accounts_once", lambda factory=None: runs.append(1) or 0)
+    background.housekeeping_after_login(db_session_factory)
+    background.housekeeping_after_login(db_session_factory)
+    assert runs == [1]  # the second sign-in came within LOGIN_RUN_GAP
+
+
+def test_with_the_loop_turned_off_it_still_runs_once_at_startup(monkeypatch: pytest.MonkeyPatch) -> None:
+    ran: list[int] = []
     monkeypatch.setattr(background.config, "REMINDER_CHECK_MINUTES", 0)
-    assert background.start_background_tasks() == []
+    monkeypatch.setattr(background, "housekeeping_once", lambda factory=None: ran.append(1) or background.Housekeeping())
+
+    async def start_and_wait() -> list[str]:
+        tasks = background.start_background_tasks()
+        await asyncio.gather(*tasks)
+        return [t.get_name() for t in tasks]
+
+    assert asyncio.run(start_and_wait()) == ["housekeeping-startup"]
+    assert ran == [1]

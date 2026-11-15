@@ -2,6 +2,7 @@ import { Smartphone } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { errorStatus } from "../api/client";
+import { useAppConfig } from "../api/useAppConfig";
 import { homePathFor, useAuth } from "../auth/AuthContext";
 import { BigButton } from "../components/BigButton";
 import { copy } from "../copy";
@@ -13,6 +14,7 @@ import { copy } from "../copy";
  */
 export function PairDevice() {
   const { state, pair } = useAuth();
+  const config = useAppConfig();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,11 @@ export function PairDevice() {
       <Link to="/login" className="text-xl text-brand-dark underline">
         {p.caregiverLink}
       </Link>
+      {config?.demo_mode && (
+        <Link to="/demo" className="text-xl text-brand-dark underline">
+          {copy.demo.pairLink}
+        </Link>
+      )}
     </main>
   );
 }

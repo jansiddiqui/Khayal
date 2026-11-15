@@ -79,3 +79,8 @@ textarea {
     color: var(--color-ink-muted);
   }
 }
+
+/* Public demo banner: hidden while a game board is in play mode (components/DemoBanner.tsx). */
+:root[data-play-mode] .demo-banner {
+  display: none;
+}

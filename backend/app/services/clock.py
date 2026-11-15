@@ -1,14 +1,14 @@
-"""The app's local clock. "Today" means today in APP_UTC_OFFSET_MINUTES (IST by default).
+"""The app's local clock. "Today" means today in config.LOCAL_TIMEZONE (IST by default).
 
 SQLite hands back naive datetimes even for timezone-aware columns, so everything is
 stored in UTC and `as_utc` re-attaches the zone when reading.
 """
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timezone
 
 from app import config
 
-LOCAL_TZ = timezone(timedelta(minutes=config.APP_UTC_OFFSET_MINUTES))
+LOCAL_TZ = config.LOCAL_TIMEZONE
 
 
 def utc_now() -> datetime:

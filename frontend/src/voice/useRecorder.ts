@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** The task stops by itself after 3 minutes; the patient never sees a countdown. */
+/** The task stops by itself after 3 minutes (2 in the public demo); the patient never sees a countdown. */
 export const AUTO_STOP_MS = 3 * 60 * 1000;
 
 /** Opus in WebM where the browser supports it (Chrome, Edge, Firefox), else Ogg. */
@@ -27,7 +27,7 @@ function pickMimeType(): string | undefined {
  * Microphone recording with a live sound level (0-1) for a simple bar.
  * `stop()` (or the 3-minute auto-stop) ends in the "finished" state with the audio.
  */
-export function useRecorder() {
+export function useRecorder(autoStopMs: number = AUTO_STOP_MS) {
   const [state, setState] = useState<RecorderState>({ kind: "idle" });
   const [level, setLevel] = useState(0);
   const recorder = useRef<MediaRecorder | null>(null);
@@ -101,9 +101,9 @@ export function useRecorder() {
 
     startedAt.current = Date.now();
     rec.start(1000);
-    autoStop.current = setTimeout(stop, AUTO_STOP_MS);
+    autoStop.current = setTimeout(stop, autoStopMs);
     setState({ kind: "recording" });
-  }, [release, stop]);
+  }, [release, stop, autoStopMs]);
 
   const reset = useCallback(() => setState({ kind: "idle" }), []);
 

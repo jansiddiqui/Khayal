@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { RequireRole, RootRedirect } from "./auth/RequireRole";
+import { DemoBanner } from "./components/DemoBanner";
 import { CaregiverDashboard } from "./pages/caregiver/Dashboard";
 import { CaregiverFamily } from "./pages/caregiver/Family";
 import { PatientDetail } from "./pages/caregiver/PatientDetail";
 import { CaregiverReminders } from "./pages/caregiver/Reminders";
+import { Demo } from "./pages/Demo";
 import { Login } from "./pages/Login";
 import { PairDevice } from "./pages/PairDevice";
 import { Games } from "./pages/patient/Games";
@@ -20,11 +22,21 @@ const caregiver = (element: ReactNode) => <RequireRole role="caregiver">{element
 
 export function App() {
   return (
+    <>
+      <DemoBanner />
+      <AppRoutes />
+    </>
+  );
+}
+
+function AppRoutes() {
+  return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/pair" element={<PairDevice />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/demo" element={<Demo />} />
 
       <Route path="/patient" element={patient(<PatientHome />)} />
       <Route path="/patient/games" element={patient(<Games />)} />

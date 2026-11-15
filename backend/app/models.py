@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, String, Time, UniqueConstraint, false
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, LargeBinary, String, Time, UniqueConstraint, false
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,8 @@ class User(Base):
     voice_task_enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
     # When the voice task was last turned on (consent date); None while it is off.
     voice_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    # Public demo only: the account and all its data are deleted after this time. None = kept.
+    demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, index=True)
 
 
 class CareLink(Base):
@@ -236,3 +238,18 @@ class SpeechSample(Base):
     transcript: Mapped[str | None] = mapped_column(String(10000), default=None)
     risk_score: Mapped[float | None] = mapped_column(default=None)
     model_version: Mapped[str] = mapped_column(String(40))
+
+
+class StoredFile(Base):
+    """An uploaded file kept in the database (KHAYAL_STORAGE=db), for hosts without
+    persistent disk. Keys look like family/{patient_id}/{id}.jpg or speech/{patient_id}/{id}.webm."""
+
+    __tablename__ = "stored_files"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # The patient the file belongs to, so deleting an account removes their files too.
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    content_type: Mapped[str] = mapped_column(String(40))
+    size: Mapped[int]
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

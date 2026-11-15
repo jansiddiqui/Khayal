@@ -53,7 +53,12 @@ class Overview:
 
 
 def overview(db: Session, patient_id: int, until: datetime | None = None) -> Overview:
-    games = {g: zscore.assess(s) if s else _empty(g) for g, s in summaries_by_game(db, patient_id, until).items()}
+    return overview_of(summaries_by_game(db, patient_id, until))
+
+
+def overview_of(summaries: dict[GameType, list[zscore.SessionSummary]]) -> Overview:
+    """The overview for sessions already in memory (every GameType key present)."""
+    games = {g: zscore.assess(s) if s else _empty(g) for g, s in summaries.items()}
     index = zscore.overall_index(r.z for r in games.values())
     return Overview(index=index, status=zscore.index_status(index), games=games)
 
@@ -98,19 +103,16 @@ def index_history(result: Overview) -> list[tuple[date, float]]:
 _SEVERITY = {"warning": Severity.warning, "critical": Severity.critical}
 
 
-def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | None:
-    """Raise one decline alert (worst severity, every declining game explained) when
-    `zscore.alert_decision` allows it: each severity at most once per 7 days, and a
-    critical alert may follow a warning inside that window."""
-    result = overview(db, patient.id, until=now)
+@dataclass(frozen=True)
+class AlertDecision:
+    severity: Severity
+    message: str
+
+
+def decide_alert(result: Overview, recent: list[tuple[datetime, Severity]], now: datetime) -> AlertDecision | None:
+    """Whether to raise a decline alert now, given the patient's overview and their decline
+    alerts from the last 7 days (created_at, severity). Pure: no database access."""
     declining = [r for r in result.games.values() if r.status in ("warning", "critical")]
-    recent = db.execute(
-        select(Alert.created_at, Alert.severity).where(
-            Alert.patient_id == patient.id,
-            Alert.type == AlertType.decline,
-            Alert.created_at > now - zscore.ALERT_COOLDOWN,
-        )
-    ).all()
     z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in result.games.items()}
     candidate = zscore.candidate_alert(z_history, alert_config())
     severity = zscore.alert_decision(
@@ -120,11 +122,31 @@ def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | Non
     )
     if severity is None:
         return None
+    return AlertDecision(
+        severity=_SEVERITY[severity],
+        message=" ".join(r.explanation for r in sorted(declining, key=lambda r: r.z or 0.0)),
+    )
+
+
+def evaluate_and_alert(db: Session, patient: User, now: datetime) -> Alert | None:
+    """Raise one decline alert (worst severity, every declining game explained) when
+    `zscore.alert_decision` allows it: each severity at most once per 7 days, and a
+    critical alert may follow a warning inside that window."""
+    recent = db.execute(
+        select(Alert.created_at, Alert.severity).where(
+            Alert.patient_id == patient.id,
+            Alert.type == AlertType.decline,
+            Alert.created_at > now - zscore.ALERT_COOLDOWN,
+        )
+    ).all()
+    decision = decide_alert(overview(db, patient.id, until=now), [(c, sev) for c, sev in recent], now)
+    if decision is None:
+        return None
     alert = Alert(
         patient_id=patient.id,
         type=AlertType.decline,
-        severity=_SEVERITY[severity],
-        message=" ".join(r.explanation for r in sorted(declining, key=lambda r: r.z or 0.0)),
+        severity=decision.severity,
+        message=decision.message,
         created_at=now,
     )
     db.add(alert)

@@ -43,12 +43,30 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(User.email == email))
 
 
-def register_user(db: Session, *, name: str, email: str, password: str, role: Role) -> User:
+def register_user(
+    db: Session,
+    *,
+    name: str,
+    email: str,
+    password: str | None = None,
+    password_hash: str | None = None,
+    role: Role,
+    demo_expires_at: datetime | None = None,
+    commit: bool = True,
+) -> User:
+    """Create an account from a password, or from an existing hash (demo accounts share one)."""
     if get_user_by_email(db, email) is not None:
         raise EmailTakenError(email)
-    user = User(name=name, email=email, password_hash=hash_password(password), role=role)
+    if password_hash is None:
+        if password is None:
+            raise ValueError("A password or a password hash is required")
+        password_hash = hash_password(password)
+    user = User(name=name, email=email, password_hash=password_hash, role=role, demo_expires_at=demo_expires_at)
     db.add(user)
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     return user
 
 

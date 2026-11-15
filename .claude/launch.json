@@ -6,6 +6,17 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "backend-demo",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "backend", "--host", "127.0.0.1", "--port", "8000"],
+      "env": {
+        "KHAYAL_DEMO_MODE": "1",
+        "KHAYAL_STORAGE": "db",
+        "KHAYAL_DATABASE_URL": "sqlite:///D:/B.Tech/Sem7/CSE471/Khayal/data/demo-preview.db"
+      },
+      "port": 8000
     }
   ]
 }

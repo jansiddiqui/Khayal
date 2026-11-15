@@ -39,6 +39,13 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
     speak(spoken ?? (spokenIntro ? `${title}. ${spokenIntro}` : title));
   }, [speak, title, spokenIntro, spoken]);
 
+  // Play mode needs the whole screen, so the public demo's banner steps aside (index.css).
+  useEffect(() => {
+    if (!compact) return;
+    document.documentElement.setAttribute("data-play-mode", "");
+    return () => document.documentElement.removeAttribute("data-play-mode");
+  }, [compact]);
+
   return (
     <div className={`mx-auto flex max-w-3xl flex-col px-4 py-4 sm:px-8 ${compact ? "h-dvh" : "min-h-screen"}`}>
       <header className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:gap-4" aria-label="Top bar">

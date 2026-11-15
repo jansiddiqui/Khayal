@@ -1,16 +1,17 @@
 """FastAPI dependencies: DB session, current user, role and care-link checks."""
 
+import math
 from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Role, User
-from app.services import auth, care
+from app.services import auth, care, ratelimit
 from app.services.clock import utc_now
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -64,3 +65,24 @@ def ensure_patient_access(db: Session, user: User, patient_id: int) -> None:
     """Raise 403 unless `user` may see `patient_id`'s data. Call from every patient-scoped route."""
     if not care.can_access_patient(db, user, patient_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to this patient")
+
+
+def client_address(request: Request) -> str:
+    """The caller's address (the real one behind the host's proxy when uvicorn runs with --proxy-headers)."""
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(name: str) -> Callable[[Request, datetime], None]:
+    """A dependency that allows a few requests per address (services/ratelimit.py), else 429."""
+    limiter = ratelimit.LIMITS[name]
+
+    def check(request: Request, now: Now) -> None:
+        wait = limiter.hit(client_address(request), now)
+        if wait is not None:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many tries, please wait a few minutes",
+                headers={"Retry-After": str(math.ceil(wait))},
+            )
+
+    return check

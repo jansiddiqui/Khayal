@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useEffect } from "react";
 import { getTodaysGames, uploadRecording, VOICE_TASK } from "../../api/client";
+import { useAppConfig } from "../../api/useAppConfig";
 import { BigButton } from "../../components/BigButton";
 import { Layout } from "../../components/Layout";
 import { copy } from "../../copy";
@@ -10,7 +11,7 @@ import { findGame } from "../../games";
 import { QuestionRow } from "../../games/QuestionRow";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import { KitchenScene } from "../../voice/KitchenScene";
-import { useRecorder, type Recording } from "../../voice/useRecorder";
+import { AUTO_STOP_MS, useRecorder, type Recording } from "../../voice/useRecorder";
 
 const v = copy.voiceTask;
 
@@ -20,7 +21,8 @@ const v = copy.voiceTask;
  * itself after 3 minutes. Every ending is kind: "Thank you, that was lovely."
  */
 export function VoiceTask() {
-  const recorder = useRecorder();
+  const config = useAppConfig();
+  const recorder = useRecorder(config ? config.recording_limit_seconds * 1000 : AUTO_STOP_MS);
   const queryClient = useQueryClient();
   const save = useMutation({
     mutationFn: (r: Recording) => uploadRecording(r.audio, r.durationMs),

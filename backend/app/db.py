@@ -16,14 +16,23 @@ class Base(DeclarativeBase):
     pass
 
 
-def _make_engine(url: str) -> Engine:
-    if url.startswith("sqlite:///"):
-        config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+def make_engine(url: str) -> Engine:
+    """SQLite for development; anything else (Postgres) gets a small, self-healing pool,
+    because the free hosted database allows only a few connections."""
+    if url.startswith("sqlite"):
+        if url.startswith("sqlite:///"):
+            config.DATA_DIR.mkdir(parents=True, exist_ok=True)
         return create_engine(url, connect_args={"check_same_thread": False})
-    return create_engine(url)
+    return create_engine(
+        url,
+        pool_size=config.DB_POOL_SIZE,
+        max_overflow=config.DB_MAX_OVERFLOW,
+        pool_pre_ping=True,  # the database may drop idle connections while the service sleeps
+        pool_recycle=300,
+    )
 
 
-engine = _make_engine(config.DATABASE_URL)
+engine = make_engine(config.DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
@@ -43,6 +52,11 @@ def ensure_schema_current() -> None:
             f"Database is at revision {current or 'none'}, code expects {head}. "
             "Run `alembic upgrade head` from the backend/ folder."
         )
+
+
+def get_session_factory() -> sessionmaker[Session]:
+    """For work that outlives a request (housekeeping after login). Tests override it."""
+    return SessionLocal
 
 
 def get_db() -> Iterator[Session]:

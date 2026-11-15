@@ -102,7 +102,7 @@ def test_rejects_wrong_type_fake_audio_bad_length_and_large_files(client: TestCl
     assert s.upload(content_type="audio/mpeg").status_code == 415
     assert s.upload(b"not audio at all", "audio/webm").status_code == 422
     assert s.upload(duration_ms=0).status_code == 422
-    assert s.upload(duration_ms=speech.MAX_DURATION_MS + 1).status_code == 422
+    assert s.upload(duration_ms=speech.max_duration_ms() + 1).status_code == 422
     big = b"\x1a\x45\xdf\xa3" + b"\x00" * speech.MAX_AUDIO_BYTES
     assert s.upload(big).status_code == 413
     assert client.get(f"/api/patients/{s.pid}/speech", headers=s.cg).json() == []
