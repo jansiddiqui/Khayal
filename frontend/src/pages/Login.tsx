@@ -1,7 +1,8 @@
-import { LogIn } from "lucide-react";
+import { LogIn, PlayCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { errorStatus } from "../api/client";
+import { useAppConfig } from "../api/useAppConfig";
 import { homePathFor, useAuth } from "../auth/AuthContext";
 import { BigButton } from "../components/BigButton";
 import { TextField } from "../components/TextField";
@@ -9,6 +10,7 @@ import { copy } from "../copy";
 
 export function Login() {
   const { state, login } = useAuth();
+  const config = useAppConfig();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -52,6 +54,7 @@ export function Login() {
         )}
         <BigButton type="submit" label={submitting ? copy.login.submitting : copy.login.submit} icon={<LogIn />} />
       </form>
+      {config?.demo_mode && <BigButton to="/demo" variant="secondary" label={copy.demo.tryIt} icon={<PlayCircle />} />}
       <Link to="/register" className="text-xl text-brand-dark underline">
         {copy.login.toRegister}
       </Link>

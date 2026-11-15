@@ -28,3 +28,8 @@ Thumbs.db
 # Impeccable: the launcher downloads and verifies its engine binary on first run
 .claude/skills/impeccable/scripts/bin/
 *.local.json
+
+# Portable PostgreSQL for running the tests on Postgres (never committed)
+data/pgsql/
+data/pgtest/
+data/downloads/

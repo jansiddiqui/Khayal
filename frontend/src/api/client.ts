@@ -1,7 +1,19 @@
 import axios from "axios";
 
-// Vite dev server proxies /api to the FastAPI backend (see vite.config.ts).
-export const api = axios.create({ baseURL: "/api" });
+/**
+ * Where the backend lives. In development the Vite dev server proxies /api to FastAPI
+ * (vite.config.ts), so VITE_API_URL stays unset. A deployed frontend sets it at build time
+ * to the backend's address, e.g. https://khayal-api.example.app (with or without /api).
+ */
+export function apiBase(url: string | undefined = import.meta.env.VITE_API_URL): string {
+  const origin = (url ?? "").trim().replace(/\/+$/, "");
+  if (!origin) return "/api";
+  return origin.endsWith("/api") ? origin : `${origin}/api`;
+}
+
+export const API_BASE = apiBase();
+
+export const api = axios.create({ baseURL: API_BASE });
 
 const TOKEN_KEY = "khayal.token";
 
@@ -45,6 +57,8 @@ export interface User {
   voice_task_enabled: boolean;
   /** When the voice task was turned on; null while it is off. */
   voice_consent_at: string | null;
+  /** Public demo only: when this account and its data are deleted. */
+  demo_expires_at?: string | null;
 }
 
 export interface TokenResponse {
@@ -108,6 +122,30 @@ export async function createPairingCode(patientId: number): Promise<PairingCode>
 
 export async function getMe(): Promise<User> {
   const { data } = await api.get<User>("/auth/me");
+  return data;
+}
+
+/** Public settings from the backend: demo mode and the voice task's length. */
+export interface AppConfig {
+  demo_mode: boolean;
+  recording_limit_seconds: number;
+  demo_account_days: number;
+}
+
+export async function getAppConfig(): Promise<AppConfig> {
+  const { data } = await api.get<AppConfig>("/config");
+  return data;
+}
+
+/** "Try the demo": a fresh caregiver (signed in) with private demo patients. */
+export interface DemoStart extends TokenResponse {
+  patient_id: number;
+  patient_name: string;
+  pairing: PairingCode;
+}
+
+export async function startDemo(): Promise<DemoStart> {
+  const { data } = await api.post<DemoStart>("/demo/start");
   return data;
 }
 
@@ -189,7 +227,7 @@ export async function postSession(input: SessionInput): Promise<SessionResult> {
  */
 export function postSessionOnPageHide(input: SessionInput): void {
   const token = tokenStore.get();
-  void fetch("/api/sessions", {
+  void fetch(`${API_BASE}/sessions`, {
     method: "POST",
     keepalive: true,
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

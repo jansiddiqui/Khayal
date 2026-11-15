@@ -1,0 +1,3 @@
+# Voroa (and other hosts) install Python packages from the repository root.
+# The backend imports the ml/ package from this folder, so the root is the service root.
+-r backend/requirements.txt

@@ -1,26 +1,30 @@
 """The weekly voice task: consent, recordings and when it is due (CLAUDE.md sections 6-7).
 
-Recordings are WebM or Ogg audio (Opus) up to 10 MB, stored under
-data/uploads/speech/{patient_id}/ and only ever served by an authenticated route. Each one
+Recordings are WebM or Ogg audio (Opus) up to 10 MB (2 MB and 2 minutes in the public
+demo), kept by the storage service (services/storage.py) under the key
+speech/{patient_id}/{id}.webm, and only ever served by an authenticated route. Each one
 goes through ml/speech (a stub for now: no transcript, no score).
 """
 
 import re
 import uuid
 from datetime import date, datetime, timedelta
-from pathlib import Path
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import config
 from app.models import SpeechSample, User
+from app.services import storage
 from app.services.clock import as_utc, local_day_start
 from ml.speech import stub
 
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
-# The patient screen stops by itself after 3 minutes; allow some slack for the browser.
-MAX_DURATION_MS = 4 * 60 * 1000
+DEMO_MAX_AUDIO_BYTES = 2 * 1024 * 1024
+# The patient screen stops by itself after this long (3 minutes; 2 in the public demo).
+RECORDING_LIMIT_SECONDS = 3 * 60
+DEMO_RECORDING_LIMIT_SECONDS = 2 * 60
+# Slack on top of the limit for the browser's own timing.
+DURATION_SLACK_MS = 30 * 1000
 DUE_EVERY_DAYS = 7
 # Content type -> (file extension, the bytes such a file starts with).
 AUDIO_TYPES: dict[str, tuple[str, bytes]] = {
@@ -38,8 +42,24 @@ class VoiceTaskOffError(Exception):
     """The caregiver has not turned the voice task on for this patient."""
 
 
-def audio_dir(patient_id: int) -> Path:
-    return config.UPLOAD_DIR / "speech" / str(patient_id)
+def max_audio_bytes() -> int:
+    return DEMO_MAX_AUDIO_BYTES if config.DEMO_MODE else MAX_AUDIO_BYTES
+
+
+def recording_limit_seconds() -> int:
+    return DEMO_RECORDING_LIMIT_SECONDS if config.DEMO_MODE else RECORDING_LIMIT_SECONDS
+
+
+def max_duration_ms() -> int:
+    return recording_limit_seconds() * 1000 + DURATION_SLACK_MS
+
+
+def too_big_message() -> str:
+    return f"Recordings must be {max_audio_bytes() // (1024 * 1024)} MB or smaller."
+
+
+def audio_key(patient_id: int, file_name: str) -> str:
+    return f"speech/{patient_id}/{file_name}"
 
 
 def set_enabled(db: Session, patient: User, enabled: bool, now: datetime) -> None:
@@ -68,19 +88,21 @@ def save_recording(
     if content_type not in AUDIO_TYPES:
         raise AudioError("Recordings must be WebM or Ogg audio.")
     extension, magic = AUDIO_TYPES[content_type]
-    if len(data) > MAX_AUDIO_BYTES:
-        raise AudioError("Recordings must be 10 MB or smaller.")
+    if len(data) > max_audio_bytes():
+        raise AudioError(too_big_message())
     if not data.startswith(magic):
         raise AudioError("That file is not a recording we can open.")
-    if not 0 < duration_ms <= MAX_DURATION_MS:
+    if not 0 < duration_ms <= max_duration_ms():
         raise AudioError("The recording length is not valid.")
 
-    folder = audio_dir(patient.id)
-    folder.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}.{extension}"
-    path = folder / name
-    path.write_bytes(data)
-    result = stub.score(path)
+    store = storage.get()
+    key = audio_key(patient.id, name)
+    store.save(db, key, patient.id, data, content_type)
+    db.flush()
+    with store.local_path(db, key) as path:
+        assert path is not None  # just saved
+        result = stub.score(path)
     sample = SpeechSample(
         patient_id=patient.id,
         audio_path=name,
@@ -96,12 +118,11 @@ def save_recording(
     return sample
 
 
-def audio_file(sample: SpeechSample) -> Path | None:
-    """The sample's file, never a path outside the patient's folder."""
+def audio_data(db: Session, sample: SpeechSample) -> bytes | None:
+    """The recording's bytes, or None if it is missing."""
     if not _FILE_NAME.match(sample.audio_path):
         return None
-    path = audio_dir(sample.patient_id) / sample.audio_path
-    return path if path.is_file() else None
+    return storage.get().load(db, audio_key(sample.patient_id, sample.audio_path))
 
 
 def voice_task_status(db: Session, patient: User, today: date) -> tuple[bool, bool]:

@@ -16,6 +16,10 @@ vi.mock("recharts", async (importOriginal) => {
   return { ...actual, ResponsiveContainer };
 });
 
+// The backend's public settings: undefined (not loaded, so not the public demo) unless a
+// test sets them with vi.mocked(useAppConfig).mockReturnValue(...). No real requests.
+vi.mock("../api/useAppConfig", () => ({ useAppConfig: vi.fn() }));
+
 // jsdom has no ResizeObserver; some components still ask for one.
 globalThis.ResizeObserver = class {
   observe(): void {}

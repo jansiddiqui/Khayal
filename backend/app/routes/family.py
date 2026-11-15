@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, ensure_patient_access
@@ -101,15 +100,15 @@ def delete_photo(patient_id: int, member_id: int, photo_id: str, caregiver: Curr
     return _out(member)
 
 
-@router.get("/{member_id}/photos/{photo_id}", response_class=FileResponse)
-def get_photo(patient_id: int, member_id: int, photo_id: str, user: CurrentUser, db: DbSession) -> FileResponse:
+@router.get("/{member_id}/photos/{photo_id}", response_class=Response)
+def get_photo(patient_id: int, member_id: int, photo_id: str, user: CurrentUser, db: DbSession) -> Response:
     """Private family photo: only the patient and their linked caregivers may fetch it."""
     ensure_patient_access(db, user, patient_id)
-    path = family.photo_file(_member(db, patient_id, member_id), photo_id)
-    if path is None:
+    data = family.photo_data(db, _member(db, patient_id, member_id), photo_id)
+    if data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
-    return FileResponse(
-        path,
+    return Response(
+        data,
         media_type="image/jpeg",
         headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"},
     )

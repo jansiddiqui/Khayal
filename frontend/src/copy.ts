@@ -235,6 +235,26 @@ export const copy = {
     tryAgain: "Try again",
     notOn: "This activity is not turned on yet. Your family member can turn it on.",
   },
+  demo: {
+    banner: "Demo only: no real health info or photos.",
+    tryIt: "Try the demo",
+    pairLink: "Just visiting? Try the demo",
+    title: "Try Khayal",
+    intro:
+      "We will make a caregiver account just for you, with three made-up patients and 90 days of practice history.",
+    deleted: (days: number) => `Your demo account and everything in it are deleted after ${days} days.`,
+    start: "Start the demo",
+    starting: "Setting up your demo…",
+    readyTitle: "Your demo is ready",
+    patientSide: (name: string) =>
+      `To try the patient side, open the address below on a phone or in a private window, then type this code for ${name}:`,
+    codeLabel: "Code for the patient's device",
+    codeExpires: "The code works for 10 minutes. You can make a new one on the patient's page.",
+    toDashboard: "Open the caregiver dashboard",
+    failed: "We could not start the demo just now. Please try again in a few minutes.",
+    tooMany: "Several demos were started from here recently. Please try again later.",
+    notAvailable: "The demo is not available on this server.",
+  },
   pair: {
     title: "Set up this device",
     intro: "Ask your family member for the 6-digit code, then type it here.",

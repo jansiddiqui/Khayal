@@ -15,7 +15,8 @@ if config.config_file_name is not None:
 
 # An explicitly passed URL (e.g. from tests) wins over the app setting.
 if not config.get_main_option("sqlalchemy.url"):
-    config.set_main_option("sqlalchemy.url", app_config.DATABASE_URL)
+    # "%" (URL-encoded passwords) must be doubled: Alembic's config file syntax interpolates it.
+    config.set_main_option("sqlalchemy.url", app_config.DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

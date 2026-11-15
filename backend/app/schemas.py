@@ -18,6 +18,22 @@ class HealthOut(BaseModel):
     app: str
 
 
+class AppConfigOut(BaseModel):
+    """Public settings the frontend needs (no secrets)."""
+
+    demo_mode: bool
+    # The voice task stops by itself after this long.
+    recording_limit_seconds: int
+    # Demo accounts are deleted this many days after they are made.
+    demo_account_days: int
+
+
+class TickOut(BaseModel):
+    reminder_patients: int | None
+    accounts_removed: int | None
+    skipped: bool
+
+
 class RegisterIn(BaseModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
     email: Email
@@ -42,6 +58,8 @@ class UserOut(BaseModel):
     pinned_games: list[GameType] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
+    # Public demo only: when this account and its data are deleted.
+    demo_expires_at: datetime | None = None
 
 
 class TokenOut(BaseModel):
@@ -57,6 +75,14 @@ class PairIn(BaseModel):
 class PairingCodeOut(BaseModel):
     code: str
     expires_at: datetime
+
+
+class DemoStartOut(TokenOut):
+    """A fresh demo caregiver (signed in) and a pairing code for one of their demo patients."""
+
+    patient_id: int
+    patient_name: str
+    pairing: PairingCodeOut
 
 
 class LinkPatientIn(BaseModel):
