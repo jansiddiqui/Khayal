@@ -1,6 +1,6 @@
 import { LayoutDashboard, PlayCircle } from "lucide-react";
-import { useState } from "react";
-import { Navigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import { errorStatus, type DemoStart } from "../api/client";
 import { useAppConfig } from "../api/useAppConfig";
 import { useAuth } from "../auth/AuthContext";
@@ -16,15 +16,19 @@ const d = copy.demo;
 export function Demo() {
   const config = useAppConfig();
   const { state, startDemo } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // "Try the demo" on the welcome page comes here with autostart: start at once.
+  const autostart = (location.state as { autostart?: boolean } | null)?.autostart === true;
   const [started, setStarted] = useState<DemoStart | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(autostart);
   const [error, setError] = useState<string | null>(null);
+  const kickedOff = useRef(false);
 
   // Already signed in (and not by this page, which signs in while it starts a demo): nothing to set up.
   if (!started && !busy && state.status === "authenticated") return <Navigate to="/" replace />;
 
-  async function onStart() {
-    if (busy) return;
+  async function run() {
     setBusy(true);
     setError(null);
     try {
@@ -35,6 +39,18 @@ export function Demo() {
       setBusy(false);
     }
   }
+
+  function onStart() {
+    if (!busy) void run();
+  }
+
+  useEffect(() => {
+    if (!autostart || kickedOff.current) return; // once, also under React's StrictMode
+    kickedOff.current = true;
+    navigate(location.pathname, { replace: true, state: null }); // a reload must not start another demo
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autostart]);
 
   if (started) {
     const pairAddress = `${window.location.origin}/pair`;
@@ -65,7 +81,7 @@ export function Demo() {
           {error}
         </p>
       )}
-      <BigButton onClick={() => void onStart()} label={busy ? d.starting : d.start} icon={<PlayCircle />} />
+      <BigButton onClick={onStart} label={busy ? d.starting : d.start} icon={<PlayCircle />} />
     </main>
   );
 }

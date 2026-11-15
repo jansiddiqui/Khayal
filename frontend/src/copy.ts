@@ -254,6 +254,15 @@ export const copy = {
     failed: "We could not start the demo just now. Please try again in a few minutes.",
     tooMany: "Several demos were started from here recently. Please try again later.",
     notAvailable: "The demo is not available on this server.",
+    waking: "Waking up the server… this can take up to a minute.",
+  },
+  welcome: {
+    name: "Khayal",
+    nameUrdu: "خیال",
+    description: "Gentle brain games, reminders and family photos for people with memory loss.",
+    tryDemo: "Try the demo",
+    haveCode: "I have a code from my family",
+    signIn: "Sign in with email",
   },
   pair: {
     title: "Set up this device",

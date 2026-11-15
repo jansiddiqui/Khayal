@@ -291,6 +291,8 @@ The prototype can run as a public demo on Voroa's free tier: step-by-step instru
 [docs/DEPLOY-VOROA.md](docs/DEPLOY-VOROA.md). With `KHAYAL_DEMO_MODE=1`:
 
 - **Banner** on every screen: "Demo only: no real health info or photos." (20px, at most 2 lines on a 375px phone). It steps aside on game boards in play mode, which must fit a phone without scrolling.
+- **Welcome page:** signed-out visitors at `/` see Khayal's name, one line about it, and two choices: "Try the demo" (starts it at once) and "I have a code from my family" (`/pair`), plus "Sign in with email". Outside demo mode `/` still goes to `/pair`.
+- **Sleeping server:** the free backend sleeps when idle. Until `GET /api/config` answers, every screen shows "Waking up the server… this can take up to a minute." and the app asks again every 5 seconds.
 - **Try the demo** (`POST /api/demo/start`): a fresh demo caregiver with private copies of Kamala, Rahim and Shanti (90 days of simulated history, reminders, placeholder photos), signed in, with a pairing code for the patient side. The history and its alerts are replayed in memory with the app's own rule and cached per day, so this takes well under a second.
 - **Rate limits** (in memory) on sign-up, sign-in, pairing and Try the demo.
 - **Clean-up:** every account made in demo mode is deleted with all its data after 7 days (at startup, every 15 minutes while awake, after sign-ins, and from `POST /api/internal/tick` with the `X-Khayal-Tick-Secret` header).

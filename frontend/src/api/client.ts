@@ -133,7 +133,8 @@ export interface AppConfig {
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
-  const { data } = await api.get<AppConfig>("/config");
+  // A short timeout: a sleeping server is retried (useAppConfig) instead of hanging the screen.
+  const { data } = await api.get<AppConfig>("/config", { timeout: 10_000 });
   return data;
 }
 

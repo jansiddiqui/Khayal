@@ -1,11 +1,11 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
-import { apiBase, type AppConfig, type DemoStart } from "../api/client";
-import { useAppConfig } from "../api/useAppConfig";
+import { apiBase, type DemoStart } from "../api/client";
 import { App } from "../App";
 import { Layout } from "../components/Layout";
 import { copy } from "../copy";
+import { DEMO, setTestAppConfig } from "../test/appConfigState";
 import { renderWithProviders } from "../test/renderWithProviders";
 
 vi.mock("../api/client", async (importOriginal) => {
@@ -14,7 +14,6 @@ vi.mock("../api/client", async (importOriginal) => {
 });
 
 const api = vi.mocked(apiClient);
-const DEMO: AppConfig = { demo_mode: true, recording_limit_seconds: 120, demo_account_days: 7 };
 
 const started: DemoStart = {
   access_token: "demo-token",
@@ -48,21 +47,21 @@ describe("public demo", () => {
     expect(screen.queryByRole("link", { name: copy.demo.tryIt })).not.toBeInTheDocument();
     unmount();
 
-    vi.mocked(useAppConfig).mockReturnValue(DEMO);
+    setTestAppConfig({ config: DEMO });
     renderWithProviders(<App />, { route: "/login" });
     expect(screen.getByRole("note")).toHaveTextContent(copy.demo.banner);
     expect(screen.getByRole("link", { name: copy.demo.tryIt })).toHaveAttribute("href", "/demo");
   });
 
   it("the banner is on patient screens too", () => {
-    vi.mocked(useAppConfig).mockReturnValue(DEMO);
+    setTestAppConfig({ config: DEMO });
     renderWithProviders(<App />, { route: "/pair" });
     expect(screen.getByRole("note")).toHaveTextContent(copy.demo.banner);
     expect(screen.getByRole("link", { name: copy.demo.pairLink })).toHaveAttribute("href", "/demo");
   });
 
   it("Try the demo signs in and shows the pairing code for the patient side", async () => {
-    vi.mocked(useAppConfig).mockReturnValue(DEMO);
+    setTestAppConfig({ config: DEMO });
     api.startDemo.mockResolvedValue(started);
     renderWithProviders(<App />, { route: "/demo" });
     expect(screen.getByText(copy.demo.deleted(7))).toBeInTheDocument();
@@ -76,8 +75,46 @@ describe("public demo", () => {
     expect(api.startDemo).toHaveBeenCalledTimes(1);
   });
 
+  it("welcomes signed-out visitors at / with two choices and a sign-in link", async () => {
+    setTestAppConfig({ config: DEMO });
+    renderWithProviders(<App />, { route: "/" });
+    expect(await screen.findByRole("heading", { name: /Khayal/ })).toBeInTheDocument();
+    expect(screen.getByText(copy.welcome.description)).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(copy.demo.banner);
+    const main = screen.getByRole("main");
+    // At most 3 main actions (CLAUDE.md section 4): two big choices and one small link.
+    expect(within(main).getAllByRole("button")).toHaveLength(1);
+    expect(within(main).getAllByRole("link").map((l) => l.textContent)).toEqual([copy.welcome.haveCode, copy.welcome.signIn]);
+    expect(within(main).getByRole("link", { name: copy.welcome.haveCode })).toHaveAttribute("href", "/pair");
+    expect(within(main).getByRole("link", { name: copy.welcome.signIn })).toHaveAttribute("href", "/login");
+  });
+
+  it("Try the demo on the welcome page starts the demo at once", async () => {
+    setTestAppConfig({ config: DEMO });
+    api.startDemo.mockResolvedValue(started);
+    renderWithProviders(<App />, { route: "/" });
+    fireEvent.click(await screen.findByRole("button", { name: copy.welcome.tryDemo }));
+    expect(await screen.findByRole("heading", { name: copy.demo.readyTitle })).toBeInTheDocument();
+    expect(screen.getByText("482913")).toBeInTheDocument();
+    expect(api.startDemo).toHaveBeenCalledTimes(1);
+  });
+
+  it("outside demo mode, / still goes to pairing", async () => {
+    renderWithProviders(<App />, { route: "/" });
+    expect(await screen.findByRole("heading", { name: copy.pair.title })).toBeInTheDocument();
+    expect(screen.queryByText(copy.welcome.haveCode)).not.toBeInTheDocument();
+  });
+
+  it("while the server wakes up, says so calmly instead of hiding the demo", async () => {
+    setTestAppConfig({ config: undefined, waking: true });
+    renderWithProviders(<App />, { route: "/" });
+    expect(await screen.findByRole("status")).toHaveTextContent(copy.demo.waking);
+    expect(screen.getByRole("heading", { name: /Khayal/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: copy.pair.title })).not.toBeInTheDocument();
+  });
+
   it("explains kindly when too many demos were started", async () => {
-    vi.mocked(useAppConfig).mockReturnValue(DEMO);
+    setTestAppConfig({ config: DEMO });
     api.startDemo.mockRejectedValue({ isAxiosError: true, response: { status: 429 } });
     renderWithProviders(<App />, { route: "/demo" });
     fireEvent.click(screen.getByRole("button", { name: copy.demo.start }));
