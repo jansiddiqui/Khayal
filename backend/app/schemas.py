@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import LEVELLED_GAMES, AlertType, GameType, MarkedBy, ReminderType, Role, Severity
+from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderType, Role, Severity
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -26,6 +26,26 @@ class AppConfigOut(BaseModel):
     recording_limit_seconds: int
     # Demo accounts are deleted this many days after they are made.
     demo_account_days: int
+    # Where people can write to the team (KHAYAL_CONTACT_EMAIL); None when not set.
+    contact_email: str | None = None
+
+
+class InviteRequestIn(BaseModel):
+    """'Request an invite' from the landing page."""
+
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    email: Email
+    role: InviteRole
+    city: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    message: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)] | None = None
+    # Must be true: the person agrees to be contacted about the pilot.
+    consent: Literal[True]
+    # Left empty by people; bots that fill every field are thanked and ignored.
+    website: Annotated[str, StringConstraints(max_length=200)] | None = None
+
+
+class InviteRequestOut(BaseModel):
+    received: Literal[True] = True
 
 
 class TickOut(BaseModel):

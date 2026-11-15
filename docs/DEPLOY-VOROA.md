@@ -36,7 +36,7 @@ and deletes every account and its data 7 days after it was made.
 ## 1. Create the database
 
 1. Voroa dashboard → **New** → **Postgres**.
-2. Name: `khayal-db`. Region: the one closest to your users (and use the **same region**
+2. Name: `khayal-db`. Region: **Mumbai (India)**. The landing page tells families their data stays in India, so this must be true (and use the **same region**
    for both web services). Plan: **DB Nano**.
 3. **Create**, and wait until it shows as available.
 4. Open `khayal-db` → **Connection** → copy the connection URL. It looks like
@@ -101,6 +101,7 @@ uses and keeps `?sslmode=require`.
     | `KHAYAL_REMINDER_CHECK_MINUTES` | `15` | How often the server checks for missed reminders and expired demo accounts while awake. |
     | `KHAYAL_DB_POOL_SIZE` / `KHAYAL_DB_MAX_OVERFLOW` | `3` / `2` | Database connections: at most 5 per instance. |
     | `KHAYAL_ALERT_RULE` | `persistence` | Decline alert rule B (see CLAUDE.md section 6). |
+    | `KHAYAL_CONTACT_EMAIL` | none | An address shown in the landing page footer (e.g. a team inbox). Unset: no address is shown. |
 
 11. **Create Web Service**.
 

@@ -39,7 +39,7 @@ Out of scope for the prototype: mobile app, MRI, real push notifications (use in
 
 ## 2. Tech stack (decided, do not change without asking)
 
-- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios, lucide-react for icons.
+- **Frontend:** React 18 + Vite + TypeScript, Tailwind CSS, React Router v7 (`react-router` package, library mode), TanStack Query, Recharts for charts, Axios, lucide-react for icons, `motion` for animation (approved, section 11).
 - **Backend:** Python 3.11+ (3.12 is fine), FastAPI, SQLAlchemy 2.0 + Alembic migrations, Pydantic v2, Pillow (photo resizing), SQLite for now (one config line to switch to PostgreSQL), JWT auth (passlib + python-jose, with `bcrypt==4.0.1` pinned because passlib 1.7.4 breaks on newer bcrypt), Uvicorn.
 - **ML:** plain Python modules in `ml/` that the backend imports through `backend/app/services/`. NumPy/pandas only for now. No torch dependency until real models are added.
 - **Tests:** pytest + httpx (FastAPI TestClient) for backend + ml; Vitest + React Testing Library + jsdom + `@testing-library/jest-dom` for frontend.
@@ -255,3 +255,17 @@ Build one at a time. Each one ends with: app runs, tests pass, README updated, g
 - Keep all user-facing patient text in one file (`frontend/src/copy.ts`) so it can be translated to Hindi later.
 - Ask before adding a new dependency that is not listed in section 2.
 - When unsure about a product decision, stop and ask; don't guess.
+
+## 11. Real pilot plan (decided)
+
+Khayal moves from a public demo to a **real product: an invite-only pilot**. This overrides "deployment" being out of scope in section 1. Hosting stays on the free Voroa tier for now (section 2). Three phases, each on its own branch, each ending with: tests pass, screenshots, commit, push, merge into `main` (no squash), then stop for review.
+
+- **Phase A: brand + landing page** (branch `brand-landing`).
+  - Palette "deep teal + saffron": deep teal primary (about #0E5E63, scale 50–950), saffron/marigold accent (about #F2A33A, scale), warm ivory ground (about #FBF7EF), ink text, success/warning/danger tuned to teal. Every text/background pair meets WCAG AA (patient body text aims for AAA). Contrast table: `docs/brand/palette.md`. It replaces the indigo tokens everywhere.
+  - An original logo ("thought + care": a thought bubble that also reads as care, in teal with a saffron dot like the dot of خ): full logo, mark, monochrome, favicons (SVG + 32/180/512 PNG), og-image 1200×630. Concepts: `docs/brand/logo-concepts.md`.
+  - A landing page at `/` for every signed-out visitor: sticky header, hero, how it works, for elders/families/doctors, features, the science (honest: not a medical device, does not diagnose; a B.Tech CSE471 research project), privacy & safety, FAQ, final call to action, a "Request an invite" form (stored in a table, rate-limited), and a footer (Privacy and Terms placeholders, contact email from `KHAYAL_CONTACT_EMAIL`, "Made in India").
+  - Visual world: an Indian courtyard home (lime-plaster ivory, painted teal doors, marigold, jaali light). The direction contract is in the Impeccable surface brief.
+  - Motion with the `motion` library (approved): gentle and 150–400 ms ease-out, off under prefers-reduced-motion.
+  - Demo mode keeps working behind `KHAYAL_DEMO_MODE`.
+- **Phase B: real pilot**: invite-only sign-up, consent, privacy policy and terms, delete account, an admin page (including reviewing invite requests), demo mode off.
+- **Phase C: redesign of the patient and caregiver UI for daily use, with motion** (section 4 rules still hold).

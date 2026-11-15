@@ -1,12 +1,12 @@
 /*
- * Khayal theme: every colour and font in the app comes from these tokens (PRODUCT.md).
- * Light mode only. One calm primary (deep indigo), one warm accent (marigold), warm neutrals.
- * The patient side sits on warm paper with Atkinson Hyperlegible; the caregiver side uses
- * the same tokens on a quieter near-white with Inter. Game content colours (Sequence tiles,
- * Reaction Tap circles, card art) are part of the games, not the theme.
+ * Khayal theme: every colour and font in the app comes from these tokens (PRODUCT.md,
+ * CLAUDE.md section 11). Light mode only. Palette "deep teal + saffron": a deep teal primary
+ * (painted wood), a saffron/marigold accent, warm lime-plaster ivory, ink tinted from the teal.
+ * Game content colours (Sequence tiles, Reaction Tap circles, card art) belong to the games.
  *
- * Contrast (checked): ink 15:1, ink-soft 9:1, ink-muted 5.6:1 on paper; white on brand 9:1;
- * accent-strong 5.3:1 on surface; line-strong 3.4:1 (control borders); focus 3.4:1.
+ * Every text/background pair is measured in docs/brand/palette.md: ink 15.2:1 and teal-700
+ * 7.0:1 on ivory (AAA); ivory on teal-900 12.5:1; teal-950 on saffron-400 8.1:1; captions,
+ * success, warning and danger text 5.7-6.6:1 (AA); borders and focus at least 3:1.
  */
 @import "@fontsource/atkinson-hyperlegible/latin-400.css";
 @import "@fontsource/atkinson-hyperlegible/latin-700.css";
@@ -16,42 +16,73 @@
 @import "@fontsource/inter/latin-700.css";
 
 @theme {
-  /* Surfaces */
-  --color-paper: oklch(0.975 0.014 85); /* patient canvas: warm paper */
-  --color-desk: oklch(0.978 0.005 85); /* caregiver canvas: quieter near-white */
-  --color-surface: oklch(0.996 0.004 85); /* cards, inputs, light buttons */
-  --color-sunken: oklch(0.945 0.012 80); /* wells, placeholders, waiting states */
+  /* Deep teal: the primary, like a painted courtyard door. 700 is the brand teal. */
+  --color-teal-50: #f1f9f9;
+  --color-teal-100: #dff1f2;
+  --color-teal-200: #c5e1e3;
+  --color-teal-300: #a3c9cc;
+  --color-teal-400: #7dabaf;
+  --color-teal-500: #5a9195;
+  --color-teal-600: #39797d;
+  --color-teal-700: #0e5e63;
+  --color-teal-800: #03494d;
+  --color-teal-900: #013538;
+  --color-teal-950: #002123;
 
-  /* Text */
-  --color-ink: oklch(0.22 0.015 60);
-  --color-ink-soft: oklch(0.36 0.015 60);
-  --color-ink-muted: oklch(0.47 0.015 60);
+  /* Saffron / marigold: the accent and the one action colour. 400 is the brand saffron. */
+  --color-saffron-50: #fff9f3;
+  --color-saffron-100: #ffefde;
+  --color-saffron-200: #ffdebc;
+  --color-saffron-300: #ffc787;
+  --color-saffron-400: #f2a33a;
+  --color-saffron-500: #df9637;
+  --color-saffron-600: #bd7f2c;
+  --color-saffron-700: #9a6723;
+  --color-saffron-800: #78501d;
+  --color-saffron-900: #593d1b;
+  --color-saffron-950: #362512;
+
+  /* Surfaces: warm lime-plaster ivory */
+  --color-ivory: #fbf7ef;
+  --color-paper: var(--color-ivory); /* patient canvas and landing page */
+  --color-desk: #fbfaf6; /* caregiver canvas: quieter near-white */
+  --color-surface: #fffdf8; /* cards, inputs, light buttons */
+  --color-sunken: #f0e9db; /* wells, placeholders, waiting states */
+
+  /* Text: near-black tinted from the teal */
+  --color-ink: #102325;
+  --color-ink-soft: #334649;
+  --color-ink-muted: #516163;
 
   /* Lines */
-  --color-line: oklch(0.89 0.014 80);
-  --color-line-strong: oklch(0.6 0.02 70);
+  --color-line: #dfd8cc;
+  --color-line-strong: #738485; /* control borders, 3.7:1 */
 
-  /* Primary: calm deep indigo, for the one main action and links */
-  --color-brand: oklch(0.42 0.12 268);
-  --color-brand-dark: oklch(0.34 0.11 268);
-  --color-brand-soft: oklch(0.95 0.025 268);
+  /* Roles used across the app */
+  --color-brand: var(--color-teal-700); /* the one main action, links */
+  --color-brand-dark: var(--color-teal-800);
+  --color-brand-soft: var(--color-teal-50);
 
-  /* Accent: warm marigold, for celebration, hints and gentle attention */
-  --color-accent: oklch(0.78 0.15 70);
-  --color-accent-strong: oklch(0.5 0.11 60);
-  --color-accent-soft: oklch(0.965 0.035 80);
+  --color-accent: var(--color-saffron-400); /* celebration, hints, gentle attention */
+  --color-accent-strong: var(--color-saffron-800); /* saffron-family text, 6.6:1 */
+  --color-accent-soft: var(--color-saffron-100);
 
-  /* Calm green: done, matched, next reminder */
-  --color-calm: oklch(0.48 0.1 155);
-  --color-calm-soft: oklch(0.96 0.03 155);
-
+  /* Status, tuned to sit with the teal */
+  --color-success: #206b38;
+  --color-success-soft: #e0f7e4;
+  --color-calm: var(--color-success); /* done, matched, next reminder */
+  --color-calm-soft: var(--color-success-soft);
+  --color-warning: var(--color-saffron-800);
+  --color-warning-soft: var(--color-saffron-100);
   /* Caregiver only: errors and critical status (never on patient screens) */
-  --color-danger: oklch(0.5 0.17 27);
-  --color-danger-soft: oklch(0.965 0.02 27);
+  --color-danger: #a8372a;
+  --color-danger-soft: #feeeeb;
 
-  /* Focus ring: deep marigold, visible on every surface */
-  --color-focus: oklch(0.6 0.14 60);
+  /* Focus ring: deep saffron, at least 3:1 on ivory and on teal */
+  --color-focus: var(--color-saffron-600);
 
   --font-patient: "Atkinson Hyperlegible", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-caregiver: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Urdu (the name خیال): the reader's own Nastaliq or Naskh face */
+  --font-urdu: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Noto Naskh Arabic", "Segoe UI", serif;
 }

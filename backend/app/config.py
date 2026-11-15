@@ -126,3 +126,6 @@ DEMO_MODE = _flag("KHAYAL_DEMO_MODE")
 DEMO_ACCOUNT_DAYS = int(os.getenv("KHAYAL_DEMO_ACCOUNT_DAYS", "7"))
 # At most this many demo caregivers at once; the oldest are removed first (the free database is 1 GB).
 DEMO_MAX_CAREGIVERS = int(os.getenv("KHAYAL_DEMO_MAX_CAREGIVERS", "200"))
+
+# Shown on the landing page's footer and privacy text, e.g. hello@khayal.example. Unset = no address shown.
+CONTACT_EMAIL = os.getenv("KHAYAL_CONTACT_EMAIL", "").strip() or None

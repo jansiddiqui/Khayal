@@ -253,3 +253,34 @@ class StoredFile(Base):
     size: Mapped[int]
     data: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class InviteRole(str, Enum):
+    family = "family"
+    doctor = "doctor"
+    care_home = "care_home"
+
+
+class InviteStatus(str, Enum):
+    new = "new"
+    invited = "invited"
+    declined = "declined"
+
+
+class InviteRequest(Base):
+    """A request for an invite to the pilot, from the landing page. Reviewed by an admin (Phase B)."""
+
+    __tablename__ = "invite_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    email: Mapped[str] = mapped_column(String(254), index=True)
+    role: Mapped[InviteRole] = mapped_column(SAEnum(InviteRole, native_enum=False, length=16))
+    city: Mapped[str] = mapped_column(String(80))
+    message: Mapped[str | None] = mapped_column(String(1000), default=None)
+    # When the person ticked "you may contact me about the pilot"; required to store a request.
+    consent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[InviteStatus] = mapped_column(
+        SAEnum(InviteStatus, native_enum=False, length=16), default=InviteStatus.new
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

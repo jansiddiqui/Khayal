@@ -119,7 +119,9 @@ def test_demo_limits_on_photos_and_recordings(client: TestClient, register: Regi
 
 
 def test_config_tells_the_frontend_about_demo_mode(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert client.get("/api/config").json() == {"demo_mode": False, "recording_limit_seconds": 180, "demo_account_days": 7}
+    assert client.get("/api/config").json() == {
+        "demo_mode": False, "recording_limit_seconds": 180, "demo_account_days": 7, "contact_email": None
+    }
     monkeypatch.setattr(config, "DEMO_MODE", True)
     assert client.get("/api/config").json()["recording_limit_seconds"] == 120
 

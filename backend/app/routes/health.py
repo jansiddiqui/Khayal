@@ -19,4 +19,5 @@ def app_config() -> AppConfigOut:
         demo_mode=config.DEMO_MODE,
         recording_limit_seconds=speech.recording_limit_seconds(),
         demo_account_days=config.DEMO_ACCOUNT_DAYS,
+        contact_email=config.CONTACT_EMAIL,
     )

@@ -13,12 +13,12 @@ import { ChevronRight } from "lucide-react";
 import type { GameTrend, IndexStatus, Trend } from "../../api/client";
 import { formatGameZ, formatZ, STATUS_SCALE_TEXT, StatusBadge, statusDifference } from "./Status";
 
-// Dataviz reference palette: one series hue, neutral reference marks, recessive grid/axes.
-const SERIES = "#2a78d6";
-const REFERENCE = "#52514e";
-const BAND = "#e9e8e3";
-const GRID = "#e5e4df";
-const AXIS = { fontSize: 12, fill: "#52514e" };
+// One series hue (the brand teal), neutral reference marks, recessive grid/axes; all from theme.css.
+const SERIES = "var(--color-teal-600)";
+const REFERENCE = "var(--color-ink-soft)";
+const BAND = "var(--color-sunken)";
+const GRID = "var(--color-line)";
+const AXIS = { fontSize: 12, fill: "var(--color-ink-soft)" };
 const BAND_Z = 1.5;
 
 const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -119,7 +119,7 @@ export function GameTrendChart({
               <Line type="monotone" dataKey="composite" stroke="none" isAnimationActive={false} legendType="none"
                 dot={{ r: 2.5, fill: SERIES, fillOpacity: 0.3, stroke: "none" }} activeDot={{ r: 4, fill: SERIES }} />
               <Line type="monotone" dataKey="average" stroke={SERIES} strokeWidth={3} dot={false}
-                activeDot={{ r: 5, stroke: "#fcfcfb", strokeWidth: 2 }} isAnimationActive={false} />
+                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -171,7 +171,7 @@ export function IndexChart({ trend }: { trend: Trend }) {
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
               <Line type="monotone" dataKey="index" stroke={SERIES} strokeWidth={2} dot={false}
-                activeDot={{ r: 5, stroke: "#fcfcfb", strokeWidth: 2 }} isAnimationActive={false} />
+                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

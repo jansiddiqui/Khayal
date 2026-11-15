@@ -30,6 +30,25 @@ vi.mock("../api/useAppConfig", async (importOriginal) => {
   };
 });
 
+// jsdom has no IntersectionObserver (motion's on-scroll reveals use it): report everything as visible.
+globalThis.IntersectionObserver = class {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: readonly number[] = [];
+  constructor(private readonly callback: IntersectionObserverCallback) {}
+  observe(target: Element): void {
+    this.callback(
+      [{ isIntersecting: true, target, intersectionRatio: 1 } as unknown as IntersectionObserverEntry],
+      this as unknown as IntersectionObserver,
+    );
+  }
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+};
+
 // jsdom has no ResizeObserver; some components still ask for one.
 globalThis.ResizeObserver = class {
   observe(): void {}
