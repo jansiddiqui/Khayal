@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { RequireRole, RootRedirect } from "./auth/RequireRole";
 import { DemoBanner } from "./components/DemoBanner";
@@ -16,6 +16,8 @@ import { Reminders } from "./pages/patient/Reminders";
 import { VoiceTask } from "./pages/patient/VoiceTask";
 import { WhoIsThis } from "./pages/patient/WhoIsThis";
 import { Register } from "./pages/Register";
+
+const Legal = lazy(() => import("./pages/landing/Legal"));
 
 const patient = (element: ReactNode) => <RequireRole role="patient">{element}</RequireRole>;
 const caregiver = (element: ReactNode) => <RequireRole role="caregiver">{element}</RequireRole>;
@@ -37,6 +39,8 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/demo" element={<Demo />} />
+      <Route path="/privacy" element={<Suspense fallback={null}><Legal kind="privacy" /></Suspense>} />
+      <Route path="/terms" element={<Suspense fallback={null}><Legal kind="terms" /></Suspense>} />
 
       <Route path="/patient" element={patient(<PatientHome />)} />
       <Route path="/patient/games" element={patient(<Games />)} />

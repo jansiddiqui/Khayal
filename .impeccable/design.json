@@ -1,0 +1,814 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T00:00:00Z",
+  "title": "Design System: Khayal",
+  "extensions": {
+    "colorMeta": {
+      "door-teal": {
+        "role": "primary",
+        "displayName": "Door Teal",
+        "canonical": "#0E5E63",
+        "cssToken": "--color-teal-700",
+        "themeTokens": "teal-700 / brand",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "door-teal-deep": {
+        "role": "primary",
+        "displayName": "Door Teal Deep",
+        "canonical": "#03494D",
+        "cssToken": "--color-teal-800",
+        "themeTokens": "teal-800 / brand-dark",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "door-teal-dusk": {
+        "role": "primary",
+        "displayName": "Door Teal Dusk",
+        "canonical": "#013538",
+        "cssToken": "--color-teal-900",
+        "themeTokens": "teal-900",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "door-teal-night": {
+        "role": "primary",
+        "displayName": "Door Teal Night",
+        "canonical": "#002123",
+        "cssToken": "--color-teal-950",
+        "themeTokens": "teal-950",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "jaali-teal": {
+        "role": "primary",
+        "displayName": "Jaali Teal",
+        "canonical": "#39797D",
+        "cssToken": "--color-teal-600",
+        "themeTokens": "teal-600",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "teal-mist": {
+        "role": "primary",
+        "displayName": "Teal Mist",
+        "canonical": "#C5E1E3",
+        "cssToken": "--color-teal-200",
+        "themeTokens": "teal-200",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "teal-haze": {
+        "role": "primary",
+        "displayName": "Teal Haze",
+        "canonical": "#DFF1F2",
+        "cssToken": "--color-teal-100",
+        "themeTokens": "teal-100",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "teal-wash": {
+        "role": "primary",
+        "displayName": "Teal Wash",
+        "canonical": "#F1F9F9",
+        "cssToken": "--color-teal-50",
+        "themeTokens": "teal-50 / brand-soft",
+        "tonalRamp": [
+          "#002123",
+          "#013538",
+          "#03494D",
+          "#0E5E63",
+          "#39797D",
+          "#7DABAF",
+          "#C5E1E3",
+          "#F1F9F9"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold": {
+        "role": "secondary",
+        "displayName": "Marigold",
+        "canonical": "#F2A33A",
+        "cssToken": "--color-saffron-400",
+        "themeTokens": "saffron-400 / accent",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold-bloom": {
+        "role": "secondary",
+        "displayName": "Marigold Bloom",
+        "canonical": "#FFC787",
+        "cssToken": "--color-saffron-300",
+        "themeTokens": "saffron-300",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold-garland": {
+        "role": "secondary",
+        "displayName": "Marigold Garland",
+        "canonical": "#DF9637",
+        "cssToken": "--color-saffron-500",
+        "themeTokens": "saffron-500",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold-ember": {
+        "role": "secondary",
+        "displayName": "Marigold Ember",
+        "canonical": "#BD7F2C",
+        "cssToken": "--color-saffron-600",
+        "themeTokens": "saffron-600 / focus",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold-earth": {
+        "role": "secondary",
+        "displayName": "Marigold Earth",
+        "canonical": "#78501D",
+        "cssToken": "--color-saffron-800",
+        "themeTokens": "saffron-800 / accent-strong / warning",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "marigold-wash": {
+        "role": "secondary",
+        "displayName": "Marigold Wash",
+        "canonical": "#FFEFDE",
+        "cssToken": "--color-saffron-100",
+        "themeTokens": "saffron-100 / accent-soft / warning-soft",
+        "tonalRamp": [
+          "#362512",
+          "#593D1B",
+          "#78501D",
+          "#9A6723",
+          "#BD7F2C",
+          "#F2A33A",
+          "#FFDEBC",
+          "#FFF9F3"
+        ],
+        "tonalRampSource": "theme.css scale"
+      },
+      "lime-plaster": {
+        "role": "neutral",
+        "displayName": "Lime Plaster",
+        "canonical": "#FBF7EF",
+        "cssToken": "--color-ivory",
+        "themeTokens": "ivory / paper",
+        "tonalRamp": [
+          "#0C0B0A",
+          "#262522",
+          "#44423D",
+          "#64615B",
+          "#85827C",
+          "#A7A5A0",
+          "#CBC9C5",
+          "#EFEEEC"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "desk-white": {
+        "role": "neutral",
+        "displayName": "Desk White",
+        "canonical": "#FBFAF6",
+        "cssToken": "--color-desk",
+        "themeTokens": "desk",
+        "tonalRamp": [
+          "#0B0B0A",
+          "#252524",
+          "#424240",
+          "#62615E",
+          "#83827F",
+          "#A6A5A2",
+          "#C9C9C7",
+          "#EFEEED"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "cream-surface": {
+        "role": "neutral",
+        "displayName": "Cream Surface",
+        "canonical": "#FFFDF8",
+        "cssToken": "--color-surface",
+        "themeTokens": "surface",
+        "tonalRamp": [
+          "#0B0B0A",
+          "#262523",
+          "#43423F",
+          "#63615D",
+          "#84827E",
+          "#A6A5A2",
+          "#CAC9C7",
+          "#EFEEED"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "sunken-plaster": {
+        "role": "neutral",
+        "displayName": "Sunken Plaster",
+        "canonical": "#F0E9DB",
+        "cssToken": "--color-sunken",
+        "themeTokens": "sunken",
+        "tonalRamp": [
+          "#0C0B09",
+          "#272520",
+          "#45423A",
+          "#666156",
+          "#878276",
+          "#A9A49B",
+          "#CCC9C2",
+          "#F0EEEA"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "teal-ink": {
+        "role": "neutral",
+        "displayName": "Teal Ink",
+        "canonical": "#102325",
+        "cssToken": "--color-ink",
+        "themeTokens": "ink",
+        "tonalRamp": [
+          "#080C0C",
+          "#1E2728",
+          "#384546",
+          "#536567",
+          "#738789",
+          "#99A8AA",
+          "#C1CCCD",
+          "#E9F0F0"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "teal-ink-soft": {
+        "role": "neutral",
+        "displayName": "Teal Ink Soft",
+        "canonical": "#334649",
+        "cssToken": "--color-ink-soft",
+        "themeTokens": "ink-soft",
+        "tonalRamp": [
+          "#080C0D",
+          "#1F2728",
+          "#384547",
+          "#536568",
+          "#748689",
+          "#9AA8AB",
+          "#C1CBCD",
+          "#EAF0F1"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "teal-ink-muted": {
+        "role": "neutral",
+        "displayName": "Teal Ink Muted",
+        "canonical": "#516163",
+        "cssToken": "--color-ink-muted",
+        "themeTokens": "ink-muted",
+        "tonalRamp": [
+          "#090C0C",
+          "#202627",
+          "#3A4445",
+          "#566466",
+          "#778687",
+          "#9CA8A9",
+          "#C2CBCC",
+          "#EAEFF0"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "plaster-line": {
+        "role": "neutral",
+        "displayName": "Plaster Line",
+        "canonical": "#DFD8CC",
+        "cssToken": "--color-line",
+        "themeTokens": "line",
+        "tonalRamp": [
+          "#0C0B09",
+          "#272520",
+          "#45413B",
+          "#666057",
+          "#878278",
+          "#A9A49D",
+          "#CCC9C3",
+          "#F0EEEB"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "control-line": {
+        "role": "neutral",
+        "displayName": "Control Line",
+        "canonical": "#738485",
+        "cssToken": "--color-line-strong",
+        "themeTokens": "line-strong",
+        "tonalRamp": [
+          "#090C0C",
+          "#202727",
+          "#3A4445",
+          "#566465",
+          "#778687",
+          "#9CA8A8",
+          "#C2CBCC",
+          "#EAF0F0"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "leaf-green": {
+        "role": "neutral",
+        "displayName": "Leaf Green",
+        "canonical": "#206B38",
+        "cssToken": "--color-success",
+        "themeTokens": "success / calm",
+        "tonalRamp": [
+          "#030F05",
+          "#0F2C17",
+          "#204D2C",
+          "#327143",
+          "#549363",
+          "#83B38D",
+          "#B2D3B8",
+          "#E1F5E4"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "leaf-wash": {
+        "role": "neutral",
+        "displayName": "Leaf Wash",
+        "canonical": "#E0F7E4",
+        "cssToken": "--color-success-soft",
+        "themeTokens": "success-soft / calm-soft",
+        "tonalRamp": [
+          "#080C09",
+          "#1F2721",
+          "#39463B",
+          "#556758",
+          "#758879",
+          "#9BAA9D",
+          "#C2CCC4",
+          "#EAF0EB"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "brick-red": {
+        "role": "neutral",
+        "displayName": "Brick Red",
+        "canonical": "#A8372A",
+        "cssToken": "--color-danger",
+        "themeTokens": "danger (caregiver screens and landing form fields only)",
+        "tonalRamp": [
+          "#190403",
+          "#42140E",
+          "#6F271E",
+          "#A03C30",
+          "#C65F50",
+          "#DE8C7E",
+          "#F5B8AE",
+          "#FFE5DE"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      },
+      "brick-wash": {
+        "role": "neutral",
+        "displayName": "Brick Wash",
+        "canonical": "#FEEEEB",
+        "cssToken": "--color-danger-soft",
+        "themeTokens": "danger-soft",
+        "tonalRamp": [
+          "#0D0A0A",
+          "#292423",
+          "#48403E",
+          "#6A5E5C",
+          "#8C7F7D",
+          "#ADA2A0",
+          "#CFC7C6",
+          "#F2EDEC"
+        ],
+        "tonalRampSource": "synthesized in OKLCH"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The landing hero headline only (42-86px fluid), measure about 14ch.",
+        "scope": "landing"
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Landing section titles (36-60px fluid).",
+        "scope": "landing"
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Room headings, audience doors and the invite form heading (1.2-1.6rem)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text on patient and landing screens; 20px floor; measures 34-62ch; lead paragraphs at 1.1rem."
+      },
+      "body-caregiver": {
+        "displayName": "Body (caregiver)",
+        "purpose": "Caregiver screens in Inter, with tabular numbers for scores, times and dates."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Header navigation and small links; captions at 0.75-0.8rem in Teal Ink Muted on landing and caregiver screens only."
+      },
+      "wordmark-urdu": {
+        "displayName": "Urdu Wordmark",
+        "purpose": "The name خیال in the logo (lang=ur), in the reader's own Nastaliq or Naskh face at 0.5 of the mark height."
+      }
+    },
+    "shadows": [
+      {
+        "name": "marigold-lift",
+        "value": "0 6px 16px -8px rgb(120 80 29 / 0.7)",
+        "purpose": "Marigold buttons at rest."
+      },
+      {
+        "name": "marigold-lift-hover",
+        "value": "0 10px 22px -10px rgb(120 80 29 / 0.75)",
+        "purpose": "Marigold buttons on hover."
+      },
+      {
+        "name": "header-settle",
+        "value": "0 8px 20px -16px rgb(16 35 37 / 0.35)",
+        "purpose": "Sticky header after 8px of scroll, with a Plaster Line border."
+      },
+      {
+        "name": "illustration-rest",
+        "value": "0 16px 32px -24px rgb(16 35 37 / 0.6)",
+        "purpose": "Small drawn product views on plaster."
+      },
+      {
+        "name": "door-hover",
+        "value": "0 22px 40px -24px rgb(16 35 37 / 0.55)",
+        "purpose": "Audience doors lifted 4px on hover."
+      },
+      {
+        "name": "form-on-teal",
+        "value": "0 30px 60px -30px rgb(0 0 0 / 0.6)",
+        "purpose": "The invite form panel in the teal invite room."
+      },
+      {
+        "name": "phone",
+        "value": "0 30px 60px -20px rgb(0 20 22 / 0.55), 0 12px 24px -12px rgb(0 20 22 / 0.4)",
+        "purpose": "The drawn phone in the hero niche."
+      },
+      {
+        "name": "niche-inset",
+        "value": "inset 0 16px 30px -12px rgb(0 0 0 / 0.45)",
+        "purpose": "The arched niche, over a radial glow from teal-400 to teal-800."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The one curve for arrivals and the logo draw-in (EASE_OUT in pages/landing/motion.tsx)."
+      },
+      {
+        "name": "feedback",
+        "value": "150-200ms",
+        "purpose": "Hover, press, border and colour changes; FAQ chevron 200ms."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97)",
+        "purpose": "Buttons on press (0.95 for the menu icon button); none under reduced motion."
+      },
+      {
+        "name": "room-reveal",
+        "value": "350ms; opacity 0 to 1 with 18px from below, left or right; once; triggers 12% before the viewport bottom",
+        "purpose": "Each landing room as you reach it (Reveal); stagger 50-90ms per item; rooms vary direction."
+      },
+      {
+        "name": "hero-arrival",
+        "value": "400ms; opacity with a 14px rise; delays 150/250/350/450ms",
+        "purpose": "Hero headline, subline, actions and links on load."
+      },
+      {
+        "name": "hero-phone",
+        "value": "600ms; 40px rise; delay 300ms",
+        "purpose": "The phone in the niche; the one arrival longer than 400ms."
+      },
+      {
+        "name": "form-swap",
+        "value": "350ms; opacity with scale 0.98 and 8px",
+        "purpose": "Invite form to its thank-you state."
+      },
+      {
+        "name": "logo-draw-in",
+        "value": "outline 700ms; fill from 550ms; trail bubbles at 750/850ms; dot at 1000ms for 400ms",
+        "purpose": "The hero mark, once."
+      },
+      {
+        "name": "jaali-drift",
+        "value": "0 to -48px x and 0 to 36px y across the hero's scroll",
+        "purpose": "Light shifting through the jaali, hero only."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "All movement off, plain markup, instant anchor scrolling."
+      },
+      {
+        "name": "scope",
+        "value": "landing page now; Phase C carries motion into patient and caregiver screens",
+        "purpose": "Where this motion grammar applies."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "root",
+        "value": "20px",
+        "note": "html font-size; rem breakpoints are 1.25x Tailwind defaults"
+      },
+      {
+        "name": "stack-table",
+        "value": "max-width 639px",
+        "note": "caregiver tables become labelled stacked lists"
+      },
+      {
+        "name": "sm",
+        "value": "800px"
+      },
+      {
+        "name": "md",
+        "value": "960px"
+      },
+      {
+        "name": "lg",
+        "value": "1280px"
+      }
+    ],
+    "scopes": {
+      "app-wide": [
+        "colors",
+        "fonts and the 20px root",
+        "focus ring",
+        "logo",
+        "light mode only",
+        "no emoji",
+        "icons beside words on patient screens"
+      ],
+      "landing-only": [
+        "courtyard room sequence",
+        "teal room grounds",
+        "jaali light",
+        "arched niche and doors",
+        "marigold garland",
+        "display and headline type",
+        "motion grammar",
+        "pill buttons"
+      ],
+      "phase-c": [
+        "motion and the courtyard feel in patient and caregiver screens, with CLAUDE.md section 4 still binding"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button (landing)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The marigold pill: the landing page's one action colour (Request an invite, Send).",
+      "html": "<button class=\"ds-btn-primary\">Request an invite <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); display: inline-flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 30px; border: none; border-radius: 9999px; background: var(--color-saffron-400, #F2A33A); color: var(--color-teal-950, #002123); font-size: 21px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px -8px rgb(120 80 29 / 0.7); transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms, box-shadow 150ms; } .ds-btn-primary:hover { background: var(--color-saffron-300, #FFC787); box-shadow: 0 10px 22px -10px rgb(120 80 29 / 0.75); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 4px solid var(--color-focus, #BD7F2C); outline-offset: 3px; } @media (prefers-reduced-motion: reduce) { .ds-btn-primary { transition: none; } .ds-btn-primary:active { transform: none; } }"
+    },
+    {
+      "name": "Ghost Button on Teal",
+      "kind": "button",
+      "refersTo": "button-ghost-on-teal",
+      "description": "The quiet second action inside a teal room (See how it works).",
+      "html": "<div class=\"ds-teal-room\"><button class=\"ds-btn-ghost\">See how it works</button></div>",
+      "css": ".ds-teal-room { background: var(--color-teal-700, #0E5E63); padding: 24px; } .ds-btn-ghost { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); min-height: 56px; padding: 0 30px; border: 2px solid var(--color-teal-200, #C5E1E3); border-radius: 9999px; background: transparent; color: var(--color-ivory, #FBF7EF); font-size: 21px; font-weight: 700; cursor: pointer; transition: background-color 150ms, border-color 150ms, transform 150ms; } .ds-btn-ghost:hover { border-color: var(--color-ivory, #FBF7EF); background: var(--color-teal-800, #03494D); } .ds-btn-ghost:active { transform: scale(0.97); } .ds-btn-ghost:focus-visible { outline: 4px solid var(--color-saffron-400, #F2A33A); outline-offset: 3px; }"
+    },
+    {
+      "name": "Primary Button (app)",
+      "kind": "button",
+      "refersTo": "button-app-primary",
+      "description": "The patient app's big teal action: at least 64px tall, icon beside words, full width on phones.",
+      "html": "<button class=\"ds-btn-app\"><svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><line x1=\"6\" x2=\"10\" y1=\"11\" y2=\"11\"/><line x1=\"8\" x2=\"8\" y1=\"9\" y2=\"13\"/><line x1=\"15\" x2=\"15.01\" y1=\"12\" y2=\"12\"/><line x1=\"18\" x2=\"18.01\" y1=\"10\" y2=\"10\"/><path d=\"M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z\"/></svg><span>Play a game<small>1 of 3 done today</small></span></button>",
+      "css": ".ds-btn-app { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 420px; min-height: 80px; padding: 16px 24px; border: none; border-radius: 20px; background: var(--color-brand, #0E5E63); color: #fff; font-size: 30px; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-app span { display: flex; flex-direction: column; align-items: center; line-height: 1.2; } .ds-btn-app small { margin-top: 4px; font-size: 25px; font-weight: 500; } .ds-btn-app:hover { background: var(--color-brand-dark, #03494D); } .ds-btn-app:focus-visible { outline: 4px solid var(--color-focus, #BD7F2C); outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button (app)",
+      "kind": "button",
+      "refersTo": "button-app-secondary",
+      "description": "The app's outlined second action (Play again).",
+      "html": "<button class=\"ds-btn-app-secondary\">Play again</button>",
+      "css": ".ds-btn-app-secondary { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); width: 100%; max-width: 420px; min-height: 80px; padding: 16px 24px; border: 4px solid var(--color-brand, #0E5E63); border-radius: 20px; background: var(--color-surface, #FFFDF8); color: var(--color-brand-dark, #03494D); font-size: 30px; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-app-secondary:hover { background: var(--color-brand-soft, #F1F9F9); } .ds-btn-app-secondary:focus-visible { outline: 4px solid var(--color-focus, #BD7F2C); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Labelled field on cream with a control-line border; teal border on focus.",
+      "html": "<label class=\"ds-field-label\">Your email<input class=\"ds-input\" type=\"email\" placeholder=\"name@example.com\"></label>",
+      "css": ".ds-field-label { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); display: block; font-size: 20px; font-weight: 700; color: var(--color-ink, #102325); } .ds-input { display: block; width: 100%; margin-top: 6px; padding: 12.5px 20px; border: 2px solid var(--color-line-strong, #738485); border-radius: 15px; background: var(--color-surface, #FFFDF8); color: var(--color-ink, #102325); font: inherit; font-weight: 400; transition: border-color 150ms; } .ds-input::placeholder { color: var(--color-ink-muted, #516163); } .ds-input:hover { border-color: var(--color-teal-600, #39797D); } .ds-input:focus { border-color: var(--color-teal-700, #0E5E63); outline: none; } .ds-input:focus-visible { outline: 3px solid var(--color-focus, #BD7F2C); outline-offset: 2px; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-header",
+      "description": "The sticky plaster lintel: logo with Urdu wordmark, bold section links, Sign in and the marigold pill.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-logo\"><svg width=\"34\" height=\"34\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><path d=\"M32 48.5C22 41 12.5 33.8 12.5 24.6 12.5 18.3 17.4 13.5 23.4 13.5c3.7 0 6.8 1.9 8.6 4.7 1.8-2.8 4.9-4.7 8.6-4.7 6 0 10.9 4.8 10.9 11.1 0 9.2-9.5 16.4-19.5 23.9z\" fill=\"#0E5E63\" stroke=\"#0E5E63\" stroke-width=\"3.2\" stroke-linejoin=\"round\"/><circle cx=\"24.6\" cy=\"54.6\" r=\"3.7\" fill=\"#0E5E63\"/><circle cx=\"18.6\" cy=\"59.9\" r=\"2.3\" fill=\"#0E5E63\"/><circle cx=\"32\" cy=\"6.6\" r=\"4.7\" fill=\"#F2A33A\"/></svg>Khayal <span lang=\"ur\" class=\"ds-urdu\">خیال</span></span><a href=\"#\">How it works</a><a href=\"#\">The science</a><a href=\"#\">Sign in</a><a href=\"#\" class=\"ds-nav-cta\">Request an invite</a></nav>",
+      "css": ".ds-nav { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); display: flex; align-items: center; gap: 24px; height: 72px; padding: 0 25px; background: var(--color-paper, #FBF7EF); border-bottom: 1px solid var(--color-line, #DFD8CC); box-shadow: 0 8px 20px -16px rgb(16 35 37 / 0.35); } .ds-nav-logo { display: inline-flex; align-items: center; gap: 10px; margin-right: auto; font-size: 21px; font-weight: 700; color: var(--color-ink, #102325); } .ds-urdu { font-family: var(--font-urdu, serif); font-size: 17px; font-weight: 400; color: var(--color-teal-700, #0E5E63); } .ds-nav a { font-size: 17px; font-weight: 700; color: var(--color-ink-soft, #334649); text-decoration: none; text-underline-offset: 0.3em; border-radius: 10px; transition: color 150ms; } .ds-nav a:hover { color: var(--color-teal-700, #0E5E63); text-decoration: underline; } .ds-nav a:focus-visible { outline: 4px solid var(--color-focus, #BD7F2C); outline-offset: 3px; } .ds-nav a.ds-nav-cta { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 9999px; background: var(--color-saffron-400, #F2A33A); color: var(--color-teal-950, #002123); text-decoration: none; box-shadow: 0 6px 16px -8px rgb(120 80 29 / 0.7); } .ds-nav a.ds-nav-cta:hover { background: var(--color-saffron-300, #FFC787); }"
+    },
+    {
+      "name": "Audience Door",
+      "kind": "card",
+      "refersTo": "audience-door-families",
+      "description": "Signature landing card: an arched door painted per audience (here the families' teal door).",
+      "html": "<article class=\"ds-door\"><h3>For families</h3><p class=\"ds-door-lead\">Know how they are doing</p><ul><li>A plain sentence when something changes</li><li>Measured against their own normal</li></ul></article>",
+      "css": ".ds-door { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); max-width: 360px; padding: 70px 35px 40px; border-radius: 200px 200px 20px 20px; background: var(--color-teal-700, #0E5E63); color: var(--color-teal-50, #F1F9F9); font-size: 20px; transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms; } .ds-door:hover { transform: translateY(-4px); box-shadow: 0 22px 40px -24px rgb(16 35 37 / 0.55); } .ds-door h3 { margin: 0; text-align: center; font-size: 30px; color: var(--color-ivory, #FBF7EF); } .ds-door-lead { margin: 4px 0 0; text-align: center; font-weight: 700; color: var(--color-saffron-300, #FFC787); } .ds-door ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; } .ds-door li { display: flex; gap: 12px; line-height: 1.375; } .ds-door li::before { content: \"\"; flex: none; width: 10px; height: 10px; margin-top: 0.45em; border-radius: 50%; background: var(--color-saffron-400, #F2A33A); } @media (prefers-reduced-motion: reduce) { .ds-door, .ds-door:hover { transition: none; transform: none; } }"
+    },
+    {
+      "name": "Honesty Note",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The teal-bordered note that states what Khayal is not (not a medical device).",
+      "html": "<div class=\"ds-note\" role=\"note\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4\"/><path d=\"M12 8h.01\"/></svg><div><p class=\"ds-note-title\">Khayal is not a medical device and does not diagnose.</p><p class=\"ds-note-body\">It is a B.Tech CSE471 research project.</p></div></div>",
+      "css": ".ds-note { font-family: var(--font-patient, 'Atkinson Hyperlegible', system-ui, sans-serif); display: flex; gap: 16px; max-width: 560px; padding: 25px; border: 2px solid var(--color-teal-700, #0E5E63); border-radius: 20px; background: var(--color-surface, #FFFDF8); color: var(--color-ink, #102325); } .ds-note > svg { flex: none; margin-top: 4px; color: var(--color-teal-700, #0E5E63); } .ds-note-title { margin: 0; font-size: 23px; font-weight: 700; line-height: 1.375; } .ds-note-body { margin: 8px 0 0; font-size: 20px; color: var(--color-ink-soft, #334649); }"
+    },
+    {
+      "name": "Jaali Light",
+      "kind": "custom",
+      "refersTo": "jaali-teal",
+      "description": "Signature landing ornament: four logo hearts per 56px tile, seen only inside a pool of light on a teal room. Decorative.",
+      "html": "<div class=\"ds-jaali-room\"><svg class=\"ds-jaali\" aria-hidden=\"true\"><defs><pattern id=\"dsj\" width=\"56\" height=\"56\" patternUnits=\"userSpaceOnUse\"><path d=\"M32 48.5C22 41 12.5 33.8 12.5 24.6 12.5 18.3 17.4 13.5 23.4 13.5c3.7 0 6.8 1.9 8.6 4.7 1.8-2.8 4.9-4.7 8.6-4.7 6 0 10.9 4.8 10.9 11.1 0 9.2-9.5 16.4-19.5 23.9z\" fill=\"#39797D\" transform=\"translate(28 28) rotate(0) translate(0 -9.5) scale(0.26) translate(-32 -31)\"/><path d=\"M32 48.5C22 41 12.5 33.8 12.5 24.6 12.5 18.3 17.4 13.5 23.4 13.5c3.7 0 6.8 1.9 8.6 4.7 1.8-2.8 4.9-4.7 8.6-4.7 6 0 10.9 4.8 10.9 11.1 0 9.2-9.5 16.4-19.5 23.9z\" fill=\"#39797D\" transform=\"translate(28 28) rotate(90) translate(0 -9.5) scale(0.26) translate(-32 -31)\"/><path d=\"M32 48.5C22 41 12.5 33.8 12.5 24.6 12.5 18.3 17.4 13.5 23.4 13.5c3.7 0 6.8 1.9 8.6 4.7 1.8-2.8 4.9-4.7 8.6-4.7 6 0 10.9 4.8 10.9 11.1 0 9.2-9.5 16.4-19.5 23.9z\" fill=\"#39797D\" transform=\"translate(28 28) rotate(180) translate(0 -9.5) scale(0.26) translate(-32 -31)\"/><path d=\"M32 48.5C22 41 12.5 33.8 12.5 24.6 12.5 18.3 17.4 13.5 23.4 13.5c3.7 0 6.8 1.9 8.6 4.7 1.8-2.8 4.9-4.7 8.6-4.7 6 0 10.9 4.8 10.9 11.1 0 9.2-9.5 16.4-19.5 23.9z\" fill=\"#39797D\" transform=\"translate(28 28) rotate(270) translate(0 -9.5) scale(0.26) translate(-32 -31)\"/><circle cx=\"0\" cy=\"0\" r=\"2.2\" fill=\"#39797D\"/><circle cx=\"56\" cy=\"0\" r=\"2.2\" fill=\"#39797D\"/><circle cx=\"0\" cy=\"56\" r=\"2.2\" fill=\"#39797D\"/><circle cx=\"56\" cy=\"56\" r=\"2.2\" fill=\"#39797D\"/></pattern><radialGradient id=\"dsl\" cx=\"0.75\" cy=\"0.5\" r=\"0.6\"><stop offset=\"0\" stop-color=\"#fff\"/><stop offset=\"0.55\" stop-color=\"#fff\" stop-opacity=\"0.45\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><mask id=\"dsm\"><rect width=\"100%\" height=\"100%\" fill=\"url(#dsl)\"/></mask></defs><rect width=\"100%\" height=\"100%\" fill=\"url(#dsj)\" mask=\"url(#dsm)\"/></svg></div>",
+      "css": ".ds-jaali-room { position: relative; height: 260px; overflow: hidden; background: var(--color-teal-700, #0E5E63); } .ds-jaali { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Courtyard Home",
+    "overview": "Khayal is a home, not a clinic or an app-store tile. Its materials are those of an Indian courtyard house: lime-plaster walls in warm ivory, doors and window frames in painted deep teal, a marigold garland as the one warm note, and light falling through a carved jaali screen. The system is light-only, calm and legible first. Text is large (a 20px root on every screen), contrast is measured for every pair, and status is never carried by colour alone.\n\nThe palette and fonts are **app-wide**: patient screens (Atkinson Hyperlegible on lime plaster), caregiver screens (Inter on a quieter near-white desk) and the public landing page share one token set in `frontend/src/theme.css`. The **courtyard composition** (teal rooms, jaali light, arched niches and doors, the garland, display-scale type and the motion grammar) currently belongs to the **landing page only** (`/`, `/privacy`, `/terms`). Phase C will carry motion and the courtyard feel into the app screens; until then, patient screens follow CLAUDE.md section 4 (at least 20px text, 64px buttons, at most three actions, Home in one place, no hidden timers) and caregiver screens stay a calm, dense dashboard.\n\nThe rejections are deliberate and visual: no white page with a gradient hero and rows of equal icon cards, no cold hospital look, no cartoons, confetti, streaks or emoji, no dark mode.",
+    "keyCharacteristics": [
+      "Deep teal owns whole regions; it is never a thin accent.",
+      "Marigold is a fill or a mark, never small text on plaster.",
+      "Ink is tinted from the teal, so text belongs to the palette.",
+      "Every text pair is measured (`docs/brand/palette.md`): body AAA on patient and landing screens, everything else at least AA, non-text marks at least 3:1.",
+      "The logo's heart is the source of the jaali; brand and ornament are one shape.",
+      "Motion is gentle (150-400ms ease-out), arrives once, and switches off under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The Painted Door Rule",
+        "body": "Teal is a total commitment: when it appears as a ground it fills the whole room edge to edge.",
+        "section": "colors"
+      },
+      {
+        "name": "The Garland Rule",
+        "body": "Marigold is a fill, a dot or a stripe. Any marigold-family text on a light ground is Marigold Earth or darker.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Pair Rule",
+        "body": "No text/background pair ships unless it has a row in `docs/brand/palette.md` that meets its target.",
+        "section": "colors"
+      },
+      {
+        "name": "The Word Beside the Colour Rule",
+        "body": "Every status (Stable, Watch, Declining, done, warning) carries an icon and a word; colour only reinforces it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Full Scale Rule",
+        "body": "The brand speaks through size: display type is set large and tight in Atkinson Hyperlegible, never in a second display face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Twenty Pixel Floor Rule",
+        "body": "The 20px root is never lowered; patient text never drops below it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Light Not Lift Rule",
+        "body": "Rooms are separated by ground colour and light; shadows are reserved for objects that sit in a room (buttons, the form, the phone, drawn illustrations).",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** take every colour and font from `theme.css` tokens; light mode only.",
+      "**Do** add a measured row to `docs/brand/palette.md` before shipping a new text/background pair.",
+      "**Do** put Door Teal Night text on marigold buttons, and Lime Plaster or Teal Wash text on Door Teal.",
+      "**Do** pair every icon with words on patient screens, and every status colour with an icon and a word.",
+      "**Do** keep patient screens at a 20px text floor, 64px buttons and at most three actions (CLAUDE.md section 4).",
+      "**Do** label drawn product views as illustrations, and keep any number in them clearly made-up.",
+      "**Do** keep motion at 150-400ms ease-out, arriving once, and off under `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** set Marigold as text on plaster (1.9:1); use Marigold Earth.",
+      "**Don't** use Brick Red on patient screens.",
+      "**Don't** use teal as a thin accent stripe on a white page; when teal is a ground it owns the room.",
+      "**Don't** use emoji, cartoons, confetti, streaks or points.",
+      "**Don't** put text on the brightest part of the jaali light.",
+      "**Don't** use hard offset shadows or pure-black shadows on plaster."
+    ]
+  }
+}

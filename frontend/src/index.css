@@ -84,3 +84,14 @@ textarea {
 :root[data-play-mode] .demo-banner {
   display: none;
 }
+
+/* Landing page: smooth anchor scrolling, unless the visitor prefers reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.landing) {
+    scroll-behavior: smooth;
+  }
+}
+/* Invite form: highlight missing or invalid fields only after a first submit attempt. */
+.invite-form[data-touched] :is(input, textarea):invalid {
+  border-color: var(--color-danger);
+}

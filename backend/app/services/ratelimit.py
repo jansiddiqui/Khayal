@@ -49,6 +49,8 @@ LIMITS: dict[str, SlidingWindowLimiter] = {
     "login": SlidingWindowLimiter(10, timedelta(minutes=5)),
     # Pairing codes: on top of the wrong-code limit in services/pairing.py.
     "pair": SlidingWindowLimiter(20, timedelta(minutes=10)),
+    # "Request an invite" on the landing page.
+    "invite": SlidingWindowLimiter(5, timedelta(hours=1)),
 }
 
 

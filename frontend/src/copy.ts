@@ -256,14 +256,6 @@ export const copy = {
     notAvailable: "The demo is not available on this server.",
     waking: "Waking up the server… this can take up to a minute.",
   },
-  welcome: {
-    name: "Khayal",
-    nameUrdu: "خیال",
-    description: "Gentle brain games, reminders and family photos for people with memory loss.",
-    tryDemo: "Try the demo",
-    haveCode: "I have a code from my family",
-    signIn: "Sign in with email",
-  },
   pair: {
     title: "Set up this device",
     intro: "Ask your family member for the 6-digit code, then type it here.",

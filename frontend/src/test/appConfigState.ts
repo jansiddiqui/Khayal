@@ -2,9 +2,9 @@ import type { AppConfig } from "../api/client";
 import type { AppConfigState } from "../api/useAppConfig";
 
 /** Not the public demo (the default in tests). */
-export const NOT_DEMO: AppConfig = { demo_mode: false, recording_limit_seconds: 180, demo_account_days: 7 };
+export const NOT_DEMO: AppConfig = { demo_mode: false, recording_limit_seconds: 180, demo_account_days: 7, contact_email: null };
 /** The public demo. */
-export const DEMO: AppConfig = { demo_mode: true, recording_limit_seconds: 120, demo_account_days: 7 };
+export const DEMO: AppConfig = { demo_mode: true, recording_limit_seconds: 120, demo_account_days: 7, contact_email: null };
 
 const DEFAULT: AppConfigState = { config: NOT_DEMO, waking: false };
 let current: AppConfigState = DEFAULT;

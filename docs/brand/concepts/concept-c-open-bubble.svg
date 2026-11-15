@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Khayal concept C: open bubble">
+  <!-- One stroke: a thought bubble left open on the right, which also reads as a cupped palm
+       and as the bowl of خ; its saffron dot sits above; one small bubble trails below -->
+  <path fill="none" stroke="#0E5E63" stroke-width="7.5" stroke-linecap="round"
+        d="M47.5 23.5C43 16.5 34.5 13.5 26 15.5 15.5 18 10 27.5 12.5 37.5 15 47 25 52.5 35.5 50.5c7-1.4 12.3-6.2 14.5-12.5"/>
+  <circle cx="13" cy="57" r="3.6" fill="#0E5E63"/>
+  <circle cx="35" cy="5.8" r="4.8" fill="#F2A33A"/>
+</svg>

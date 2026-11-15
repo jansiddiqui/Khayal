@@ -285,6 +285,16 @@ The weekly picture description (rules in CLAUDE.md section 7):
 - **Tests:** they run without warnings; charts get a fixed size in jsdom, and every API call a test triggers is mocked.
 - **Report screenshots:** `docs/report-screenshots/`, numbered in order (patient screens at 375 px, caregiver screens at 1280 px).
 
+## Brand and landing page (pilot Phase A)
+
+Khayal is becoming an invite-only pilot (CLAUDE.md section 11).
+
+- **Palette "deep teal + saffron":** tokens in `frontend/src/theme.css` (teal and saffron scales 50–950, ivory, ink, success/warning/danger). Every text/background pair is measured in [docs/brand/palette.md](docs/brand/palette.md).
+- **Logo:** an original mark ("thought + care"): three concepts and the recommendation in [docs/brand/logo-concepts.md](docs/brand/logo-concepts.md); files in `docs/brand/logo/`; favicons and the og-image in `frontend/public/`.
+- **Landing page** at `/` for everyone signed out (`frontend/src/pages/landing/`, copy in `content.ts`): how it works, for elders/families/doctors, features, the science (honest, not a medical device), privacy, FAQ and a "Request an invite" form. Motion uses `motion` and switches off under prefers-reduced-motion. Screenshots: `docs/brand/landing/`.
+- **Invite requests:** `POST /api/invites` (public, 5 per address per hour, honeypot against bots) stores name, email, role, city, optional message and the consent time in `invite_requests` (migration 0008). Phase B adds the admin page to review them.
+- **Contact email:** set `KHAYAL_CONTACT_EMAIL` on the backend to show it in the footer.
+
 ## Public demo (Voroa)
 
 The prototype can run as a public demo on Voroa's free tier: step-by-step instructions are in

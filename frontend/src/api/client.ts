@@ -175,12 +175,32 @@ export interface AppConfig {
   demo_mode: boolean;
   recording_limit_seconds: number;
   demo_account_days: number;
+  /** Where people can write to the team; null when not configured. */
+  contact_email?: string | null;
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
   // A short timeout: a sleeping server is retried (useAppConfig) instead of hanging the screen.
   const { data } = await api.get<AppConfig>("/config", { timeout: 10_000 });
   return data;
+}
+
+/** "Request an invite" on the landing page (public, rate-limited). */
+export type InviteRole = "family" | "doctor" | "care_home";
+
+export interface InviteRequestInput {
+  name: string;
+  email: string;
+  role: InviteRole;
+  city: string;
+  message?: string;
+  consent: true;
+  /** Hidden honeypot: people leave it empty. */
+  website?: string;
+}
+
+export async function requestInvite(input: InviteRequestInput): Promise<void> {
+  await api.post("/invites", input);
 }
 
 /** "Try the demo": a fresh caregiver (signed in) with private demo patients. */

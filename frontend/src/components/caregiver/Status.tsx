@@ -2,14 +2,14 @@ import { CircleArrowDown, CircleCheck, CircleDashed, TriangleAlert, type LucideI
 import type { IndexStatus } from "../../api/client";
 
 /**
- * Reserved status colours (dataviz reference palette) - always shown with an icon and a
+ * Reserved status colours, from the theme (theme.css) - always shown with an icon and a
  * word, never colour alone.
  */
 export const STATUS_COLORS = {
-  good: "#0ca30c",
-  warning: "#fab219",
-  critical: "#d03b3b",
-  none: "#9a9890",
+  good: "var(--color-success)",
+  warning: "var(--color-saffron-500)",
+  critical: "var(--color-danger)",
+  none: "var(--color-line-strong)",
 } as const;
 
 interface StatusLook {

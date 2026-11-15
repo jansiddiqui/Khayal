@@ -53,7 +53,8 @@ beforeEach(() => {
 const patientRoutes = ["/patient", "/patient/games", "/patient/reminders", "/patient/who-is-this", "/patient/voice"];
 
 describe("signed out", () => {
-  it.each(["/", "/patient", "/patient/games"])("%s starts at Pair a device", async (route) => {
+  // "/" is the public landing page now (CLAUDE.md section 11); patient pages still start at pairing.
+  it.each(["/patient", "/patient/games"])("%s starts at Pair a device", async (route) => {
     renderWithProviders(<App />, { route });
     expect(await screen.findByRole("heading", { name: copy.pair.title })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.pair.caregiverLink })).toHaveAttribute("href", "/login");

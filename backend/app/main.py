@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import config
 from app.background import start_background_tasks
 from app.db import ensure_schema_current
-from app.routes import alerts, auth, demo, family, games, health, internal, patients, reminders, speech, trends
+from app.routes import alerts, auth, demo, family, games, health, internal, invites, patients, reminders, speech, trends
 
 
 def _setup_logging() -> None:
@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
         trends.router,
         demo.router,
         internal.router,
+        invites.router,
     ):
         app.include_router(router, prefix="/api")
     return app
