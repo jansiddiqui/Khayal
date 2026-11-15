@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, type AxiosResponse } from "axios";
 
 /**
  * Where the backend lives. In development the Vite dev server proxies /api to FastAPI
@@ -13,7 +13,52 @@ export function apiBase(url: string | undefined = import.meta.env.VITE_API_URL):
 
 export const API_BASE = apiBase();
 
+/**
+ * A production build without VITE_API_URL sends API calls to the frontend's own address,
+ * where the host answers with index.html. Say so loudly in the console. Returns whether the
+ * setting looks right.
+ */
+export function checkApiUrl(
+  env: { PROD: boolean; VITE_API_URL?: string } = import.meta.env,
+  log: (message: string) => void = console.error,
+): boolean {
+  if (!env.PROD || (env.VITE_API_URL ?? "").trim() !== "") return true;
+  log(
+    "Khayal: VITE_API_URL was empty when this frontend was built, so API calls go to this site's own address " +
+      "and get the web page instead of the backend. Set VITE_API_URL (marked build-time) to the backend's address, " +
+      "e.g. https://khayal-api.example.app, and redeploy the frontend. See docs/DEPLOY-VOROA.md.",
+  );
+  return false;
+}
+
+checkApiUrl();
+
 export const api = axios.create({ baseURL: API_BASE });
+
+/**
+ * Every JSON API response must really be JSON. If the frontend calls the wrong address (for
+ * example a build without VITE_API_URL), the host answers 200 with index.html; treat that as a
+ * failed request, so screens show their error or "waking up" state instead of misreading it.
+ * Blob downloads (photos, recordings) and empty answers (204) are not checked.
+ */
+export function isJsonResponse(response: AxiosResponse): boolean {
+  const expectsJson = response.config.responseType === undefined || response.config.responseType === "json";
+  const empty = response.status === 204 || response.data === "" || response.data === undefined || response.data === null;
+  if (!expectsJson || empty) return true;
+  const type = String(response.headers["content-type"] ?? "").toLowerCase();
+  return type.includes("application/json") || type.includes("+json");
+}
+
+api.interceptors.response.use((response) => {
+  if (isJsonResponse(response)) return response;
+  // No `response` on the error, so callers never mistake it for a real answer with a status.
+  throw new AxiosError(
+    `Expected JSON from ${response.config.url ?? "the API"} but got ${String(response.headers["content-type"] ?? "no content type")}`,
+    "ERR_NOT_JSON",
+    response.config,
+    response.request,
+  );
+});
 
 const TOKEN_KEY = "khayal.token";
 
