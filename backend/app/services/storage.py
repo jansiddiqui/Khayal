@@ -32,6 +32,10 @@ class InvalidKeyError(ValueError):
     pass
 
 
+def valid_key(key: str) -> bool:
+    return _KEY.match(key) is not None
+
+
 def check_key(key: str) -> str:
     if not _KEY.match(key):
         raise InvalidKeyError(key)

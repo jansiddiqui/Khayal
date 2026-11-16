@@ -1,4 +1,12 @@
+import logging
+import math
+import os
+import tempfile
+from collections.abc import Iterator
+
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
 from sqlalchemy import func, select
 
 from app.deps import CurrentAdmin, DbSession, Now
@@ -13,9 +21,10 @@ from app.schemas import (
     LinkOut,
     RemovedOut,
 )
-from app.services import accounts, auth, invites, resets
+from app.services import accounts, auth, backup, invites, ratelimit, resets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+log = logging.getLogger("khayal.backup")
 
 
 @router.get("/invite-requests", response_model=list[AdminInviteRequestOut])
@@ -120,3 +129,50 @@ def remove_demo_accounts(body: DemoRemoveIn, admin: CurrentAdmin, db: DbSession)
     if body.confirm_count != len(accounts.demo_accounts(db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The number of demo accounts changed; check again")
     return RemovedOut(removed=accounts.remove_demo_accounts(db))
+
+
+_CHUNK = 1024 * 1024
+
+
+def _stream(path: str) -> Iterator[bytes]:
+    with open(path, "rb") as f:
+        while chunk := f.read(_CHUNK):
+            yield chunk
+
+
+@router.get("/backup", response_class=StreamingResponse)
+def download_backup(admin: CurrentAdmin, db: DbSession, now: Now) -> StreamingResponse:
+    """A full backup: every table as JSON plus every photo and recording, as a zip
+    (services/backup.py). One per 10 minutes for the whole server; each one is logged."""
+    wait = ratelimit.LIMITS["backup"].hit("all", now)
+    if wait is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"A backup was made a few minutes ago. Try again in {math.ceil(wait / 60)} min.",
+            headers={"Retry-After": str(math.ceil(wait))},
+        )
+    # Built in a temporary file, not in memory, then streamed and removed.
+    handle, path = tempfile.mkstemp(prefix="khayal-backup-", suffix=".zip")
+    try:
+        with os.fdopen(handle, "wb") as out:
+            summary = backup.write(db, out, now, made_by=admin.email or f"user {admin.id}")
+    except BaseException:
+        os.unlink(path)
+        log.exception("Full backup by admin %s failed", admin.id)
+        raise
+    size = os.path.getsize(path)
+    log.info(
+        "Full backup downloaded by admin %s (%s): %d tables, %d rows, %d files, %d bytes, revision %s",
+        admin.id, admin.email, summary.tables, summary.rows, summary.files, size, summary.revision,
+    )
+    name = f"khayal-backup-{now.strftime('%Y-%m-%d-%H%M')}.zip"
+    return StreamingResponse(
+        _stream(path),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{name}"',
+            "Content-Length": str(size),
+            "Cache-Control": "no-store",
+        },
+        background=BackgroundTask(os.unlink, path),
+    )

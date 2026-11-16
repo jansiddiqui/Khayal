@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { admin, linkUrl, type SecretLink } from "../../api/client";
+import { Download } from "lucide-react";
+import { admin, errorStatus, linkUrl, type SecretLink } from "../../api/client";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CopyLink } from "../../components/caregiver/PrivacyPanel";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
@@ -221,7 +222,44 @@ function DemoAccounts() {
   );
 }
 
-/** The pilot's admin page (KHAYAL_ADMIN_EMAILS): requests, invites, users, demo clean-up. */
+/** Admin → Download full backup: the free database has no backups of its own (docs/BACKUP-RESTORE.md). */
+function Backup() {
+  const download = useMutation({
+    mutationFn: admin.backup,
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+  return (
+    <section className={card} aria-labelledby="backup-title">
+      <h2 id="backup-title" className="flex items-center gap-2 text-lg font-semibold">
+        <Download className="size-5 text-brand" aria-hidden="true" />
+        Full backup
+      </h2>
+      <p className="text-ink-muted">
+        Every table, photo and recording in one zip. Download it every week, save it in <code>{"data\\backups\\voroa\\"}</code> and keep the newest 8. It holds personal data: keep it on your own computer only.
+      </p>
+      <button type="button" className={primary + " self-start"} disabled={download.isPending} onClick={() => download.mutate()}>
+        {download.isPending ? "Preparing the backup…" : "Download full backup"}
+      </button>
+      {download.isSuccess && <p className="text-calm">Saved as {download.data.fileName}.</p>}
+      {download.isError && (
+        <p role="alert" className="text-danger">
+          {errorStatus(download.error) === 429
+            ? "A backup was made in the last 10 minutes. Try again a little later."
+            : "Could not make the backup. Try again."}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** The pilot's admin page (KHAYAL_ADMIN_EMAILS): requests, invites, users, demo clean-up, backups. */
 export function AdminPage() {
   const [made, setMade] = useState<Made>(null);
   return (
@@ -236,6 +274,7 @@ export function AdminPage() {
         <Invites onLink={setMade} />
         <Users onLink={setMade} />
         <DemoAccounts />
+        <Backup />
       </div>
     </CaregiverLayout>
   );
