@@ -11,7 +11,8 @@ from app.db import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep the app's own loggers (khayal.*) working when migrations run in the same process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # An explicitly passed URL (e.g. from tests) wins over the app setting.
 if not config.get_main_option("sqlalchemy.url"):

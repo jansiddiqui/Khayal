@@ -237,7 +237,7 @@ account would be a demo account):
 2. **Deploy.** Merge into `main` and push; both services redeploy (the backend's pre-deploy
    applies the new migrations). Check `https://khayal-api.onvoroa.com/api/config`: it says
    `"demo_mode":false`. The site shows no demo banner and no "Try the demo".
-3. **Back up.** In the dashboard, `khayal-db` → **Backups**: download a backup now and save it under `data\backups\voroa\` ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)).
+3. **Back up.** After step 4 (signing in as admin), Admin → **Download full backup**, and save the zip under `data\backups\voroa\` ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)). The free database has no backups of its own.
 4. **Sign in as admin.** Open `https://khayal-web.onvoroa.com/setup`, create your account with
    the email in `KHAYAL_ADMIN_EMAILS` (a password of at least 10 characters), and accept the
    policy. The caregiver header now shows **Admin**.
@@ -252,7 +252,7 @@ account would be a demo account):
 **Password resets:** there is no email service yet. Admin → **Users** → **Reset link** gives a
 48-hour link to send the person; using it signs out their other sessions.
 
-**Backups:** weekly, from the dashboard (`khayal-db` → **Backups** → download), saved under `data\backups\voroa\`, newest 8 kept ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)).
+**Backups:** weekly, Admin → **Download full backup**, saved under `data\backups\voroa\`, newest 8 kept; restore with `python -m app.restore_backup <zip>` into an empty database ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)). Before real families join, upgrade `khayal-db` to **Starter** (₹299/month) for automatic daily backups.
 
 ## Limits
 

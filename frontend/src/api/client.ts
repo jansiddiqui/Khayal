@@ -435,6 +435,13 @@ export const admin = {
   demoCount: async () => (await api.get<{ count: number }>("/admin/demo-accounts")).data.count,
   removeDemo: async (confirmCount: number) =>
     (await api.post<{ removed: number }>("/admin/demo-accounts/remove", { confirm_count: confirmCount })).data.removed,
+  /** The full backup zip (every table plus every photo and recording), with the server's file name. */
+  backup: async (): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await api.get<Blob>("/admin/backup", { responseType: "blob" });
+    const disposition = String(response.headers["content-disposition"] ?? "");
+    const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `khayal-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+    return { blob: response.data, fileName };
+  },
 };
 
 export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap";

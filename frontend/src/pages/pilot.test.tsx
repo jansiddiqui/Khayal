@@ -37,6 +37,7 @@ vi.mock("../api/client", async (importOriginal) => {
       resetLink: vi.fn(),
       demoCount: vi.fn(),
       removeDemo: vi.fn(),
+      backup: vi.fn(),
     },
   };
 });
@@ -93,6 +94,23 @@ describe("admin page", () => {
     const dialog = screen.getByRole("alertdialog", { name: "Remove all demo accounts" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Remove 4 demo accounts" }));
     await waitFor(() => expect(adminApi.removeDemo).toHaveBeenCalledWith(4));
+  });
+
+  it("downloads a full backup and explains the 10-minute limit", async () => {
+    const blob = new Blob(["zip"], { type: "application/zip" });
+    adminApi.backup.mockResolvedValueOnce({ blob, fileName: "khayal-backup-2026-11-16-0930.zip" });
+    adminApi.backup.mockRejectedValueOnce(Object.assign(new Error("429"), { isAxiosError: true, response: { status: 429 } }));
+    URL.createObjectURL = vi.fn(() => "blob:backup");
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    renderWithProviders(<App />, { route: "/admin" });
+    const button = await screen.findByRole("button", { name: "Download full backup" });
+    fireEvent.click(button);
+    expect(await screen.findByText("Saved as khayal-backup-2026-11-16-0930.zip.")).toBeInTheDocument();
+    expect(click).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Download full backup" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("A backup was made in the last 10 minutes");
+    click.mockRestore();
   });
 
   it("is linked from the caregiver header for admins only", async () => {

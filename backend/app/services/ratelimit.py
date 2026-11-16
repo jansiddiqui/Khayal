@@ -51,6 +51,8 @@ LIMITS: dict[str, SlidingWindowLimiter] = {
     "pair": SlidingWindowLimiter(20, timedelta(minutes=10)),
     # "Request an invite" on the landing page.
     "invite": SlidingWindowLimiter(5, timedelta(hours=1)),
+    # Full backups (admin page): heavy, so one per 10 minutes for the whole server.
+    "backup": SlidingWindowLimiter(1, timedelta(minutes=10)),
 }
 
 
