@@ -58,7 +58,7 @@ $env:KHAYAL_STORAGE = "db"
 It ends with "Row counts and file checksums match the backup." Delete `data\restore-drill.db`
 afterwards (one file). Close the window afterwards so the two variables do not stay set.
 
-## Restore after data loss
+## The restore command
 
 `python -m app.restore_backup <zip>` restores a backup into an **empty** database. It refuses
 to run unless:
@@ -72,32 +72,94 @@ right order (parents before children) and all photos and recordings in one trans
 the Postgres id counters past the restored ids, and finally compares row counts and file
 checksums with the backup.
 
-Because the Voroa database is reachable only from inside the workspace, the command has to run
-there, on the `khayal-api` service, not on your laptop.
+## Restore into Voroa
 
-1. **Stop traffic:** in Voroa, suspend the `khayal-api` service, so nobody writes while you restore.
+The Voroa database is reachable only from inside the workspace, so the command runs **inside
+the `khayal-api` container**, reached with Voroa's **SSH Access** (free tier: key-only login,
+a shell inside the running container). Your laptop only copies the zip in.
+
+In the commands below, `<service-user>` is the SSH user shown in Voroa → `khayal-api` →
+**SSH Access**. It is personal to your workspace: never write it into this repository.
+
+### Once: an SSH key
+
+In PowerShell on your laptop:
+
+```powershell
+ssh-keygen -t ed25519 -C "khayal-voroa"
+```
+
+Press Enter for the default file (`C:\Users\<you>\.ssh\id_ed25519`) and choose a passphrase.
+Then open the **public** key, `C:\Users\<you>\.ssh\id_ed25519.pub` (one line starting with
+`ssh-ed25519`), and paste it in Voroa → `khayal-api` → **SSH Access** → **Add key**. Never share
+or upload the private key (the file without `.pub`). Test it:
+
+```powershell
+ssh -p 2222 <service-user>@ssh.getvoroa.com
+```
+
+You land in a shell inside the running container; type `exit` to leave.
+
+### The restore
+
+1. **Stop traffic:** in Voroa, suspend the **`khayal-web`** service (the website), so no family
+   uses the app while you restore. Keep **`khayal-api` running**: SSH needs its container.
 2. **A fresh, empty database:** create a new DB in the **Mumbai** region (Starter if you have
-   upgraded), and put its URL in `KHAYAL_DATABASE_URL` on the backend. Keep the old database
+   upgraded), and put its URL in `KHAYAL_DATABASE_URL` on `khayal-api`. Keep the old database
    until the restore is checked.
-3. **Create the tables:** trigger a manual deploy. The pre-deploy command
-   (`alembic upgrade head`) creates every table, at the newest revision. If the backup is from
-   before a newer migration, its revision differs; bring the empty database to the backup's
-   revision first (`python -m alembic -c backend/alembic.ini downgrade <backup revision>`,
-   harmless on an empty database), restore, then `upgrade head` again.
-4. **Put the zip next to the backend:** open a shell on `khayal-api` in the Voroa dashboard and
-   upload the backup zip into a temporary folder there (for example `/tmp/`).
-5. **Restore**, in that shell, from the repository folder:
+3. **Create the tables:** trigger a manual deploy of `khayal-api`. The pre-deploy command
+   (`alembic upgrade head`) creates every table at the newest revision. Wait until the deploy
+   is live: a redeploy replaces the container, and anything copied in before it is lost.
+4. **Copy the zip in**, from the repository folder on your laptop (PowerShell):
 
-   ```
-   cd backend && python -m app.restore_backup /tmp/khayal-backup-2026-11-22-0930.zip
+   ```powershell
+   scp -P 2222 data\backups\voroa\khayal-backup-2026-11-22-0930.zip <service-user>@ssh.getvoroa.com:/tmp/khayal-backup.zip
    ```
 
-   It prints the target (password hidden), then
+   Note the capital `-P` for scp (ssh uses a small `-p`). `/tmp` is not on a persistent disk,
+   which is what you want: the copy disappears on the next redeploy at the latest.
+
+   **If scp is refused** (some SSH gateways allow a shell but not file copies), send the file
+   through a plain SSH connection instead. Use **Git Bash**, not PowerShell (PowerShell can
+   damage binary data in a pipe):
+
+   ```bash
+   ssh -p 2222 <service-user>@ssh.getvoroa.com 'cat > /tmp/khayal-backup.zip' < data/backups/voroa/khayal-backup-2026-11-22-0930.zip
+   ```
+
+   Either way, check that the copy is complete: `Get-FileHash <the zip>` on your laptop (PowerShell)
+   and `sha256sum /tmp/khayal-backup.zip` in the SSH shell must show the same hash (ignore
+   upper/lower case). The restore checks every file inside the zip too, and refuses a damaged one.
+5. **Restore**, in the SSH shell (`ssh -p 2222 <service-user>@ssh.getvoroa.com`):
+
+   ```
+   ls                                  # shows backend/ and frontend/; otherwise cd to the app folder
+   test -n "$KHAYAL_DATABASE_URL$DATABASE_URL" && echo "database set" || echo "MISSING"
+   cd backend
+   python -m app.restore_backup /tmp/khayal-backup.zip
+   ```
+
+   If the second line prints `MISSING`, the shell does not have the service's environment
+   variables: stop and do not restore (it would fill a throwaway SQLite file in the container
+   instead). The command prints the target with the password hidden: it must be the new
+   Postgres database, with file storage `db`. It ends with
    "Done. Row counts and file checksums match the backup." If it says **Refused**, nothing was
-   written; fix what it names (not empty, other revision, damaged zip) and run it again.
-6. Delete the zip from the shell's temporary folder, **resume** `khayal-api`, open
-   `/api/health`, sign in, and check that the people and their recent sessions are there.
-   Anything done after the backup was made is lost; tell the families affected.
+   written; fix what it names and run it again:
+   - *other migration revision* (the backup is older than the deployed code): on this empty
+     database run `python -m alembic downgrade <backup revision>` (from `backend/`, harmless on
+     an empty database), restore, then `python -m alembic upgrade head`;
+   - *not empty*: someone used the app; start again from step 2 with a new database;
+   - *damaged zip*: copy it in again (step 4), or use an older backup.
+6. **Delete the zip** in the SSH shell, then leave:
+
+   ```
+   rm /tmp/khayal-backup.zip
+   exit
+   ```
+
+7. **Resume** `khayal-web`, open `/api/health`, sign in, and check that the people and their
+   recent sessions are there. Anything done after the backup was made is lost; tell the
+   families affected. When everything looks right, delete the old database in Voroa.
 
 ## The script `scripts/backup-voroa.ps1`
 

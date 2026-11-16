@@ -252,7 +252,7 @@ account would be a demo account):
 **Password resets:** there is no email service yet. Admin → **Users** → **Reset link** gives a
 48-hour link to send the person; using it signs out their other sessions.
 
-**Backups:** weekly, Admin → **Download full backup**, saved under `data\backups\voroa\`, newest 8 kept; restore with `python -m app.restore_backup <zip>` into an empty database ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)). Before real families join, upgrade `khayal-db` to **Starter** (₹299/month) for automatic daily backups.
+**Backups:** weekly, Admin → **Download full backup**, saved under `data\backups\voroa\`, newest 8 kept; restore with `python -m app.restore_backup <zip>` into an empty database, run inside `khayal-api` over Voroa's SSH Access ([BACKUP-RESTORE.md](BACKUP-RESTORE.md)). Before real families join, upgrade `khayal-db` to **Starter** (₹299/month) for automatic daily backups.
 
 ## Limits
 
