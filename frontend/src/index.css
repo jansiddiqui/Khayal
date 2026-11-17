@@ -95,3 +95,46 @@ textarea {
 .invite-form[data-touched] :is(input, textarea):invalid {
   border-color: var(--color-danger);
 }
+
+/* ---- Phase C: shared motion and states (src/ui) ---- */
+
+/* Waiting placeholders: a soft light passing over sunken plaster; still under reduced motion. */
+.skeleton {
+  background: linear-gradient(100deg, var(--color-sunken) 30%, color-mix(in oklab, var(--color-sunken), white 55%) 50%, var(--color-sunken) 70%);
+  background-size: 300% 100%;
+  animation: skeleton-light 1.6s var(--ease-calm) infinite;
+}
+@keyframes skeleton-light {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+/* A gentle "let's try another": a small side-to-side settle, never a shake that alarms. */
+@keyframes gentle-nudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+}
+.gentle-nudge { animation: gentle-nudge 360ms var(--ease-calm); }
+
+/* A right answer glows once in leaf green. */
+@keyframes calm-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-success), transparent 40%); }
+  100% { box-shadow: 0 0 0 14px color-mix(in oklab, var(--color-success), transparent 100%); }
+}
+.calm-glow { animation: calm-glow 700ms var(--ease-calm); }
+
+/* Colour tiles light up when tapped. */
+@keyframes tile-tap {
+  0% { filter: brightness(1.35); transform: scale(0.96); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.tile-tap { animation: tile-tap 320ms var(--ease-calm); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .gentle-nudge { animation: none; }
+  .tile-tap { animation: none; }
+  /* The glow still confirms the answer, without movement: a short ring that fades. */
+  .calm-glow { animation-duration: 1ms; box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-success), transparent 50%); }
+}

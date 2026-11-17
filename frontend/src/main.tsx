@@ -6,6 +6,8 @@ import { App } from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import "./index.css";
 import { ReadAloudProvider } from "./readAloud/ReadAloudContext";
+import { FeedbackProvider } from "./ui/feedback";
+import { ToastProvider } from "./ui/Toast";
 
 const queryClient = new QueryClient();
 
@@ -14,9 +16,13 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ReadAloudProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <FeedbackProvider>
+            <ToastProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </ToastProvider>
+          </FeedbackProvider>
         </ReadAloudProvider>
       </AuthProvider>
     </QueryClientProvider>
