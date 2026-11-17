@@ -215,6 +215,8 @@ Patients never type an email or password:
 ## Family photos
 
 - JPG or PNG only, at most 5 MB, at most 5 photos per person. The server checks the actual image (not just the file name), re-encodes it as JPEG at most 800 px on the long side, and drops EXIF data such as GPS location.
+- **Fast on the 0.1-CPU server:** the browser shrinks each photo first (`frontend/src/api/photoResize.ts`: canvas, at most 800 px, JPEG 0.85, no metadata), so a phone photo of a few MB is sent as about 100 KB. The server still checks every photo; a JPEG that is already at most 800 px with no EXIF, comment or XMP (a small sRGB colour profile is allowed) is kept as sent, anything else is re-encoded. Upload routes read the body asynchronously and run database and image work in the thread pool (`backend/app/uploads.py`), so one upload never blocks other requests.
+- Several photos can be chosen at once (up to the 5-photo limit); they upload one after another with a thumbnail, "Uploading 2 of 3 · 45%" and a progress bar. Each upload gives up after 60 s and shows the status and the server's message, with **Try again** (it carries on from the photo that failed).
 - Stored under `data/uploads/family/{patient_id}/` (gitignored). These are private family photos: they are **never** served as static files. The only way to get one is the authenticated photo route, and the frontend shows them from in-memory blobs.
 - **Who is this?** is help, not a test: no scoring. About Today's last question becomes "Who is this?" (one photo, 3 names, a kind reply) once 3 or more people have photos; otherwise it asks the city, or the year if no city is set.
 

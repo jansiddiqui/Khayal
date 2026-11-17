@@ -5,6 +5,7 @@ from app.deps import CurrentCaregiver, CurrentUser, DbSession, ensure_patient_ac
 from app.models import FamilyMember, User
 from app.schemas import FamilyMemberIn, FamilyMemberOut, FamilyPhotoOut
 from app.services import family
+from app.uploads import blocking, content_type, read_body
 
 router = APIRouter(prefix="/patients/{patient_id}/family", tags=["family"])
 
@@ -67,26 +68,28 @@ def delete_family_member(patient_id: int, member_id: int, caregiver: CurrentCare
 async def upload_photo(
     patient_id: int, member_id: int, request: Request, caregiver: CurrentCaregiver, db: DbSession
 ) -> FamilyMemberOut:
-    """The request body is the image itself (Content-Type image/jpeg or image/png)."""
+    """The request body is the image itself (Content-Type image/jpeg or image/png). The browser
+    already sends a small JPEG (frontend/src/api/photoResize.ts); the server checks it
+    and resizes again only if needed. Database and image work run off the event loop (app/uploads.py)."""
+    member = await blocking(_photo_target, db, caregiver, patient_id, member_id)
+    if content_type(request) not in PHOTO_TYPES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only JPG and PNG photos are allowed.")
+    data = await read_body(request, family.MAX_PHOTO_BYTES, "Photos must be 5 MB or smaller.")
+    return await blocking(_add_photo, db, member, data)
+
+
+def _photo_target(db: Session, caregiver: User, patient_id: int, member_id: int) -> FamilyMember:
     ensure_patient_access(db, caregiver, patient_id)
     member = _member(db, patient_id, member_id)
     patient = db.get(User, patient_id)
     if patient is None or not patient.photos_enabled:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Turn on photos for this person first.")
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type not in PHOTO_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only JPG and PNG photos are allowed.")
-    declared = request.headers.get("content-length")
-    if declared is not None and declared.isdigit() and int(declared) > family.MAX_PHOTO_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Photos must be 5 MB or smaller.")
+    return member
 
-    data = bytearray()
-    async for chunk in request.stream():
-        data.extend(chunk)
-        if len(data) > family.MAX_PHOTO_BYTES:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Photos must be 5 MB or smaller.")
+
+def _add_photo(db: Session, member: FamilyMember, data: bytes) -> FamilyMemberOut:
     try:
-        family.add_photo(db, member, bytes(data))
+        family.add_photo(db, member, data)
     except family.TooManyPhotosError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except family.PhotoError as exc:

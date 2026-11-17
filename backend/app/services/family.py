@@ -1,7 +1,9 @@
 """Family members and their private photos.
 
-Photos are JPG/PNG up to 5 MB, re-encoded as JPEG no larger than 800 px on the long
-side (which also drops EXIF metadata such as GPS), at most 5 per person, kept by the
+Photos are JPG/PNG up to 5 MB, stored as JPEG no larger than 800 px on the long side without
+EXIF metadata such as GPS. The browser already resizes them (frontend/src/api/photoResize.ts);
+a JPEG that is already small and clean is kept as sent, anything else is re-encoded here. At
+most 5 per person, kept by the
 storage service (services/storage.py) under the key family/{patient_id}/{id}.jpg. They are
 only ever served by an authenticated route. In the public demo a resized photo must be at
 most 1 MB.
@@ -63,23 +65,57 @@ def prepare_photo(data: bytes) -> bytes:
         if fmt not in ALLOWED_FORMATS:
             raise PhotoError("Only JPG and PNG photos are allowed.")
         with Image.open(io.BytesIO(data)) as img:
-            img = ImageOps.exif_transpose(img)  # keep phone photos the right way up
-            if img.mode in ("RGBA", "LA", "P"):
-                img = img.convert("RGBA")
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                background.paste(img, mask=img.getchannel("A"))
-                img = background
+            if already_small_clean_jpeg(img):
+                img.load()  # decode it fully once, so a broken file is still refused
+                jpeg = data
             else:
-                img = img.convert("RGB")
-            img.thumbnail((MAX_SIDE, MAX_SIDE))
-            out = io.BytesIO()
-            img.save(out, format="JPEG", quality=JPEG_QUALITY, optimize=True)
-            jpeg = out.getvalue()
+                jpeg = _reencode(img)
     except (UnidentifiedImageError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
         raise PhotoError("That file is not a photo we can open.") from exc
     if config.DEMO_MODE and len(jpeg) > DEMO_MAX_STORED_BYTES:
         raise PhotoError("In the demo, photos must be 1 MB or smaller after resizing.")
     return jpeg
+
+
+# What a browser canvas writes into a JPEG: the JFIF header and, in Chrome, a small standard sRGB
+# colour profile (colour information, nothing about the person). No EXIF (GPS, camera), comments
+# or XMP: any of those, or anything else, means the file is re-encoded.
+_PLAIN_JPEG_INFO = frozenset(
+    {"jfif", "jfif_version", "jfif_unit", "jfif_density", "dpi", "progressive", "progression", "adobe", "adobe_transform",
+     "icc_profile"}
+)
+_MAX_ICC_BYTES = 4096
+
+
+def already_small_clean_jpeg(img: Image.Image) -> bool:
+    """True for a JPEG that is already what we would store: at most MAX_SIDE px, plain RGB or
+    greyscale, with no personal metadata. The browser resizes photos like this before uploading
+    (frontend/src/api/photoResize.ts), so the slow server skips re-encoding them."""
+    return (
+        img.format == "JPEG"
+        and max(img.size) <= MAX_SIDE
+        and img.mode in ("RGB", "L")
+        and set(img.info) <= _PLAIN_JPEG_INFO
+        and len(img.info.get("icc_profile") or b"") <= _MAX_ICC_BYTES
+        and len(img.getexif()) == 0
+    )
+
+
+def _reencode(img: Image.Image) -> bytes:
+    """Any other photo: upright, flattened onto white, at most MAX_SIDE px, JPEG without metadata."""
+    img = ImageOps.exif_transpose(img)  # keep phone photos the right way up
+    if img.mode in ("RGBA", "LA", "P"):
+        img = img.convert("RGBA")
+        background = Image.new("RGB", img.size, (255, 255, 255))
+        background.paste(img, mask=img.getchannel("A"))
+        img = background
+    else:
+        img = img.convert("RGB")
+    img.thumbnail((MAX_SIDE, MAX_SIDE))
+    img.info = {}  # Pillow would otherwise copy some metadata (such as a JPEG comment) into the new file
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    return out.getvalue()
 
 
 def add_photo(db: Session, member: FamilyMember, data: bytes) -> str:

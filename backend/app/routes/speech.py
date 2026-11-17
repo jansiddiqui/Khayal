@@ -6,6 +6,7 @@ from app.deps import CurrentPatient, CurrentUser, DbSession, Now, ensure_patient
 from app.models import SpeechSample
 from app.schemas import SpeechSampleOut
 from app.services import speech
+from app.uploads import blocking, content_type, read_body
 
 router = APIRouter(tags=["speech"])
 
@@ -33,24 +34,15 @@ async def upload_recording(
     """The request body is the recording itself (Content-Type audio/webm or audio/ogg)."""
     if not patient.voice_task_enabled:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The voice task is not turned on.")
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type not in speech.AUDIO_TYPES:
+    kind = content_type(request)
+    if kind not in speech.AUDIO_TYPES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Recordings must be WebM or Ogg audio.")
     if duration_ms > speech.max_duration_ms():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="The recording length is not valid.")
-    limit = speech.max_audio_bytes()
-    too_big = HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=speech.too_big_message())
-    declared = request.headers.get("content-length")
-    if declared is not None and declared.isdigit() and int(declared) > limit:
-        raise too_big
-
-    data = bytearray()
-    async for chunk in request.stream():
-        data.extend(chunk)
-        if len(data) > limit:
-            raise too_big
+    data = await read_body(request, speech.max_audio_bytes(), speech.too_big_message())
     try:
-        sample = speech.save_recording(db, patient, bytes(data), content_type, duration_ms, now)
+        # Storage, the speech model and the database block: run them off the event loop (app/uploads.py).
+        sample = await blocking(speech.save_recording, db, patient, data, kind, duration_ms, now)
     except speech.AudioError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     return _out(sample)

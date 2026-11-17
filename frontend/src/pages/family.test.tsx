@@ -7,7 +7,7 @@ import { copy } from "../copy";
 import { buildQuestion, buildWhoIsThisQuestion, canAskWhoIsThis } from "../games/dailyOrientation/logic";
 import { DailyOrientationRound } from "../games/dailyOrientation/DailyOrientation";
 import { renderWithProviders } from "../test/renderWithProviders";
-import { photoProblem } from "./caregiver/Family";
+import { photoProblem, pickPhotos } from "./caregiver/Family";
 
 vi.mock("../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/client")>();
@@ -189,6 +189,16 @@ describe("caregiver family page", () => {
     api.listFamily.mockResolvedValue([rahul]);
   });
 
+  it("picks the good photos, up to the places left", () => {
+    const jpg = (n: string) => new File(["x"], `${n}.jpg`, { type: "image/jpeg" });
+    const gif = new File(["x"], "c.gif", { type: "image/gif" });
+    const mixed = pickPhotos([jpg("a"), gif, jpg("b")], 5);
+    expect(mixed.accepted.map((f) => f.name)).toEqual(["a.jpg", "b.jpg"]);
+    expect(mixed.notes).toEqual(["c.gif: Only JPG and PNG photos are allowed."]);
+    expect(pickPhotos([jpg("a"), jpg("b"), jpg("c")], 1).notes).toEqual(["Only 1 more photo fit (5 per person), so the first 1 is added."]);
+    expect(pickPhotos([jpg("a")], 0)).toEqual({ accepted: [], notes: ["This person already has 5 photos."] });
+  });
+
   it("checks photo files before uploading", () => {
     const file = (type: string, size: number) => new File([new Uint8Array(size)], "p", { type });
     expect(photoProblem(file("image/jpeg", 1000))).toBeNull();
@@ -221,9 +231,9 @@ describe("caregiver family page", () => {
 
     const card = within(await screen.findByRole("listitem", { name: "Rahul" }));
     expect(card.getAllByRole("img")).toHaveLength(2);
-    expect(card.getByText("2 / 5 photos · JPG or PNG, up to 5 MB")).toBeInTheDocument();
+    expect(card.getByText("2 / 5 photos · JPG or PNG, up to 5 MB each")).toBeInTheDocument();
 
-    const input = card.getByLabelText("Add photo") as HTMLInputElement;
+    const input = card.getByLabelText("Add photos") as HTMLInputElement;
     const gif = new File(["x"], "a.gif", { type: "image/gif" });
     await act(async () => fireEvent.change(input, { target: { files: [gif] } }));
     expect(card.getByRole("alert")).toHaveTextContent("Only JPG and PNG photos are allowed.");
@@ -231,7 +241,7 @@ describe("caregiver family page", () => {
 
     const jpg = new File(["x"], "a.jpg", { type: "image/jpeg" });
     await act(async () => fireEvent.change(input, { target: { files: [jpg] } }));
-    await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledWith(2, 1, jpg));
+    await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledWith(2, 1, jpg, expect.any(Function)));
 
     fireEvent.click(card.getByRole("button", { name: "Remove Rahul photo 1" }));
     await waitFor(() => expect(api.deleteFamilyPhoto).toHaveBeenCalledWith(2, 1, rahul.photos[0]!.id));
@@ -254,22 +264,71 @@ describe("caregiver family page", () => {
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
     const card = within(await screen.findByRole("listitem", { name: "Rahul" }));
     const jpg = new File([new Uint8Array(25_000)], "a.jpg", { type: "image/jpeg" });
-    await act(async () => fireEvent.change(card.getByLabelText("Add photo"), { target: { files: [jpg] } }));
+    await act(async () => fireEvent.change(card.getByLabelText("Add photos"), { target: { files: [jpg] } }));
 
     expect(await card.findByRole("alert")).toHaveTextContent("Could not upload the photo. No answer from the server after 60 seconds.");
-    expect(card.getByText("Add photo")).toBeInTheDocument(); // not stuck on "Uploading…"
+    expect(await card.findByText("Add photos")).toBeInTheDocument(); // not stuck on "Uploading…"
     fireEvent.click(card.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledTimes(2));
-    expect(api.uploadFamilyPhoto).toHaveBeenLastCalledWith(2, 1, jpg);
+    expect(api.uploadFamilyPhoto).toHaveBeenLastCalledWith(2, 1, jpg, expect.any(Function));
     await waitFor(() => expect(card.queryByRole("alert")).not.toBeInTheDocument());
     expect(card.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("uploads several photos one after another, with a preview and the percentage", async () => {
+    // Meena has 1 photo, so 4 more fit; 5 are chosen.
+    const files = ["1", "2", "3", "4", "5"].map((n) => new File([n], `p${n}.jpg`, { type: "image/jpeg" }));
+    const sent: string[] = [];
+    let finishFirst: () => void = () => undefined;
+    api.uploadFamilyPhoto.mockImplementation(async (_patient, _member, photo, onProgress) => {
+      sent.push((photo as File).name);
+      onProgress?.(0.45);
+      if (sent.length === 1) await new Promise<void>((resolve) => (finishFirst = resolve));
+      return meena;
+    });
+    api.listFamily.mockResolvedValue([meena]);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    const card = within(await screen.findByRole("listitem", { name: "Meena" }));
+    await act(async () => fireEvent.change(card.getByLabelText("Add photos"), { target: { files } }));
+
+    // While the first one is on its way: its thumbnail, "1 of 4" and 45%, and no second upload yet.
+    expect(await card.findByRole("img", { name: "Uploading photo 1 of 4" })).toHaveAttribute("src", "blob:test-photo");
+    expect(card.getByRole("progressbar", { name: "Uploading photo 1 of 4" })).toHaveAttribute("value", "45");
+    expect(card.getByText("Uploading 1 of 4 · 45%")).toBeInTheDocument();
+    expect(card.getByText("Uploading…")).toBeInTheDocument();
+    expect(sent).toEqual(["p1.jpg"]);
+    expect(card.getByRole("alert")).toHaveTextContent("Only 4 more photos fit (5 per person), so the first 4 are added.");
+
+    await act(async () => finishFirst());
+    await waitFor(() => expect(sent).toEqual(["p1.jpg", "p2.jpg", "p3.jpg", "p4.jpg"]));
+    await waitFor(() => expect(card.queryByRole("progressbar")).not.toBeInTheDocument());
+  });
+
+  it("a failed photo in a batch stops the rest, and Try again goes on from it", async () => {
+    const files = ["1", "2", "3"].map((n) => new File([n], `p${n}.jpg`, { type: "image/jpeg" }));
+    const sent: string[] = [];
+    let calls = 0;
+    api.uploadFamilyPhoto.mockImplementation(async (_patient, _member, photo) => {
+      calls += 1;
+      if (calls === 2) throw new apiClient.UploadTimeoutError(60_000);
+      sent.push((photo as File).name);
+      return anil;
+    });
+    api.listFamily.mockResolvedValue([anil]);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    const card = within(await screen.findByRole("listitem", { name: "Anil" }));
+    await act(async () => fireEvent.change(card.getByLabelText("Add photos"), { target: { files } }));
+    expect(await card.findByRole("alert")).toHaveTextContent("Could not upload p2.jpg. No answer from the server after 60 seconds.");
+    expect(sent).toEqual(["p1.jpg"]);
+    fireEvent.click(card.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(sent).toEqual(["p1.jpg", "p2.jpg", "p3.jpg"]));
   });
 
   it("stops new uploads at 5 photos and shows custom relations when editing", async () => {
     api.listFamily.mockResolvedValue([person(9, "Raju", "Neighbour", 5)]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
     const card = within(await screen.findByRole("listitem", { name: "Raju" }));
-    expect(card.getByLabelText("Add photo")).toBeDisabled();
+    expect(card.getByLabelText("Add photos")).toBeDisabled();
     fireEvent.click(card.getByRole("button", { name: "Edit" }));
     const form = within(screen.getByRole("form", { name: "Save changes" }));
     expect(form.getByLabelText("Relation")).toHaveValue("Other");

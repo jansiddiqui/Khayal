@@ -1,11 +1,13 @@
+import asyncio
 import io
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import Image, ImageCms
 
-from app.services import family
+from app.services import elders, family
 from tests.conftest import Register, bearer, link_patient
 
 
@@ -158,3 +160,78 @@ def test_photo_ids_cannot_escape_the_folder(client: TestClient, register: Regist
         assert client.get(f"{s.base}/{member_id}/photos/{bad}", headers=s.cg).status_code == 404
     # An unknown member id is simply not found.
     assert client.get(f"/api/patients/{s.pid}/family/999/photos/{'0' * 32}", headers=s.cg).status_code == 404
+
+
+def _jpeg(size: tuple[int, int], **save: object) -> bytes:
+    out = io.BytesIO()
+    Image.new("RGB", size, (14, 94, 99)).save(out, format="JPEG", quality=85, **save)
+    return out.getvalue()
+
+
+def test_small_clean_jpeg_from_the_browser_is_stored_as_sent(client: TestClient, register: Register, upload_dir: Path) -> None:
+    """The browser already resized it (max 800 px, no metadata): the slow server keeps the bytes."""
+    s = Setup(client, register)
+    member = s.add()
+    # Chrome's canvas adds a small standard sRGB colour profile; that is fine to keep.
+    srgb = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    for sent in (_jpeg((800, 600)), _jpeg((600, 800), icc_profile=srgb)):
+        photo = s.upload(member["id"], sent).json()["photos"][-1]
+        assert (upload_dir / "family" / str(s.pid) / f"{photo['id']}.jpg").read_bytes() == sent
+
+
+def test_small_jpegs_with_metadata_are_still_re_encoded(client: TestClient, register: Register, upload_dir: Path) -> None:
+    s = Setup(client, register)
+    member = s.add()
+    exif = Image.Exif()
+    exif[0x8825] = {1: "N", 2: (12.0, 58.0, 0.0)}  # GPS
+    exif[0x0112] = 6  # orientation: rotate
+    sizes = []
+    for sent in (
+        _jpeg((400, 300), exif=exif),
+        _jpeg((400, 300), icc_profile=b"x" * 5000),  # an unusually large profile: not what a browser sends
+        _jpeg((400, 300), comment=b"a private note"),
+    ):
+        photo = s.upload(member["id"], sent).json()["photos"][-1]
+        stored = (upload_dir / "family" / str(s.pid) / f"{photo['id']}.jpg").read_bytes()
+        assert stored != sent
+        with Image.open(io.BytesIO(stored)) as img:
+            assert len(img.getexif()) == 0
+            assert "icc_profile" not in img.info and "comment" not in img.info
+            sizes.append(img.size)
+    assert sizes == [(300, 400), (400, 300), (400, 300)]  # the EXIF one was turned upright first
+
+
+def test_small_jpeg_that_is_cut_off_is_refused(client: TestClient, register: Register) -> None:
+    s = Setup(client, register)
+    member_id = s.add()["id"]
+    sent = _jpeg((800, 600))
+    assert s.upload(member_id, sent[: len(sent) // 2]).status_code == 422
+
+
+def test_upload_work_runs_off_the_event_loop(client: TestClient, register: Register, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pillow and the database must not block the event loop (0.1 CPU on the free server)."""
+    seen: list[bool] = []
+
+    def on_event_loop() -> bool:
+        try:
+            asyncio.get_running_loop()
+            return True
+        except RuntimeError:
+            return False
+
+    real_add, real_set = family.add_photo, elders.set_photo
+
+    def add_photo(*args: Any, **kwargs: Any) -> str:
+        seen.append(on_event_loop())
+        return real_add(*args, **kwargs)
+
+    def set_photo(*args: Any, **kwargs: Any) -> None:
+        seen.append(on_event_loop())
+        real_set(*args, **kwargs)
+
+    monkeypatch.setattr(family, "add_photo", add_photo)
+    monkeypatch.setattr(elders, "set_photo", set_photo)
+    s = Setup(client, register)
+    assert s.upload(s.add()["id"], _jpeg((200, 200))).status_code == 201
+    assert client.post(f"/api/patients/{s.pid}/photo", content=_jpeg((200, 200)), headers={**s.cg, "Content-Type": "image/jpeg"}).status_code == 200
+    assert seen == [False, False]
