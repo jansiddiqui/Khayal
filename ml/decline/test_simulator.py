@@ -56,7 +56,8 @@ def test_delayed_recall_follows_word_recall_only_when_another_game_comes_after()
 
 def test_profiles_separate_on_the_real_decline_rule() -> None:
     statuses: dict[str, list[str]] = defaultdict(list)
-    for seed in range(6):
+    # 24 patients per profile: with 6, one unlucky seed moves the share by several points.
+    for seed in range(24):
         for profile in ("healthy", "moderate"):
             sessions = simulate_patient(seed, profile, 90, np.random.default_rng(seed), START)
             for game in CORE:

@@ -21,8 +21,14 @@ LEGACY_CORE: tuple[GameType, ...] = (
     GameType.reaction_tap,
 )
 
-# New patients. One game per domain where the games exist (docs/games/research.md D7).
-DEFAULT_CORE: tuple[GameType, ...] = LEGACY_CORE
+# New patients: one game per domain (docs/games/research.md D7): verbal memory, visuospatial
+# memory, executive/speed, everyday function.
+DEFAULT_CORE: tuple[GameType, ...] = (
+    GameType.word_recall,
+    GameType.object_location,
+    GameType.colour_trails,
+    GameType.money_handling,
+)
 
 # The domain each levelled game mainly tests, shown to caregivers when they change the set.
 Domain = str

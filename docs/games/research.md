@@ -1,7 +1,7 @@
 # Games v2: research basis and design (for review before building)
 
-Status: **reviewed, decisions D1–D8 accepted (section 6)**. Nothing is built yet: the build
-waits for Phase C (the UX redesign). Branch `games-v2`.
+Status: **reviewed, decisions D1–D8 accepted (section 6), built in step 2** (branch `games-v2`,
+after Phase C).
 
 Every reference below was checked with a web search on 2026-11-17: title, authors, year,
 journal, volume/pages and DOI. Where one part could not be confirmed, it says so. References
@@ -359,8 +359,13 @@ UX redesign, so the new games use the new components.
 
   *Accepted: (a).* It is recorded in CLAUDE.md section 7 ("Core set"). With 4 core games and 2
   slots a day, each core game comes round about every 2 days, so a baseline takes about 30 days,
-  as now. The default set, and what existing patients get, is settled when building, from these
-  domains: verbal memory, visuospatial memory, executive/speed, visuospatial/everyday function.
+  as now. **Settled when building (step 2):** the default set is Remember the Words (verbal
+  memory), Where did it go? (visuospatial memory), Join in order (executive/speed) and Market day
+  (everyday function). Patients who had already played keep their 4 earlier games (Find the Pairs,
+  Follow the Colours, Remember the Words, Tap When Green), so their baselines keep counting. With
+  the new default the decline evaluation (`ml/results/decline_eval.md`, rule B) gives accuracy
+  0.929, false alarms 0.088, MCI detected 0.784 and moderate 0.988, close to the earlier 4 games
+  (0.944, 0.104, 0.792, 0.988).
 - **D8, CANTAB PAL is a proprietary test:** we copy the *task idea* only, with our own layout,
   objects and wording, and never use the name "PAL" in the patient UI. The same applies to the
   CTT (PAR) and the CDT.

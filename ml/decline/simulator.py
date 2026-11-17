@@ -52,7 +52,7 @@ ORIENTATION = "daily_orientation"
 DELAYED = "word_recall_delayed"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span", "object_location")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
-CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
+CORE: tuple[str, ...] = ("word_recall", "object_location", "colour_trails", "money_handling")
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall", "spatial_span", "object_location"})
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
