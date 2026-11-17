@@ -117,7 +117,7 @@ The caregiver UI can be a normal dense dashboard.
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
 - **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
 - **PlayerLevel**: patient_id, game_type, current_level (1–10), updated_at
-- **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, days_of_week, active
+- **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, repeat (`once` | `daily` | `weekly_days`), on_date (once), start_date + optional end_date (daily / weekly_days), days_of_week (weekly_days), active. Dates are days on the app clock; a reminder whose day or end date has passed is listed under "Past reminders" (kept with its history).
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
 - **SpeechSample**: id, patient_id, audio_path, content_type, recorded_at, duration_ms, transcript (nullable), risk_score (nullable), model_version
