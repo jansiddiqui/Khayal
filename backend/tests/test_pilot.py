@@ -267,6 +267,9 @@ def test_paired_devices_are_listed_and_revocable(client: TestClient) -> None:
     tablet = pair("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Safari/604.1")
     listed = client.get(f"/api/patients/{pid}/devices", headers=care).json()
     assert sorted(d["device_label"] for d in listed) == ["Android phone · Chrome", "iPad · Safari"]
+    # The caregiver's list says when the elder last used Khayal (here: just paired).
+    summary = next(p for p in client.get("/api/patients", headers=care).json() if p["id"] == pid)
+    assert summary["last_active_at"] is not None
 
     phone_id = next(d["id"] for d in listed if d["device_label"].startswith("Android"))
     assert client.post(f"/api/patients/{pid}/devices/{phone_id}/revoke", headers=care).status_code == 204

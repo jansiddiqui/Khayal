@@ -230,6 +230,9 @@ describe("caregiver", () => {
     expect(await screen.findByText("Kamala Devi")).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("not a medical device");
 
+    // With someone already added, the form waits behind a button instead of filling half the page.
+    expect(screen.queryByLabelText("Their name")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add another person" }));
     fireEvent.change(screen.getByLabelText("Their name"), { target: { value: "Rahim Khan" } });
     fireEvent.change(screen.getByLabelText(/City/), { target: { value: "Pune" } });
     const add = screen.getByRole("button", { name: "Add" });

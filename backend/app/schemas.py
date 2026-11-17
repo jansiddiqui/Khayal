@@ -507,6 +507,8 @@ class PatientSummaryOut(PatientOut):
 
     cognitive_index: float | None
     cognitive_status: IndexStatus
+    # When they last used Khayal (device activity or a finished game); None if never.
+    last_active_at: datetime | None = None
 
 
 class TrendPointOut(BaseModel):

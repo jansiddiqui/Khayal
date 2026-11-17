@@ -1,20 +1,29 @@
+import { ChevronRight, UserPlus, Users } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "motion/react";
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { addElder, errorDetail, listPatients, uploadElderPhoto, type AddElderInput, type Patient } from "../../api/client";
 import { Disclaimer } from "../../components/caregiver/Disclaimer";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
-
-const input = "rounded-md border border-line-strong bg-surface px-3 py-2";
+import { ActiveState, LastUpdated } from "../../components/caregiver/LiveState";
+import { Button } from "../../ui/Button";
+import { TextInput } from "../../ui/Field";
+import { calm, DURATION, useLessMotion } from "../../ui/motion";
+import { Skeleton } from "../../ui/Skeleton";
+import { EmptyState } from "../../ui/States";
+import { useToast } from "../../ui/Toast";
 
 /**
  * Add the elder you look after (CLAUDE.md section 11): no email for them; their device pairs
  * with a 6-digit code. The consents are recorded with the policy version.
  */
-function AddElderForm() {
+function AddElderForm({ onAdded }: { onAdded?: () => void }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const [tried, setTried] = useState(false);
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [guardian, setGuardian] = useState(false);
@@ -31,6 +40,9 @@ function AddElderForm() {
     },
     onSuccess: (elder) => {
       setAdded(elder);
+      setTried(false);
+      toast.show({ message: `Added ${elder.name}. Next, pair their phone on their page.` });
+      onAdded?.();
       setName("");
       setCity("");
       setGuardian(false);
@@ -45,7 +57,8 @@ function AddElderForm() {
   const first = name.trim().split(/\s+/)[0] || "they";
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!guardian || !basis) return;
+    setTried(true);
+    if (!name.trim() || !guardian || !basis) return;
     add.mutate({ name, city: city || undefined, is_family_or_guardian: true, basis, photos, voice });
   }
 
@@ -55,14 +68,23 @@ function AddElderForm() {
         Add the person you look after
       </h2>
       <p className="text-ink-muted">No email is needed for them. Their phone or tablet signs in with a 6-digit code you make on their page.</p>
-      <label className="flex flex-col gap-1">
-        <span className="text-ink-soft">Their name</span>
-        <input required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} className={input} />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-ink-soft">City (for the daily “About Today” game)</span>
-        <input maxLength={80} value={city} onChange={(e) => setCity(e.target.value)} className={input} />
-      </label>
+      <TextInput
+        label="Their name"
+        required
+        maxLength={120}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        error={name.trim() ? null : "Please write their name, as the family calls them."}
+        forceError={tried}
+        autoComplete="off"
+      />
+      <TextInput
+        label="City (for the daily “About Today” game)"
+        maxLength={80}
+        value={city}
+        onChange={(e) => setCity(e.target.value)}
+        hint="Optional. Used for the question “Which city are you in?”."
+      />
 
       <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
         <legend className="px-1 font-medium">Consent</legend>
@@ -103,13 +125,12 @@ function AddElderForm() {
       <p className="text-ink-muted">
         By adding them you agree to the <Link to="/privacy" className="underline">privacy policy</Link> on their behalf.
       </p>
-      <button
-        type="submit"
-        disabled={add.isPending || !guardian || !basis}
-        className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
-      >
-        {add.isPending ? "Adding…" : "Add"}
-      </button>
+      <Button type="submit" variant="primary" icon={<UserPlus />} loading={add.isPending} disabled={!guardian || !basis} className="self-start">
+        Add
+      </Button>
+      {tried && (!guardian || !basis) && (
+        <p className="text-sm text-danger">Please confirm the consent above (both parts) before adding them.</p>
+      )}
       {add.isError && (
         <p role="alert" className="text-danger">
           {errorDetail(add.error) ?? "Could not add them. Try again."}
@@ -128,17 +149,47 @@ function AddElderForm() {
 }
 
 export function CaregiverDashboard() {
-  const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients });
+  const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients, refetchInterval: 60_000 });
+  const navigate = useNavigate();
+  const less = useLessMotion();
+  const [adding, setAdding] = useState(false);
+  const none = patients.isSuccess && patients.data.length === 0;
+  // With nobody added yet the form is the next step, so it is open; otherwise it waits behind a button.
+  const showForm = none || adding;
 
   return (
-    <CaregiverLayout title="Dashboard">
-      <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-        <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-          <h2 className="text-lg font-semibold">The people you look after</h2>
-          {patients.isPending && <p className="text-ink-muted">Loading…</p>}
+    <CaregiverLayout
+      title="Dashboard"
+      meta={
+        patients.isSuccess && (
+          <LastUpdated updatedAt={patients.dataUpdatedAt} fetching={patients.isFetching} onRefresh={() => void patients.refetch()} />
+        )
+      }
+    >
+      <div className={`grid gap-6 ${showForm ? "md:grid-cols-[2fr_1fr]" : ""}`}>
+        <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4" aria-labelledby="people-title">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="people-title" className="text-lg font-semibold">
+              The people you look after
+            </h2>
+            {!showForm && (
+              <Button size="sm" icon={<UserPlus />} onClick={() => setAdding(true)}>
+                Add another person
+              </Button>
+            )}
+          </div>
+          {patients.isPending && (
+            <div role="status" aria-busy="true" aria-label="Loading the people you look after" className="flex flex-col gap-3 py-1">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-9 w-full" />
+              ))}
+            </div>
+          )}
           {patients.isError && <LoadError message="Could not load the people you look after." onRetry={() => void patients.refetch()} />}
-          {patients.isSuccess && patients.data.length === 0 && (
-            <p className="text-ink-muted">Nobody yet. Add the person you look after with the form.</p>
+          {none && (
+            <EmptyState icon={<Users />} title="Nobody here yet">
+              Add the person you look after with the form. Then pair their phone with a 6-digit code.
+            </EmptyState>
           )}
           {patients.isSuccess && patients.data.length > 0 && (
             <table role="table" className="stack-table w-full text-left">
@@ -147,22 +198,44 @@ export function CaregiverDashboard() {
                   <th role="columnheader" className="py-2 pr-4 font-medium">Name</th>
                   <th role="columnheader" className="py-2 pr-4 font-medium">Status</th>
                   <th role="columnheader" className="py-2 pr-4 font-medium">Index</th>
+                  <th role="columnheader" className="py-2 pr-4 font-medium">Today</th>
                   <th role="columnheader" className="py-2 font-medium">City</th>
                 </tr>
               </thead>
               <tbody role="rowgroup">
                 {patients.data.map((p) => (
-                  <tr role="row" key={p.id} className="border-b border-line last:border-0">
-                    <td role="cell" data-label="Name" className="py-2 pr-4">
-                      <Link to={`/caregiver/patients/${p.id}`} className="text-brand-dark underline">
+                  <tr
+                    role="row"
+                    key={p.id}
+                    onClick={(event) => {
+                      // The whole row opens their page for a mouse; the name stays the real link.
+                      if ((event.target as HTMLElement).closest("a")) return;
+                      navigate(`/caregiver/patients/${p.id}`);
+                    }}
+                    className="group cursor-pointer border-b border-line transition-colors duration-150 ease-calm last:border-0 hover:bg-brand-soft"
+                  >
+                    <td role="cell" data-label="Name" className="py-2.5 pr-4 pl-1">
+                      <Link
+                        to={`/caregiver/patients/${p.id}`}
+                        className="inline-flex items-center gap-1 font-medium text-brand-dark underline-offset-2 hover:underline"
+                      >
                         {p.name}
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="size-4 opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
+                        />
                       </Link>
                     </td>
-                    <td role="cell" data-label="Status" className="py-2 pr-4">
+                    <td role="cell" data-label="Status" className="py-2.5 pr-4">
                       <StatusBadge status={p.cognitive_status} />
                     </td>
-                    <td role="cell" data-label="Index" className="py-2 pr-4 tabular-nums">{p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}</td>
-                    <td role="cell" data-label="City" className="py-2 text-ink-soft">{p.city ?? "—"}</td>
+                    <td role="cell" data-label="Index" className="py-2.5 pr-4 tabular-nums">
+                      {p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}
+                    </td>
+                    <td role="cell" data-label="Today" className="py-2.5 pr-4">
+                      <ActiveState lastActiveAt={p.last_active_at} />
+                    </td>
+                    <td role="cell" data-label="City" className="py-2.5 text-ink-soft">{p.city ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -175,9 +248,25 @@ export function CaregiverDashboard() {
           <Disclaimer />
         </section>
 
-        <section className="rounded-lg border border-line bg-surface p-4">
-          <AddElderForm />
-        </section>
+        <AnimatePresence initial={false}>
+          {showForm && (
+            <motion.section
+              key="add"
+              initial={less ? { opacity: 0 } : { opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              transition={calm(DURATION.base)}
+              className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4"
+            >
+              <AddElderForm onAdded={() => setAdding(false)} />
+              {!none && (
+                <Button size="sm" variant="quiet" className="self-start" onClick={() => setAdding(false)}>
+                  Close
+                </Button>
+              )}
+            </motion.section>
+          )}
+        </AnimatePresence>
       </div>
     </CaregiverLayout>
   );

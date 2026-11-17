@@ -273,6 +273,8 @@ export type DeclineStatus = "insufficient" | "stable" | "warning" | "critical";
 export interface PatientSummary extends Patient {
   cognitive_index: number | null;
   cognitive_status: IndexStatus;
+  /** When they last used Khayal (device activity or a finished game); null if never. */
+  last_active_at?: string | null;
 }
 
 export async function listPatients(): Promise<PatientSummary[]> {
