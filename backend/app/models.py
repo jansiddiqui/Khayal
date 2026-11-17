@@ -131,7 +131,20 @@ class ReminderType(str, Enum):
     other = "other"
 
 
+class ReminderRepeat(str, Enum):
+    once = "once"
+    daily = "daily"
+    weekly_days = "weekly_days"
+
+
 class Reminder(Base):
+    """A reminder and when it repeats (services/reminders.py `scheduled_on`):
+
+    - once: only on `on_date`;
+    - daily: every day from `start_date` to `end_date` (both optional, inclusive);
+    - weekly_days: on `days_of_week`, from `start_date` to `end_date`.
+    Dates are days on the app's local clock (services/clock.py)."""
+
     __tablename__ = "reminders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -140,8 +153,17 @@ class Reminder(Base):
     type: Mapped[ReminderType] = mapped_column(SAEnum(ReminderType, native_enum=False, length=16))
     # Local wall-clock time (app clock), e.g. 09:00.
     time_of_day: Mapped[time] = mapped_column(Time)
-    # Weekdays it repeats on, 0 = Monday ... 6 = Sunday.
+    repeat: Mapped[ReminderRepeat] = mapped_column(
+        SAEnum(ReminderRepeat, native_enum=False, length=16), default=ReminderRepeat.weekly_days,
+        server_default=ReminderRepeat.weekly_days.value,
+    )
+    # Weekdays it repeats on, 0 = Monday ... 6 = Sunday (weekly_days; all 7 for daily; empty for once).
     days_of_week: Mapped[list[int]] = mapped_column(JSON)
+    # once: the day it is for.
+    on_date: Mapped[date | None] = mapped_column(Date, default=None)
+    # daily / weekly_days: first and last day (inclusive). No start = since it was made; no end = until stopped.
+    start_date: Mapped[date | None] = mapped_column(Date, default=None)
+    end_date: Mapped[date | None] = mapped_column(Date, default=None)
     active: Mapped[bool] = mapped_column(default=True)
     # Occurrences before this are never counted as missed.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

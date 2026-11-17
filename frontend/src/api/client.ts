@@ -226,6 +226,8 @@ export interface AppConfig {
   demo_account_days: number;
   /** Where people can write to the team; null when not configured. */
   contact_email?: string | null;
+  /** The app clock's offset from UTC in minutes (IST = 330): reminder dates are days on this clock. */
+  utc_offset_minutes?: number;
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
@@ -565,20 +567,35 @@ export interface Reminder {
   title: string;
   type: ReminderType;
   time_of_day: TimeOfDay;
-  /** 0 = Monday ... 6 = Sunday */
+  repeat: ReminderRepeat;
+  /** 0 = Monday ... 6 = Sunday (all 7 for "daily", none for "once"). */
   days_of_week: number[];
+  /** "YYYY-MM-DD" on the app clock: the day of a one-time reminder. */
+  on_date: string | null;
+  /** First and last day of a repeating reminder (inclusive); no end = until stopped. */
+  start_date: string | null;
+  end_date: string | null;
   active: boolean;
+  /** Its one day or its end date has passed: listed under "Past reminders". */
+  past: boolean;
   /** Today's status, or null when not scheduled today. */
   today_status: ReminderStatus | null;
   /** Who marked today's occurrence done, if anyone. */
   today_marked_by: "patient" | "caregiver" | null;
 }
 
+/** "once": on `on_date`. "daily": every day. "weekly_days": on `days_of_week`. */
+export type ReminderRepeat = "once" | "daily" | "weekly_days";
+
 export interface ReminderInput {
   title: string;
   type: ReminderType;
   time_of_day: string;
+  repeat: ReminderRepeat;
   days_of_week: number[];
+  on_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   active: boolean;
 }
 

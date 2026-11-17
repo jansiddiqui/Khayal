@@ -7,13 +7,24 @@ or more were missed in the last 48 hours.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Alert, AlertType, MarkedBy, Reminder, ReminderLog, ReminderStatus, Role, Severity, User
+from app.models import (
+    Alert,
+    AlertType,
+    MarkedBy,
+    Reminder,
+    ReminderLog,
+    ReminderRepeat,
+    ReminderStatus,
+    Role,
+    Severity,
+    User,
+)
 from app.services.clock import as_utc, at_local, local
 
 # How long after its time a reminder can still be marked done before it counts as missed.
@@ -27,7 +38,34 @@ TodayStatus = Literal["done", "missed", "pending"]
 
 
 def scheduled_on(reminder: Reminder, day: date) -> bool:
-    return day.weekday() in reminder.days_of_week
+    """Whether the reminder applies on `day` (a local date): its repeat rule, within its start and end dates."""
+    if reminder.repeat == ReminderRepeat.once:
+        return reminder.on_date == day
+    if reminder.start_date is not None and day < reminder.start_date:
+        return False
+    if reminder.end_date is not None and day > reminder.end_date:
+        return False
+    return reminder.repeat == ReminderRepeat.daily or day.weekday() in reminder.days_of_week
+
+
+def last_day(reminder: Reminder) -> date | None:
+    """The last day the reminder applies on, or None while it repeats until stopped."""
+    return reminder.on_date if reminder.repeat == ReminderRepeat.once else reminder.end_date
+
+
+def is_past(reminder: Reminder, today: date) -> bool:
+    """Its one day, or its end date, is before today: it moves to "Past reminders" (kept, with its history)."""
+    end = last_day(reminder)
+    return end is not None and end < today
+
+
+class PastTimeError(ValueError):
+    """A one-time reminder for a moment that has already passed."""
+
+
+def check_not_past(repeat: ReminderRepeat, on_date: date | None, time_of_day: time, now: datetime) -> None:
+    if repeat == ReminderRepeat.once and on_date is not None and at_local(on_date, time_of_day) <= now:
+        raise PastTimeError("Pick a date and time that have not passed yet.")
 
 
 def occurrence(reminder: Reminder, day: date) -> datetime:

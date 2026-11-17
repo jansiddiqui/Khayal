@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter
 
 from app import config
@@ -20,4 +22,10 @@ def app_config() -> AppConfigOut:
         recording_limit_seconds=speech.recording_limit_seconds(),
         demo_account_days=config.DEMO_ACCOUNT_DAYS,
         contact_email=config.CONTACT_EMAIL,
+        utc_offset_minutes=_utc_offset_minutes(),
     )
+
+
+def _utc_offset_minutes() -> int:
+    offset = datetime.now(timezone.utc).astimezone(config.LOCAL_TIMEZONE).utcoffset()
+    return int(offset.total_seconds() // 60) if offset is not None else 0

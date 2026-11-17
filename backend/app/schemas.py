@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderType, Role, Severity
+from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderRepeat, ReminderType, Role, Severity
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -28,6 +28,8 @@ class AppConfigOut(BaseModel):
     demo_account_days: int
     # Where people can write to the team (KHAYAL_CONTACT_EMAIL); None when not set.
     contact_email: str | None = None
+    # The app clock's current offset from UTC (IST = 330), so "today" in forms is the server's day.
+    utc_offset_minutes: int = 330
 
 
 class InviteRequestIn(BaseModel):
@@ -366,17 +368,37 @@ Weekday = Annotated[int, Field(ge=0, le=6)]
 
 
 class ReminderIn(BaseModel):
+    """once: `on_date`. daily: `start_date` (default today) and optional `end_date`. weekly_days: the
+    same plus `days_of_week`. Fields that don't apply to the repeat are cleared."""
+
     title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
     type: ReminderType
     time_of_day: time
+    repeat: ReminderRepeat = ReminderRepeat.weekly_days
     # 0 = Monday ... 6 = Sunday
-    days_of_week: Annotated[list[Weekday], Field(min_length=1, max_length=7)]
+    days_of_week: Annotated[list[Weekday], Field(max_length=7)] = []
+    on_date: date | None = None
+    start_date: date | None = None
+    end_date: date | None = None
     active: bool = True
 
     @model_validator(mode="after")
     def _normalise(self) -> "ReminderIn":
-        self.days_of_week = sorted(set(self.days_of_week))
         self.time_of_day = self.time_of_day.replace(second=0, microsecond=0, tzinfo=None)
+        if self.repeat == ReminderRepeat.once:
+            if self.on_date is None:
+                raise ValueError("Pick the date for a one-time reminder.")
+            self.days_of_week, self.start_date, self.end_date = [], None, None
+            return self
+        self.on_date = None
+        if self.repeat == ReminderRepeat.daily:
+            self.days_of_week = list(range(7))
+        else:
+            self.days_of_week = sorted(set(self.days_of_week))
+            if not self.days_of_week:
+                raise ValueError("Pick at least one day.")
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("The end date must be on or after the start date.")
         return self
 
 
@@ -389,8 +411,14 @@ class ReminderOut(BaseModel):
     title: str
     type: ReminderType
     time_of_day: time
+    repeat: ReminderRepeat
     days_of_week: list[int]
+    on_date: date | None
+    start_date: date | None
+    end_date: date | None
     active: bool
+    # Its one day or its end date has passed: shown under "Past reminders".
+    past: bool
     # Status of today's occurrence; null when it isn't scheduled today (or is inactive).
     today_status: TodayStatus | None
     # Who marked today's occurrence done, if anyone.

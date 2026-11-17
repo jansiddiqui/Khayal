@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, ensure_schema_current
 from app.demo_history import load_demo_history, reset_demo_history
-from app.models import FamilyMember, Reminder, ReminderType, Role, User
+from app.models import FamilyMember, Reminder, ReminderRepeat, ReminderType, Role, User
 from app.services import auth, care, family, speech
 from app.services.clock import utc_now
 
@@ -39,6 +39,11 @@ DEMO_REMINDERS = [
     ("Dr. Mehta, eye check-up", ReminderType.appointment, time(11, 30), [4]),
 ]
 
+
+
+def repeat_for(days: list[int]) -> ReminderRepeat:
+    """Demo reminders on all 7 days repeat "every day"; the others "on some days"."""
+    return ReminderRepeat.daily if sorted(set(days)) == list(range(7)) else ReminderRepeat.weekly_days
 
 # Demo family for the first patient: (name, relation, note, card colour).
 DEMO_FAMILY = [
@@ -91,7 +96,7 @@ def seed(db: Session) -> tuple[User, list[User]]:
         care.link_patient(db, caregiver, patient)
     if db.scalar(select(Reminder.id).where(Reminder.patient_id == patients[0].id)) is None:
         for title, kind, at, days in DEMO_REMINDERS:
-            db.add(Reminder(patient_id=patients[0].id, title=title, type=kind, time_of_day=at, days_of_week=days))
+            db.add(Reminder(patient_id=patients[0].id, title=title, type=kind, time_of_day=at, days_of_week=days, repeat=repeat_for(days)))
         db.commit()
     # Demo data: Kamala's family photos are on (in the app this is a separate consent).
     if not patients[0].photos_enabled:

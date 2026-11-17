@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
 import type { Alert, Reminder, TodayReminder, User } from "../api/client";
 import { App } from "../App";
@@ -155,18 +155,29 @@ describe("caregiver reminders and alerts", () => {
     title: "Blood pressure tablet",
     type: "medicine",
     time_of_day: "09:00:00",
+    repeat: "daily",
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
+    on_date: null,
+    start_date: "2026-11-01",
+    end_date: null,
     active: true,
+    past: false,
     today_status: "missed",
     today_marked_by: null,
   };
 
   beforeEach(() => {
+    // Tuesday 17 November 2026, 3:30 PM in India (the app clock).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-17T10:00:00Z"));
     signInAs(priya);
     api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listReminders.mockResolvedValue([reminder]);
     api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
   });
+  afterEach(() => vi.useRealTimers());
+
+  const addForm = async () => within(await screen.findByRole("form", { name: "Add reminder" }));
 
   it("shows adherence and caregiver-marked reminders", async () => {
     api.listReminders.mockResolvedValue([
@@ -182,43 +193,134 @@ describe("caregiver reminders and alerts", () => {
     expect(row("Tea").getByRole("cell", { name: "Done" })).toBeInTheDocument();
   });
 
-  it("lists reminders with today's status", async () => {
+  it("summarises each schedule in plain words, and moves past ones to their own section", async () => {
+    api.listReminders.mockResolvedValue([
+      reminder,
+      { ...reminder, id: 10, title: "Eye check-up", type: "appointment", repeat: "once", days_of_week: [], on_date: "2026-11-18", start_date: null, time_of_day: "20:00:00", today_status: null },
+      { ...reminder, id: 11, title: "Walk", type: "other", repeat: "weekly_days", days_of_week: [0, 2, 4], time_of_day: "18:00:00", end_date: "2026-11-30", today_status: null },
+      { ...reminder, id: 12, title: "Physio", type: "other", repeat: "weekly_days", days_of_week: [1], start_date: "2026-11-20", today_status: null },
+      { ...reminder, id: 13, title: "Blood test", type: "appointment", repeat: "once", days_of_week: [], on_date: "2026-11-10", start_date: null, past: true, today_status: null },
+    ]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
-    const row = (await screen.findByRole("cell", { name: "Blood pressure tablet" })).closest("tr")!;
-    expect(within(row).getByRole("cell", { name: "9:00 AM" })).toBeInTheDocument();
-    expect(within(row).getByRole("cell", { name: "Every day" })).toBeInTheDocument();
-    expect(within(row).getByRole("cell", { name: "Missed" })).toBeInTheDocument();
+    const current = within(await screen.findByRole("region", { name: "Reminders" }));
+    await current.findByRole("cell", { name: "Blood pressure tablet" });
+    const when = (title: string) => within(current.getByRole("cell", { name: title }).closest("tr")!).getByRole("cell", { name: /·/ }).textContent;
+    expect(when("Blood pressure tablet")).toBe("Every day · 9:00 AM");
+    expect(when("Eye check-up")).toBe("Once · Wed 18 Nov · 8:00 PM");
+    expect(when("Walk")).toBe("Mon, Wed, Fri · 6:00 PM · until 30 Nov");
+    expect(when("Physio")).toBe("Tue · 9:00 AM · from 20 Nov");
+    expect(current.getByRole("cell", { name: "Missed" })).toBeInTheDocument();
+    expect(current.queryByText("Blood test")).toBeNull();
+
+    const past = within(screen.getByRole("region", { name: "Past reminders" }));
+    expect(past.getByRole("cell", { name: "Once · Tue 10 Nov · 9:00 AM" })).toBeInTheDocument();
+    expect(past.queryByRole("button", { name: /Edit/ })).toBeNull();
+    api.deleteReminder.mockResolvedValue(undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(past.getByRole("button", { name: "Delete Blood test" }));
+    await waitFor(() => expect(api.deleteReminder).toHaveBeenCalledWith(2, 13));
   });
 
-  it("adds a reminder", async () => {
+  it("shows only the fields for the chosen repeat, with today as the default date", async () => {
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    // Medicine starts as "Every day": time, start (today), and "Until I stop it".
+    expect(form.getByLabelText("Every day")).toBeChecked();
+    expect(form.getByLabelText("Starts")).toHaveValue("2026-11-17");
+    expect(form.getByLabelText("Until I stop it")).toBeChecked();
+    expect(form.queryByLabelText("Date")).toBeNull();
+    expect(form.queryByLabelText("Mon")).toBeNull();
+
+    fireEvent.change(form.getByLabelText("Type"), { target: { value: "appointment" } });
+    expect(form.getByLabelText("Just once")).toBeChecked();
+    expect(form.getByLabelText("Date")).toHaveValue("2026-11-17");
+    expect(form.getByLabelText("Date")).toHaveAttribute("min", "2026-11-17");
+    expect(form.queryByLabelText("Starts")).toBeNull();
+    expect(form.queryByLabelText("Until I stop it")).toBeNull();
+
+    fireEvent.click(form.getByLabelText("On some days"));
+    expect(form.getByLabelText("Mon")).not.toBeChecked();
+    expect(form.getByText("Choose at least one day.")).toBeInTheDocument();
+    // Once the caregiver picked "Repeats" themself, changing the type no longer changes it.
+    fireEvent.change(form.getByLabelText("Type"), { target: { value: "medicine" } });
+    expect(form.getByLabelText("On some days")).toBeChecked();
+  });
+
+  it("adds a one-time reminder, and not for a time that has passed", async () => {
     api.createReminder.mockResolvedValue(reminder);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
-    const form = within(await screen.findByRole("form", { name: "Add reminder" }));
+    const form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: " Dr. Mehta " } });
+    fireEvent.change(form.getByLabelText("Type"), { target: { value: "appointment" } });
+    fireEvent.change(form.getByLabelText("Time"), { target: { value: "15:00" } }); // today, but 3:30 PM has passed it
+    expect(form.getByText("That time has already passed. Choose a later date or time.")).toBeInTheDocument();
+    expect(form.getByRole("button", { name: "Add reminder" })).toBeDisabled();
 
-    fireEvent.change(form.getByLabelText("Title"), { target: { value: "  Lunch " } });
-    fireEvent.change(form.getByLabelText("Type"), { target: { value: "meal" } });
-    fireEvent.change(form.getByLabelText("Time"), { target: { value: "13:00" } });
-    ["Sat", "Sun"].forEach((d) => fireEvent.click(form.getByLabelText(d)));
+    fireEvent.change(form.getByLabelText("Time"), { target: { value: "20:00" } });
     fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
-
     await waitFor(() =>
       expect(api.createReminder).toHaveBeenCalledWith(2, {
-        title: "Lunch",
-        type: "meal",
-        time_of_day: "13:00",
-        days_of_week: [0, 1, 2, 3, 4],
+        title: "Dr. Mehta",
+        type: "appointment",
+        time_of_day: "20:00",
         active: true,
+        repeat: "once",
+        days_of_week: [],
+        on_date: "2026-11-17",
+        start_date: null,
+        end_date: null,
       }),
     );
   });
 
-  it("needs at least one day", async () => {
+  it("adds an every-day and an on-some-days reminder with an end date", async () => {
+    api.createReminder.mockResolvedValue(reminder);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
-    const form = within(await screen.findByRole("form", { name: "Add reminder" }));
-    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Lunch" } });
-    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((d) => fireEvent.click(form.getByLabelText(d)));
-    expect(form.getByText("Choose at least one day.")).toBeInTheDocument();
+    let form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Tablet" } });
+    fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
+    await waitFor(() =>
+      expect(api.createReminder).toHaveBeenLastCalledWith(2, expect.objectContaining({
+        repeat: "daily", days_of_week: [0, 1, 2, 3, 4, 5, 6], on_date: null, start_date: "2026-11-17", end_date: null,
+      })),
+    );
+
+    form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Walk" } });
+    fireEvent.change(form.getByLabelText("Type"), { target: { value: "other" } });
+    expect(form.getByLabelText("On some days")).toBeChecked();
+    ["Mon", "Wed", "Fri"].forEach((d) => fireEvent.click(form.getByLabelText(d)));
+    fireEvent.change(form.getByLabelText("Time"), { target: { value: "18:00" } });
+    fireEvent.click(form.getByLabelText("Ends on"));
+    expect(form.getByLabelText("Ends on date")).toHaveAttribute("min", "2026-11-17");
+    fireEvent.change(form.getByLabelText("Ends on date"), { target: { value: "2026-11-30" } });
+    fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
+    await waitFor(() =>
+      expect(api.createReminder).toHaveBeenLastCalledWith(2, {
+        title: "Walk", type: "other", time_of_day: "18:00", active: true,
+        repeat: "weekly_days", days_of_week: [0, 2, 4], on_date: null, start_date: "2026-11-17", end_date: "2026-11-30",
+      }),
+    );
+  });
+
+  it("can't end before it starts", async () => {
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Tablet" } });
+    fireEvent.change(form.getByLabelText("Starts"), { target: { value: "2026-11-25" } });
+    fireEvent.click(form.getByLabelText("Ends on"));
+    expect(form.getByLabelText("Ends on date")).toHaveValue("2026-11-25");
+    fireEvent.change(form.getByLabelText("Ends on date"), { target: { value: "2026-11-20" } });
+    expect(form.getByText("It can't end before it starts.")).toBeInTheDocument();
     expect(form.getByRole("button", { name: "Add reminder" })).toBeDisabled();
+  });
+
+  it("uses the app clock's day, not the browser's, near midnight", async () => {
+    // 11:30 PM UTC on the 17th is already 5:00 AM on the 18th in India.
+    vi.setSystemTime(new Date("2026-11-17T23:30:00Z"));
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    expect(form.getByLabelText("Starts")).toHaveValue("2026-11-18");
   });
 
   it("edits and deletes a reminder", async () => {
@@ -227,17 +329,30 @@ describe("caregiver reminders and alerts", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Blood pressure tablet" }));
     const form = within(screen.getByRole("form", { name: "Save changes" }));
     expect(form.getByLabelText("Time")).toHaveValue("09:00");
+    expect(form.getByLabelText("Every day")).toBeChecked();
+    expect(form.getByLabelText("Starts")).toHaveValue("2026-11-01");
     fireEvent.click(form.getByLabelText("Active"));
     fireEvent.click(form.getByRole("button", { name: "Save changes" }));
     await waitFor(() =>
-      expect(api.updateReminder).toHaveBeenCalledWith(2, 7, expect.objectContaining({ active: false, time_of_day: "09:00" })),
+      expect(api.updateReminder).toHaveBeenCalledWith(2, 7, expect.objectContaining({ active: false, time_of_day: "09:00", start_date: "2026-11-01" })),
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Blood pressure tablet" }));
     await waitFor(() => expect(api.deleteReminder).toHaveBeenCalledWith(2, 7));
+  });
+
+  it("shows the server's reason when a save is refused", async () => {
+    api.createReminder.mockRejectedValue(
+      Object.assign(new Error("422"), { isAxiosError: true, response: { status: 422, data: { detail: "Pick a date and time that have not passed yet." } } }),
+    );
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Tablet" } });
+    fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the change. Pick a date and time that have not passed yet.");
   });
 
   it("shows alerts on the patient page and acknowledges them", async () => {
