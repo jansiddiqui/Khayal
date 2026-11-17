@@ -241,10 +241,12 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
 
     case "tutorial":
       return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <h2 className="text-3xl font-bold">{copy.games.tutorialHeading}</h2>
-          <game.tutorial.Demo />
-          <div className="flex flex-col gap-2 text-2xl">
+          <div className="mx-auto w-[min(20rem,30dvh)]">
+            <game.tutorial.Demo />
+          </div>
+          <div className="flex flex-col gap-1 text-xl">
             {game.tutorial.steps.map((step) => (
               <p key={step}>{step}</p>
             ))}

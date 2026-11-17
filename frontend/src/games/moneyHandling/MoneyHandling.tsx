@@ -37,7 +37,7 @@ function PieceButton({ piece, onClick, glow, label }: { piece: Piece; onClick: (
       aria-label={label}
       className={`touch-manipulation rounded-lg ${pressable} ${glow ? "calm-glow ring-4 ring-accent-strong ring-offset-2 ring-offset-surface" : ""}`}
     >
-      {piece.kind === "note" ? <NoteArt value={piece.value} className="h-[3.4rem] w-[6.8rem]" /> : <CoinArt value={piece.value} className="size-[3.4rem]" />}
+      {piece.kind === "note" ? <NoteArt value={piece.value} className="h-[3rem] w-[6rem]" /> : <CoinArt value={piece.value} className="size-[3rem]" />}
     </button>
   );
 }
@@ -74,10 +74,10 @@ function PayRound({ round, onComplete, practice = false }: RoundProps & { round:
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <QuestionRow spoken={prompt}>
-        <p className="text-2xl font-semibold">{prompt}</p>
-        {slipped && <p className="mt-1 text-xl text-brand-dark">{t.practiceHint(round.target)}</p>}
+        <p className="text-xl font-semibold">{prompt}</p>
+        {slipped && <p className="mt-1 text-lg text-brand-dark">{t.practiceHint(round.target)}</p>}
       </QuestionRow>
-      <section aria-label={t.counter} className="flex min-h-[6.5rem] flex-col gap-1 rounded-2xl border-4 border-dashed border-line-strong bg-sunken p-2">
+      <section aria-label={t.counter} className="flex min-h-[5.4rem] flex-col gap-1 rounded-2xl border-4 border-dashed border-line-strong bg-sunken p-2">
         <p className="flex items-center gap-2 text-lg text-ink-soft">
           <ShoppingBasket aria-hidden="true" className="size-5" />
           {t.counter}

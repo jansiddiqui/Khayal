@@ -97,12 +97,12 @@ function SetRound({ round, onComplete }: RoundProps & { round: ClockRound }) {
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <QuestionRow spoken={`${prompt} ${step}`}>
         <p className="text-2xl font-semibold">{prompt}</p>
-        {!round.wordsOnly && <p className="text-xl text-ink-soft">{t.inDigits(digits(target))}</p>}
-        <p className="mt-1 text-xl text-brand-dark" aria-live="polite">
+        {!round.wordsOnly && <p className="text-lg text-ink-soft">{t.inDigits(digits(target))}</p>}
+        <p className="text-lg text-brand-dark" aria-live="polite">
           {step}
         </p>
       </QuestionRow>
-      <div className="mx-auto w-full max-w-[17rem]">
+      <div className="mx-auto w-[min(17rem,32dvh)]">
         <ClockFace face={round.face} hour={hour} minute={minute} label={t.clockLabel} onTapAngle={place} onStep={stepHand} />
       </div>
       <div className="flex gap-2">
@@ -145,7 +145,7 @@ function ReadRound({ round, onComplete, practice = false, rng = Math.random }: R
         <p className="text-2xl font-semibold">{prompt}</p>
         {slipped && <p className="mt-1 text-xl text-brand-dark">{t.practiceHint(timeWords(answer))}</p>}
       </QuestionRow>
-      <div className="mx-auto w-full max-w-[14rem]">
+      <div className="mx-auto w-[min(14rem,28dvh)]">
         <ClockFace face={round.face} hour={round.time.h + round.time.m / 60} minute={round.time.m} label={t.clockShowing(timeWords(round.time))} />
       </div>
       <div className="flex flex-col gap-3">

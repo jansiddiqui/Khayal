@@ -143,14 +143,14 @@ export function ObjectLocationRound({ level, practice = false, onComplete, rng =
         )}
       </QuestionRow>
       {current && (
-        <div className="flex items-center gap-3 self-center rounded-2xl border-4 border-accent bg-surface p-2 pr-4 shadow-lift">
-          <Photo id={current} className="size-[5rem] rounded-xl" />
+        <div className="flex items-center gap-3 self-center rounded-2xl border-4 border-accent bg-surface p-1.5 pr-4 shadow-lift">
+          <Photo id={current} className="size-[4rem] rounded-xl" />
           <span className="text-2xl font-bold">{objectName(current)}</span>
         </div>
       )}
       <div
         className="mx-auto grid gap-2.5"
-        style={{ gridTemplateColumns: `repeat(${config.cols}, 5.4rem)` }}
+        style={{ gridTemplateColumns: `repeat(${config.cols}, 5.2rem)` }}
         role="group"
         aria-label={copy.games.objectLocation.title}
       >
@@ -165,7 +165,7 @@ export function ObjectLocationRound({ level, practice = false, onComplete, rng =
               onClick={() => tapBox(box)}
               onAnimationEnd={() => setNudged((n) => (n === box ? null : n))}
               aria-label={inside ? t.boxWith(box + 1, objectName(inside)) : t.box(box + 1)}
-              className={`relative flex size-[5.4rem] items-center justify-center overflow-hidden rounded-2xl border-4 bg-surface shadow-lift ${pressable} ${
+              className={`relative flex size-[5.2rem] items-center justify-center overflow-hidden rounded-2xl border-4 bg-surface shadow-lift ${pressable} ${
                 isPlaced ? "border-calm" : inside ? "border-accent" : "border-brand"
               } ${nudged === box ? "gentle-nudge" : ""} ${answerBox === box ? "calm-glow ring-4 ring-accent-strong ring-offset-2 ring-offset-surface" : ""}`}
             >

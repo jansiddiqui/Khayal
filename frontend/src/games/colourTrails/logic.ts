@@ -75,7 +75,7 @@ export function buildTrail(config: TrailConfig, rng: Rng): TrailItem[] {
     const cell = cells[i]!;
     const col = cell % cols;
     const row = Math.floor(cell / cols);
-    const jitter = () => (rng() - 0.5) * 0.3;
+    const jitter = () => (rng() - 0.5) * 0.16;
     return {
       id: i,
       ...spec,

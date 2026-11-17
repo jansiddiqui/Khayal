@@ -179,7 +179,7 @@ export const copy = {
       title: "Join in order",
       intro: "Tap the numbers in order, one after another.",
       promptPart1: "Tap the numbers in order: 1, then 2, then 3, and on.",
-      promptPart2: "Tap in order, changing each time: teal circle 1, then saffron square 2, then teal circle 3.",
+      promptPart2: "Change each time: teal circle 1, saffron square 2, teal circle 3, and on.",
       /** After a tap that doesn't join: which number comes next (never "wrong"). */
       lookFor: (n: number, mark: "circle" | "square" | null) =>
         mark === null ? `Let's look for ${n}.` : `Let's look for the ${mark === "circle" ? "teal circle" : "saffron square"} ${n}.`,

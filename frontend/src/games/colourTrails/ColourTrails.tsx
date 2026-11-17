@@ -70,12 +70,12 @@ export function ColourTrailsRound({ level, practice = false, onComplete, rng = M
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <QuestionRow spoken={lookFor ?? prompt}>
-        <p className="text-2xl" aria-live="polite">
+        <p className="text-xl" aria-live="polite">
           {lookFor ?? prompt}
         </p>
         <p className="mt-1 text-xl font-semibold text-brand-dark">{t.joinedOf(joined.length, config.length)}</p>
       </QuestionRow>
-      <div className="relative min-h-[22rem] flex-1">
+      <div className="relative min-h-[16rem] flex-1">
         <svg aria-hidden="true" className="pointer-events-none absolute inset-0 size-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           {joined.slice(1).map((item, i) => {
             const from = joined[i]!;

@@ -13,7 +13,7 @@ CC0 or public domain). Contact sheets were reviewed by eye for a single object, 
 background, no people and no text.
 
 **What was changed in every photo:** cropped to the object, squared so the object fills about
-70% of the side (photo edges feathered into the background where the square needed padding),
+70% of the side (90–94% for the long, thin glasses, spoon, umbrella and comb, so they don't read tiny in a 100px box) (photo edges feathered into the background where the square needed padding),
 resized to 400 × 400, saved as WebP and JPEG (each under 40 KB). No colour changes beyond the
 resize. Extra changes are in the last column.
 
