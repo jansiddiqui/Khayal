@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
-import type { GameType, RoundResult } from "../api/client";
+import type { GameType, RoundResult, User } from "../api/client";
 
 export type { RoundResult };
 
@@ -37,6 +37,8 @@ export interface GameDefinition {
   icon: LucideIcon;
   Round: ComponentType<RoundProps>;
   tutorial: Tutorial;
+  /** True when this session gets one extra round (About Today's festival question, D6). */
+  extraRound?: (user: User | null, now: Date) => boolean;
 }
 
 /** Fisher–Yates shuffle that returns a new array. */

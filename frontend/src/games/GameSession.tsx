@@ -16,6 +16,7 @@ import {
 import { BigButton } from "../components/BigButton";
 import { Card } from "../components/Card";
 import { copy } from "../copy";
+import { useAuth } from "../auth/AuthContext";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
 import { findGame } from ".";
 import type { GameDefinition, Rng } from "./types";
@@ -70,6 +71,10 @@ interface GameSessionProps {
  */
 export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const { speak } = useReadAloud();
+  const { state: auth } = useAuth();
+  /** Rounds in this session: 5, or 6 with About Today's festival question. */
+  const [totalRounds, setTotalRounds] = useState(ROUNDS_PER_SESSION);
+  const total = useRef(ROUNDS_PER_SESSION);
   /** Where in the praise list this session starts, so it varies between sessions too. */
   const praiseStart = useRef(0);
   const tutorialShown = useRef(false);
@@ -114,7 +119,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       started_at: startedAt.current,
       ended_at: new Date().toISOString(),
       rounds: results.current,
-      completed: results.current.length === ROUNDS_PER_SESSION,
+      completed: results.current.length === total.current,
     };
   }
 
@@ -155,6 +160,8 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     results.current = [];
     submitted.current = false;
     startedAt.current = new Date().toISOString();
+    total.current = ROUNDS_PER_SESSION + (game.extraRound?.(auth.status === "authenticated" ? auth.user : null, new Date()) ? 1 : 0);
+    setTotalRounds(total.current);
     praiseStart.current = Math.floor((rng ?? Math.random)() * copy.games.praise.length);
     save.reset();
     setPhase({ kind: "playing", round: 1 });
@@ -169,7 +176,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     results.current = [...results.current, result];
     const praise = copy.games.praise[(praiseStart.current + round - 1) % copy.games.praise.length]!;
     const message = feedback ?? (result.correct ? praise : copy.games.roundTryAnother);
-    if (round >= ROUNDS_PER_SESSION) {
+    if (round >= total.current) {
       lastFeedback.current = feedback;
       setPhase({ kind: "done", lastFeedback: feedback });
       submit();
@@ -284,7 +291,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     case "playing":
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
           <Guarded key={phase.round} className="flex min-h-0 flex-1 flex-col">
             <game.Round
               level={level.data.level}
@@ -300,7 +307,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       return (
         <Guarded key={`between-${phase.round}`} className="flex flex-col gap-3">
           {/* The place in the session stays where it was during the round. */}
-          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
           <motion.div
             initial={less ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}

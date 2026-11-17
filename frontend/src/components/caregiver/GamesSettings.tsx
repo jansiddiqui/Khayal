@@ -5,6 +5,8 @@ import { Button } from "../../ui/Button";
 import { Skeleton } from "../../ui/Skeleton";
 import { useToast } from "../../ui/Toast";
 import { GAME_NAMES } from "./TrendCharts";
+import { copy } from "../../copy";
+import { FESTIVAL_IDS, type FestivalId } from "../../games/dailyOrientation/festivals";
 
 const CORE_SIZE = 4;
 
@@ -165,6 +167,68 @@ export function TutorialAgainForm({ patientId, games }: { patientId: number; gam
       {reset.isError && (
         <p role="alert" className="text-danger">
           Could not save that just now.
+        </p>
+      )}
+    </form>
+  );
+}
+
+/**
+ * The festivals this family celebrates (research.md D6). About Today then asks "Which festival
+ * comes next?" in the 30 days before one of them. Nothing ticked = the question is off.
+ */
+export function FestivalsForm({ patient }: { patient: Patient }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set(patient.festivals ?? []));
+  const save = useMutation({
+    mutationFn: () => updatePatient(patient.id, { festivals: [...chosen] }),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast.show({
+        message: updated.festivals?.length ? "Festivals saved." : "The festival question is off.",
+      });
+    },
+  });
+  const changed = [...chosen].sort().join() !== [...(patient.festivals ?? [])].sort().join();
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.mutate();
+      }}
+    >
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-lg font-semibold">Festivals this family celebrates</legend>
+        <p className="max-w-prose text-ink-muted">
+          In the 30 days before a festival you tick, About Today asks "Which festival comes next?". It is off until you
+          tick at least one. This question is our own and is not a validated test item.
+        </p>
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-3">
+          {FESTIVAL_IDS.map((id: FestivalId) => (
+            <label key={id} className="flex items-center gap-2 py-1">
+              <input
+                type="checkbox"
+                checked={chosen.has(id)}
+                onChange={(e) => {
+                  const next = new Set(chosen);
+                  if (e.target.checked) next.add(id);
+                  else next.delete(id);
+                  setChosen(next);
+                }}
+              />
+              {copy.festivals[id]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Button type="submit" className="self-start" loading={save.isPending} disabled={!changed}>
+        Save festivals
+      </Button>
+      {save.isError && (
+        <p role="alert" className="text-danger">
+          Could not save the festivals.
         </p>
       )}
     </form>

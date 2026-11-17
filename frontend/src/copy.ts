@@ -159,6 +159,9 @@ export const copy = {
       replyTimeOfDay: (time: string) => `It's ${time.toLowerCase()} now.`,
       replyCity: (city: string) => `You're in ${city}.`,
       replyYear: (year: string) => `It's ${year}.`,
+      /** Our own adapted item, asked only before a festival the family celebrates (D6). */
+      askFestival: "Which festival comes next?",
+      replyFestival: (name: string) => `${name} comes next.`,
       tutorial: ["A few gentle questions about today.", "Tap the answer you think is right."],
     },
     reactionTap: {
@@ -271,6 +274,24 @@ export const copy = {
   timesOfDay: { morning: "Morning", afternoon: "Afternoon", evening: "Evening", night: "Night" },
   // Other answers offered next to the patient's own city.
   cities: ["Delhi", "Mumbai", "Kolkata", "Chennai", "Bengaluru", "Hyderabad", "Pune", "Jaipur", "Lucknow", "Ahmedabad"],
+  /** Festivals for About Today's festival question (dates in games/dailyOrientation/festivals). */
+  festivals: {
+    makar_sankranti: "Makar Sankranti",
+    pongal: "Pongal",
+    holi: "Holi",
+    eid_ul_fitr: "Eid ul-Fitr",
+    vaisakhi: "Vaisakhi",
+    bakrid: "Bakrid (Eid ul-Adha)",
+    onam: "Onam",
+    raksha_bandhan: "Raksha Bandhan",
+    janmashtami: "Janmashtami",
+    ganesh_chaturthi: "Ganesh Chaturthi",
+    durga_puja: "Durga Puja",
+    dussehra: "Dussehra",
+    diwali: "Diwali",
+    guru_nanak_jayanti: "Guru Nanak Jayanti",
+    christmas: "Christmas",
+  },
   /** "Where did it go?" objects (photos in games/objectLocation/photos). */
   objects: {
     key: "Key",

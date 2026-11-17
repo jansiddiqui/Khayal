@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
-import { CoreGamesForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
+import { CoreGamesForm, FestivalsForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
@@ -588,7 +588,7 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <Section id="settings" title="Settings" hint="Pair a device, home city, core games, pinned games, tutorials">
+        <Section id="settings" title="Settings" hint="Pair a device, home city, core games, pinned games, festivals, tutorials">
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
             <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
@@ -599,6 +599,7 @@ export function PatientDetail() {
               pinned={patient.pinned_games}
               options={patient.core_games}
             />
+            <FestivalsForm key={`festivals-${(patient.festivals ?? []).join()}`} patient={patient} />
             <TutorialAgainForm patientId={patient.id} games={["daily_orientation", ...LEVELLED_GAMES]} />
           </div>
         </Section>

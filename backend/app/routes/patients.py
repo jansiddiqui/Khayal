@@ -78,6 +78,9 @@ def update_patient(
         # Pins must stay inside the core set; pins that left it return to automatic.
         if today_games.pinned_games(patient) is None:
             patient.pinned_games = None
+    if "festivals" in body.model_fields_set:
+        chosen = sorted(set(body.festivals or []))
+        patient.festivals = chosen or None
     if "pinned_games" in body.model_fields_set:
         pins = body.pinned_games
         if pins and not set(pins) <= set(core_games.core_games(patient)):

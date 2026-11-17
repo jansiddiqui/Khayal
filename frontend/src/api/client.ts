@@ -108,6 +108,8 @@ export interface User {
   city: string | null;
   /** Patients only: games a caregiver fixed in slots 2-3 of today's games. */
   pinned_games: GameType[] | null;
+  /** Patients only: festivals the family celebrates (About Today's festival question); null = off. */
+  festivals?: string[] | null;
   /** Patients only: the caregiver's consent for the weekly voice task. */
   voice_task_enabled: boolean;
   /** When the voice task was turned on; null while it is off. */
@@ -135,6 +137,8 @@ export interface Patient {
   /** The 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set"). */
   core_games: GameType[];
   core_is_default: boolean;
+  /** Festivals the family celebrates; null or empty = the festival question is off. */
+  festivals?: string[] | null;
   voice_task_enabled: boolean;
   voice_consent_at: string | null;
   photos_enabled: boolean;
@@ -592,6 +596,7 @@ export interface PatientChanges {
   pinned_games?: GameType[] | null;
   /** Exactly 4 different levelled games; null = the default core set. */
   core_games?: GameType[] | null;
+  festivals?: string[] | null;
   voice_task_enabled?: boolean;
 }
 

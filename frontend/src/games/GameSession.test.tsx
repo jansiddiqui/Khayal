@@ -262,6 +262,21 @@ describe("GameSession", () => {
     expect(screen.getByText(copy.games.roundOf(1, ROUNDS_PER_SESSION))).toBeInTheDocument();
   });
 
+  it("plays one extra round when the game asks for it (About Today's festival question)", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    renderWithProviders(<GameSession game={{ ...fakeGame, extraRound: () => true }} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    for (let round = 1; round <= ROUNDS_PER_SESSION + 1; round++) {
+      expect(screen.getByText(copy.games.roundOf(round, ROUNDS_PER_SESSION + 1))).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Finish round" }));
+      if (round <= ROUNDS_PER_SESSION) fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
+    }
+    await waitFor(() => expect(api.postSession).toHaveBeenCalledOnce());
+    const body = api.postSession.mock.calls[0]![0];
+    expect(body.rounds).toHaveLength(ROUNDS_PER_SESSION + 1);
+    expect(body.completed).toBe(true);
+  });
+
   it("ends with Back to Home when every game today is done", async () => {
     api.postSession.mockResolvedValue(result("same"));
     api.getTodaysGames.mockResolvedValue({

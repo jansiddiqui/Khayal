@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderRepeat, ReminderType, Role, Severity
 from app.services import core_games
+from app.services.festivals import FestivalId
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -113,6 +114,8 @@ class UserOut(BaseModel):
     created_at: datetime
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    # Patients only: festivals the family celebrates (About Today's festival question).
+    festivals: list[str] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
     # Public demo only: when this account and its data are deleted.
@@ -171,6 +174,7 @@ class PatientOut(BaseModel):
     # in by presenters.patient_out (the stored value may be None = the default set).
     core_games: list[GameType] | None = None
     core_is_default: bool = True
+    festivals: list[str] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
     photos_enabled: bool = False
@@ -287,6 +291,8 @@ class PatientUpdateIn(BaseModel):
     pinned_games: list[GameType] | None = None
     # Exactly 4 different levelled games; null = the default core set.
     core_games: list[GameType] | None = None
+    # Festivals the family celebrates; empty or null turns the festival question off.
+    festivals: list[FestivalId] | None = None
     # Caregiver consent for the weekly voice task.
     voice_task_enabled: bool | None = None
 
@@ -343,9 +349,11 @@ class SessionIn(BaseModel):
             if not self.completed:
                 raise ValueError("a delayed recall check is always complete")
             return self
-        if len(self.rounds) > BLOCK_SIZE:
-            raise ValueError(f"a session has at most {BLOCK_SIZE} rounds")
-        if self.completed != (len(self.rounds) == BLOCK_SIZE):
+        # About Today has one extra round when the festival question is asked (D6).
+        full = {BLOCK_SIZE, BLOCK_SIZE + 1} if self.game_type == GameType.daily_orientation else {BLOCK_SIZE}
+        if len(self.rounds) > max(full):
+            raise ValueError(f"a session has at most {max(full)} rounds")
+        if self.completed != (len(self.rounds) in full):
             raise ValueError(f"a completed session has exactly {BLOCK_SIZE} rounds; a stopped one has fewer")
         return self
 
