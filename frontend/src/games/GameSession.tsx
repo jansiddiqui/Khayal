@@ -25,7 +25,7 @@ import { Spinner } from "../ui/Spinner";
  * When a new board or a reply appears, taps are ignored this long, so a second tap meant for the
  * last screen can't answer the next one (the elderly double-tap). Nothing visible changes.
  */
-export const INPUT_GUARD_MS = 400;
+export const INPUT_GUARD_MS = 300;
 
 /** Ignores pointer input for INPUT_GUARD_MS after it appears; keyboard and screen readers are unaffected. */
 function Guarded({ children, className = "" }: { children: ReactNode; className?: string }) {

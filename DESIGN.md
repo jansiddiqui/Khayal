@@ -279,7 +279,7 @@ The logo mark is a soft heart whose point dissolves into a thought bubble's two 
 ### Navigation
 - **Header:** a sticky plaster lintel, 3.6rem tall: logo left, bold 0.85rem Teal Ink Soft links that turn Door Teal and underline on hover, "Sign in", and the marigold invite pill. Below `lg` a 48px menu button (icon only, named for screen readers) opens a full-width list with divider lines and a full-width invite pill.
 - **Footer:** Night Teal, reversed logo, Teal Haze links that turn plaster on hover.
-- **Patient app:** the same top bar on every screen, with Home and Read aloud as large bordered buttons, icon above the word.
+- **Patient app:** the same top bar on every screen, with Home and Read aloud as large bordered buttons, icon above the word, and a third button that opens the settings sheet (vibration and soft sound). It is labelled "More" on phones and "Settings" from 800px, with the accessible name "More settings".
 
 ### Jaali Light (signature, landing only)
 A lattice of 56px tiles, each four logo hearts meeting point to point with small corner studs, drawn one step lighter than its teal ground and revealed only inside a soft radial pool of light. Decorative (`aria-hidden`); text never sits on its brightest part. In the hero the pool falls on the niche and drifts with scroll (up to 48px across, 36px down); elsewhere it is still.

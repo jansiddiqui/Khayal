@@ -219,6 +219,12 @@ export const copy = {
   reminders: {
     title: "Today's reminders",
     nowHeading: "Now",
+    /** Over reminders whose time has passed: never "Now" (CLAUDE.md section 6). */
+    earlierHeading: "Earlier today",
+    /** Under the one reminder being asked about, when more are waiting. */
+    moreAfter: (n: number) => (n === 1 ? "1 more reminder after this one." : `${n} more reminders after this one.`),
+    /** Nothing left to answer, but something was "not sure": never "All done… Well done!". */
+    familyWillHelp: "That's everything for now. Your family will help with the rest.",
     laterHeading: "Later today",
     doneHeading: "Done",
     timeForThis: "It's time for this.",

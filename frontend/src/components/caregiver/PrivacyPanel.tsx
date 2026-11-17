@@ -18,9 +18,10 @@ import {
   type SecretLink,
 } from "../../api/client";
 import { LoadError } from "./LoadError";
+import { serverDate } from "../../api/client";
 
-const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const when = (iso: string) => serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const day = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 const button = "inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken disabled:opacity-60";
 

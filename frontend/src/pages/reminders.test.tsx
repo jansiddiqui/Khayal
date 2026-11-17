@@ -126,7 +126,7 @@ describe("patient Home next reminder card", () => {
 describe("patient Today's reminders", () => {
   beforeEach(() => signInAs(kamala));
 
-  it("asks about overdue ones and offers Done within the hour, never more than 3 buttons", async () => {
+  it("asks about one reminder at a time, overdue ones first, and never urges", async () => {
     api.getTodayReminders.mockResolvedValue([
       today(1, "Tablet A", "07:00", "missed", true, "overdue"),
       today(2, "Tablet B", "08:00", "pending", true, "due"),
@@ -134,25 +134,41 @@ describe("patient Today's reminders", () => {
       today(5, "Lunch", "13:00", "pending", false),
       today(6, "Tea", "06:00", "done", true),
     ]);
+    api.markReminderDone.mockResolvedValue({} as Reminder);
     renderWithProviders(<App />, { route: "/patient/reminders" });
 
-    await screen.findByRole("heading", { name: copy.reminders.nowHeading });
+    // Only an overdue card is on screen, so the heading never says "Now".
+    await screen.findByRole("heading", { name: copy.reminders.earlierHeading });
     const main = within(screen.getByRole("main"));
     const a = within(screen.getByRole("region", { name: "Tablet A" }));
     expect(a.getByText("This was for 7:00 AM. Is it done?")).toBeInTheDocument();
     expect(a.getByRole("button", { name: copy.reminders.yesDone })).toBeInTheDocument();
     expect(a.getByRole("button", { name: copy.reminders.notSure })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Tablet B" })).getByRole("button", { name: copy.reminders.done })).toBeInTheDocument();
-    // Tablet C waits its turn (2 + 1 buttons already on screen): it appears once one is answered.
+    // B and C wait their turn; the patient is told how many.
+    expect(screen.queryByRole("region", { name: "Tablet B" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Tablet C" })).toBeNull();
-    expect(main.getAllByRole("button").filter((b) => b.closest("header") === null)).toHaveLength(3);
-    // Never urges: no "Now" wording on an overdue card, no negative words anywhere.
+    expect(screen.getByText(copy.reminders.moreAfter(2))).toBeInTheDocument();
+    expect(main.getAllByRole("button").filter((b) => b.closest("header") === null)).toHaveLength(2);
     expect(a.queryByText(copy.reminders.letsDoItNow)).toBeNull();
     expect(screen.getByRole("main").textContent).not.toMatch(/\b(missed|wrong|late)\b/i);
 
     expect(screen.getByRole("heading", { name: copy.reminders.laterHeading })).toBeInTheDocument();
     expect(screen.getByText("Lunch")).toBeInTheDocument();
     expect(screen.getByText(copy.reminders.doneMark)).toBeInTheDocument();
+
+    // Answering A brings B (due now, with one Done button).
+    fireEvent.click(a.getByRole("button", { name: copy.reminders.yesDone }));
+    const b = within(await screen.findByRole("region", { name: "Tablet B" }));
+    expect(b.getByRole("button", { name: copy.reminders.done })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: copy.reminders.nowHeading })).toBeInTheDocument();
+    expect(screen.getByText(copy.reminders.moreAfter(1))).toBeInTheDocument();
+  });
+
+  it("thanks gently, without 'All done', when something was 'not sure'", async () => {
+    api.getTodayReminders.mockResolvedValue([today(1, "Blood pressure tablet", "09:00", "unsure", true, "unsure")]);
+    renderWithProviders(<App />, { route: "/patient/reminders" });
+    expect(await screen.findByText(copy.reminders.familyWillHelp)).toBeInTheDocument();
+    expect(screen.queryByText(copy.reminders.allDone)).toBeNull();
   });
 
   it("ticks a reminder off where it is and thanks the patient", async () => {
@@ -452,6 +468,10 @@ describe("caregiver reminders and alerts", () => {
       "Done, confirmed later at 8:40 pm",
     );
     expect(todayLabel({ ...reminder, today_status: "unsure" })).toBe("Not sure (family told)");
+    // No answer yet: "Pending" within the hour, then said plainly (not "Missed" before it is logged).
+    const nine = { ...reminder, time_of_day: "09:00:00", today_status: "pending" as const };
+    expect(todayLabel(nine, "09:40")).toBe("Pending");
+    expect(todayLabel(nine, "10:05")).toBe("Not answered yet");
   });
 
   it("shows the server's reason when a save is refused", async () => {

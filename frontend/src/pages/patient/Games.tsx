@@ -13,7 +13,6 @@ export function Games() {
 
   return (
     <Layout title={copy.games.title} spokenIntro={copy.games.intro}>
-      <p className="text-2xl">{copy.games.intro}</p>
       {today.isPending && <p className="text-2xl">{copy.common.loading}</p>}
       {today.isError && (
         <Card>

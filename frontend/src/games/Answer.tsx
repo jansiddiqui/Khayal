@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFeedback } from "../ui/feedback";
-import { pressable, useLessMotion } from "../ui/motion";
+import { pressable } from "../ui/motion";
 
 /** How long a chosen answer stays highlighted before the kind reply appears. */
 export const ANSWER_HOLD_MS = 650;
@@ -18,7 +18,6 @@ export interface Choice<T> {
  */
 export function useChoice<T>(onDecide: (choice: Choice<T>) => void) {
   const { cue } = useFeedback();
-  const less = useLessMotion();
   const [chosen, setChosen] = useState<Choice<T> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decided = useRef(false);
@@ -36,9 +35,10 @@ export function useChoice<T>(onDecide: (choice: Choice<T>) => void) {
       const choice = { value, correct };
       setChosen(choice);
       cue(correct ? "success" : "gentle");
-      timer.current = setTimeout(() => latest.current(choice), less ? 250 : ANSWER_HOLD_MS);
+      // The same hold under reduced motion: less movement, never less time to see the answer.
+      timer.current = setTimeout(() => latest.current(choice), ANSWER_HOLD_MS);
     },
-    [cue, less],
+    [cue],
   );
 
   return { chosen, choose };

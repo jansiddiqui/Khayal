@@ -148,6 +148,9 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
   );
 }
 
+/** Declining first, then Watch, Stable and Learning: the people who need attention come first. */
+const STATUS_ORDER = { declining: 0, watch: 1, stable: 2, insufficient: 3 } as const;
+
 export function CaregiverDashboard() {
   const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients, refetchInterval: 60_000 });
   const navigate = useNavigate();
@@ -203,7 +206,7 @@ export function CaregiverDashboard() {
                 </tr>
               </thead>
               <tbody role="rowgroup">
-                {patients.data.map((p) => (
+                {[...patients.data].sort((a, b) => STATUS_ORDER[a.cognitive_status] - STATUS_ORDER[b.cognitive_status]).map((p) => (
                   <tr
                     role="row"
                     key={p.id}

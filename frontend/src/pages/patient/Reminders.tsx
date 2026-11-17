@@ -13,8 +13,21 @@ import { useFeedback } from "../../ui/feedback";
 import { calm, DURATION, useLessMotion } from "../../ui/motion";
 import { Busy, Skeleton } from "../../ui/Skeleton";
 
-/** CLAUDE.md section 4: at most 3 buttons; later reminders show once their time comes. */
+/**
+ * One reminder is asked about at a time (one main action, CLAUDE.md section 4), so its answer
+ * buttons are always on screen at 375 × 812; the next appears when it is answered.
+ */
 export const MAX_ACTION_BUTTONS = 3;
+
+/** Compact: the icon and the title on one line (the time is in the question). */
+function ReminderTitle({ reminder }: { reminder: TodayReminder }) {
+  return (
+    <p className="flex items-center gap-3 text-2xl font-semibold">
+      <ReminderIcon type={reminder.type} className="size-8 shrink-0" />
+      <span className="min-w-0">{reminder.title}</span>
+    </p>
+  );
+}
 
 function ReminderLine({ reminder }: { reminder: TodayReminder }) {
   const r = copy.reminders;
@@ -108,22 +121,18 @@ export function Reminders() {
   const later = all.filter((x) => x.phase === "upcoming" && !answered.has(x.id));
   const finished = all.filter((x) => x.phase === "done" && !answered.has(x.id));
 
-  // At most 3 action buttons on screen: a "due" card has one, an "overdue" card has two.
-  let budget = MAX_ACTION_BUTTONS;
-  const withButtons = new Set<number>();
-  for (const x of nowList) {
-    if (answered.has(x.id) || x.phase === "unsure") continue;
-    const cost = x.phase === "overdue" ? 2 : 1;
-    if (cost <= budget) {
-      withButtons.add(x.id);
-      budget -= cost;
-    }
-  }
+  // One reminder is asked about at a time: the first unanswered one gets its buttons.
+  const waiting = nowList.filter((x) => !answered.has(x.id) && x.phase !== "unsure");
+  const withButtons = new Set<number>(waiting.slice(0, 1).map((x) => x.id));
+  const moreAfter = Math.max(0, waiting.length - 1);
 
   // Cards that would have no button wait their turn (one thing at a time, CLAUDE.md section 4).
   const shownNow = nowList.filter((x) => answered.has(x.id) || x.phase === "unsure" || withButtons.has(x.id));
   const open = all.filter((x) => x.phase !== "done" && x.phase !== "unsure" && !answered.has(x.id));
-  const intro = all.length === 0 ? r.nothingToday : open.length === 0 ? r.allDone : undefined;
+  const anyUnsure = all.some((x) => x.phase === "unsure") || [...answered.values()].some((a) => a.kind === "unsure");
+  const intro =
+    all.length === 0 ? r.nothingToday : open.length === 0 ? (anyUnsure ? r.familyWillHelp : r.allDone) : undefined;
+  const heading = shownNow.some((x) => x.phase === "due") || (shownNow.length === 0 && later.length > 0) ? r.nowHeading : r.earlierHeading;
 
   return (
     <Layout title={r.title} spokenIntro={intro}>
@@ -136,7 +145,7 @@ export function Reminders() {
       {(shownNow.length > 0 || later.length > 0) && (
         <section aria-labelledby="now-heading" className="flex flex-col gap-4">
           <h2 id="now-heading" className="text-3xl font-bold">
-            {r.nowHeading}
+            {heading}
           </h2>
           {shownNow.length === 0 && <p className="text-2xl">{r.nothingNow}</p>}
           <div className="flex flex-col gap-4">
@@ -151,11 +160,11 @@ export function Reminders() {
                     layout={!less}
                     transition={calm(DURATION.base)}
                     aria-label={reminder.title}
-                    className={`flex flex-col gap-4 rounded-2xl border-4 p-5 transition-colors duration-300 ${
+                    className={`flex flex-col gap-3 rounded-2xl border-4 p-4 transition-colors duration-300 ${
                       isDone ? "border-calm bg-calm-soft" : isUnsure ? "border-line-strong bg-surface" : "border-brand bg-surface"
                     }`}
                   >
-                    <ReminderLine reminder={reminder} />
+                    {reminder.phase === "overdue" && !isDone && !isUnsure ? <ReminderTitle reminder={reminder} /> : <ReminderLine reminder={reminder} />}
                     {isDone ? (
                       <p role="status" className="flex items-center gap-3 text-2xl font-semibold text-calm">
                         <DrawnCheck />
@@ -178,6 +187,7 @@ export function Reminders() {
                             <BigButton
                               label={r.yesDone}
                               icon={<Check />}
+                              size="compact"
                               busy={answer.isPending && answer.variables?.id === reminder.id && answer.variables.kind === "done"}
                               onClick={() => answer.mutate({ id: reminder.id, kind: "done" })}
                             />
@@ -185,6 +195,7 @@ export function Reminders() {
                               label={r.notSure}
                               icon={<CircleHelp />}
                               variant="secondary"
+                              size="compact"
                               busy={answer.isPending && answer.variables?.id === reminder.id && answer.variables.kind === "unsure"}
                               onClick={() => answer.mutate({ id: reminder.id, kind: "unsure" })}
                             />
@@ -198,6 +209,7 @@ export function Reminders() {
                           <BigButton
                             label={r.done}
                             icon={<Check />}
+                            size="compact"
                             busy={answer.isPending && answer.variables?.id === reminder.id}
                             onClick={() => answer.mutate({ id: reminder.id, kind: "done" })}
                           />
@@ -214,6 +226,7 @@ export function Reminders() {
               })}
             </AnimatePresence>
           </div>
+          {moreAfter > 0 && <p className="text-xl text-ink-soft">{r.moreAfter(moreAfter)}</p>}
         </section>
       )}
 

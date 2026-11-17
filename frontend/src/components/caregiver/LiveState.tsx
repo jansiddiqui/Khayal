@@ -1,6 +1,7 @@
 import { RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../ui/Button";
+import { serverDate } from "../../api/client";
 
 /** "just now", "3 min ago", "2 hours ago" for a past moment. */
 export function ago(ms: number, now: number = Date.now()): string {
@@ -53,7 +54,7 @@ export function ActiveState({ lastActiveAt }: { lastActiveAt: string | null | un
       </span>
     );
   }
-  const when = new Date(lastActiveAt);
+  const when = serverDate(lastActiveAt);
   const today = new Date(now);
   const sameDay = when.toDateString() === today.toDateString();
   const yesterday = new Date(now - 86_400_000).toDateString() === when.toDateString();

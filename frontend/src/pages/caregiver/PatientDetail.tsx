@@ -27,6 +27,7 @@ import { Button } from "../../ui/Button";
 import { CountUp } from "../../ui/CountUp";
 import { Skeleton } from "../../ui/Skeleton";
 import { useToast } from "../../ui/Toast";
+import { serverDate } from "../../api/client";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
 const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"];
@@ -104,7 +105,7 @@ const ALERTS_SHOWN = 3;
 export const HIGHLIGHT_MS = 2000;
 
 const alertTime = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 const ALERT_TYPE_LABEL = {
   decline: "Decline",
@@ -383,7 +384,7 @@ export function PatientDetail() {
     return (
       <CaregiverLayout title="Patient not found">
         <p className="mb-4">This patient is not linked to your account.</p>
-        <Link to="/caregiver" className="inline-flex items-center gap-1 text-brand-dark underline">
+        <Link to="/caregiver" className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
           All patients
         </Link>
@@ -392,21 +393,21 @@ export function PatientDetail() {
   }
 
   return (
-    <CaregiverLayout title={patient?.name ?? "Loading…"}>
+    <CaregiverLayout title={patient?.name ?? "Patient"}>
       <nav className="mb-4 flex flex-wrap gap-x-6 gap-y-2">
-        <Link to="/caregiver" className="inline-flex items-center gap-1 text-brand-dark underline">
+        <Link to="/caregiver" className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
           All patients
         </Link>
-        <Link to={`/caregiver/patients/${patientId}/reminders`} className="inline-flex items-center gap-1 text-brand-dark underline">
+        <Link to={`/caregiver/patients/${patientId}/reminders`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           Reminders
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
-        <Link to={`/caregiver/patients/${patientId}/family`} className="inline-flex items-center gap-1 text-brand-dark underline">
+        <Link to={`/caregiver/patients/${patientId}/family`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           Family photos
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
-        <button type="button" onClick={openSettings} className="inline-flex items-center gap-1 text-brand-dark underline">
+        <button type="button" onClick={openSettings} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <Smartphone aria-hidden="true" className="size-4" />
           Pair a device
         </button>
@@ -515,7 +516,7 @@ export function PatientDetail() {
                   </thead>
                   <tbody role="rowgroup">
                     {rows.map((s) => (
-                      <tr role="row" key={s.id} className="border-b border-line last:border-0">
+                      <tr role="row" key={s.id} className="border-b border-line transition-colors duration-150 last:border-0 hover:bg-brand-soft/60">
                         <td role="cell" data-label="Date" className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
                         <td role="cell" data-label="Game" className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
                         <td role="cell" data-label="Status" className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
@@ -532,7 +533,7 @@ export function PatientDetail() {
                   </tbody>
                 </table>
                 {sessions.data.length > SESSION_ROWS && (
-                  <button type="button" onClick={() => setAllRows(!allRows)} className="mt-3 text-brand-dark underline">
+                  <button type="button" onClick={() => setAllRows(!allRows)} className="mt-3 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
                     {allRows ? "Show latest only" : `Show all ${sessions.data.length} sessions`}
                   </button>
                 )}

@@ -78,6 +78,12 @@
   --color-danger: #a8372a;
   --color-danger-soft: #feeeeb;
 
+  /* Reaction Tap (game content): "tap" and "don't tap" signals, large bold text on them. */
+  --color-go: #16a34a;
+  --color-go-edge: #14532d;
+  --color-stop: #b91c1c;
+  --color-stop-edge: #7f1d1d;
+
   /* Focus ring: deep saffron, at least 3:1 on ivory and on teal */
   --color-focus: var(--color-saffron-600);
 

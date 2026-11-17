@@ -33,6 +33,7 @@ export function useUndoable(): (action: UndoableAction) => void {
           if (settled) return;
           settled = true;
           action.revert();
+          toast.show({ message: "Undone. It's back.", tone: "info" });
         },
         onExpire: () => {
           if (settled) return;

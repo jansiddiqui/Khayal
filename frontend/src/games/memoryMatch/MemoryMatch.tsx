@@ -13,7 +13,7 @@ import { CARD_ART } from "../memory/art";
 import { boardColumns, buildDeck, isBoardCorrect, memoryMatchConfig } from "./logic";
 
 /** Pause before a non-matching pair turns back over. */
-export const MISMATCH_SHOW_MS = 1200;
+export const MISMATCH_SHOW_MS = 2000;
 
 /**
  * One round = one full board. Correct when mistakes <= pairs.

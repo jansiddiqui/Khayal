@@ -21,6 +21,12 @@ export function CaregiverLayout({ title, meta, children }: { title: string; meta
 
   return (
     <div className="caregiver min-h-screen bg-desk text-sm text-ink">
+      <a
+        href="#content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:shadow-toast"
+      >
+        Skip to content
+      </a>
       <header className="border-b border-line bg-surface">
         <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
           <Link to="/caregiver" className="mr-2 whitespace-nowrap text-lg font-bold text-brand-dark">
@@ -47,10 +53,12 @@ export function CaregiverLayout({ title, meta, children }: { title: string; meta
       </header>
       <motion.main
         key={pathname}
+        id="content"
+        tabIndex={-1}
         initial={less ? { opacity: 0 } : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={calm(DURATION.base)}
-        className="mx-auto max-w-6xl px-4 py-6 sm:px-6"
+        className="mx-auto max-w-6xl px-4 py-6 outline-none sm:px-6"
       >
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-2xl font-semibold">{title}</h1>

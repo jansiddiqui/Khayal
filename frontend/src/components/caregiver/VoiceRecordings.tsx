@@ -3,9 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { LoadError } from "./LoadError";
 import { fetchAudioBlob, listRecordings, setElderConsent, type Patient, type SpeechSample } from "../../api/client";
+import { serverDate } from "../../api/client";
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
 export function formatDuration(ms: number): string {
   const total = Math.round(ms / 1000);

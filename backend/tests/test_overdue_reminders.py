@@ -70,7 +70,9 @@ def test_late_yes_is_confirmed_later(client: TestClient, register: Register, clo
     clock.now = at(21, 0)  # the 18:00 one is overdue (and already logged missed)
     done = answer(s, later, "done").json()
     assert (done["today_status"], done["today_late"]) == ("done", True)
-    assert done["today_logged_at"].startswith("2026-11-17T15:30")  # 21:00 IST in UTC
+    # The moment it was confirmed (Postgres may answer in another time zone: compare instants).
+    confirmed = datetime.fromisoformat(done["today_logged_at"].replace("Z", "+00:00"))
+    assert (confirmed if confirmed.tzinfo else confirmed.replace(tzinfo=timezone.utc)) == at(21)
     mine = today(s)["Evening tablet"]
     assert (mine["phase"], mine["late"]) == ("done", True)
     adherence = client.get(f"/api/patients/{s.pid}/reminders/adherence", headers=s.cg).json()

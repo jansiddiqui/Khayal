@@ -15,8 +15,8 @@ type Circle = "waiting" | "green" | "red" | "tooEarly";
  */
 const circleStyle: Record<Circle, string> = {
   waiting: "rounded-full border-line-strong bg-sunken text-ink",
-  green: "rounded-full border-green-900 bg-green-600 text-white",
-  red: "rounded-[2.5rem] border-red-900 bg-red-700 text-white",
+  green: "rounded-full border-go-edge bg-go text-white",
+  red: "rounded-[2.5rem] border-stop-edge bg-stop text-white",
   tooEarly: "rounded-full border-accent-strong bg-accent-soft text-ink",
 };
 

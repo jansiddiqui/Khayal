@@ -6,6 +6,7 @@ import { changePassword, deleteMyAccount, errorStatus, exportMyData, myConsents,
 import { useAuth } from "../../auth/AuthContext";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { Button } from "../../ui/Button";
+import { serverDate } from "../../api/client";
 
 const input = "rounded-md border border-line-strong bg-surface px-3 py-2";
 const card = "flex flex-col gap-3 rounded-lg border border-line bg-surface p-4";
@@ -16,7 +17,7 @@ const KIND: Record<string, string> = {
   voice: "Weekly voice task",
 };
 const BASIS: Record<string, string> = { elder_agreed: "they agreed", legal_authority: "legally authorised" };
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const day = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 function ChangePassword() {
   const { adopt } = useAuth();

@@ -92,7 +92,7 @@ Our users are elderly people with memory problems. Every patient screen must fol
 
 **Patient Home layout (decided):**
 
-- Top bar: the big "Home" button, and next to it a "Read aloud: On/Off" toggle (icon + words). The top bar is the same on every patient screen and does not count toward the 3-button limit.
+- Top bar: the big "Home" button, next to it a "Read aloud: On/Off" toggle (icon + words), and a "More" button ("Settings" on wider screens) that opens a settings sheet with vibration (default on) and soft sound (default off) (decided in Phase C). The top bar is the same on every patient screen and does not count toward the 3-button limit.
 - Below it: a "Next reminder" info card (information only, not a button).
 - Then exactly 3 big buttons: "Play a game", "Today's reminders", "Who is this?".
 - The weekly voice task is not on Home. It appears inside the games list as "Tell me about a picture", and only when it is due.

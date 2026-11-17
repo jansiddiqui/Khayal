@@ -4,8 +4,9 @@ import { useEffect, useRef } from "react";
 import { createPairingCode, listDevices } from "../../api/client";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
+import { serverDate } from "../../api/client";
 
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const timeOf = (iso: string) => serverDate(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 /**
  * "Pair a device": a one-time 6-digit code (valid 10 minutes) that the patient types on

@@ -37,6 +37,14 @@ checkApiUrl();
 export const api = axios.create({ baseURL: API_BASE });
 
 /**
+ * A server time as a Date. Postgres sends an offset; SQLite (local development and the demo) sends
+ * UTC without one, which a browser would otherwise read as local time (5.5 hours off in India).
+ */
+export function serverDate(iso: string): Date {
+  return new Date(/(Z|[+-]\d\d:?\d\d)$/i.test(iso) ? iso : `${iso}Z`);
+}
+
+/**
  * Every JSON API response must really be JSON. If the frontend calls the wrong address (for
  * example a build without VITE_API_URL), the host answers 200 with index.html; treat that as a
  * failed request, so screens show their error or "waking up" state instead of misreading it.

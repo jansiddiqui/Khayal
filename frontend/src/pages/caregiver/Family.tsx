@@ -99,11 +99,14 @@ function PhotoDrop({
   disabled,
   onFiles,
   note,
+  forName,
 }: {
   label: string;
   disabled: boolean;
   onFiles: (files: File[]) => void;
   note: string;
+  /** Whose photos these are, for screen readers (several "Add photos" on one page). */
+  forName?: string;
 }) {
   const id = useId();
   const [over, setOver] = useState(false);
@@ -139,6 +142,7 @@ function PhotoDrop({
         accept="image/jpeg,image/png"
         multiple
         className="sr-only"
+        aria-describedby={forName ? `${id}-for` : undefined}
         disabled={disabled}
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
@@ -146,6 +150,11 @@ function PhotoDrop({
           if (files.length) onFiles(files);
         }}
       />
+      {forName && (
+        <span id={`${id}-for`} className="sr-only">
+          Photos of {forName}
+        </span>
+      )}
       <span className="text-ink-muted">{over ? "Drop the photos here" : note}</span>
     </div>
   );
@@ -411,6 +420,7 @@ function MemberCard({
         <div className="mt-3">
           <PhotoDrop
             label={uploads.busy ? "Uploading…" : "Add photos"}
+            forName={member.name}
             disabled={full || uploads.busy}
             onFiles={onFiles}
             note={`${member.photos.length} / ${MAX_PHOTOS} photos · JPG or PNG, up to 5 MB each · or drop them here`}

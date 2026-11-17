@@ -29,21 +29,33 @@ import { EmptyState } from "../../ui/States";
 import { useToast } from "../../ui/Toast";
 import { useUndoable } from "../../ui/undo";
 import { appNow, cleanInput, defaultRepeat, emptyReminder, formProblem, IST_MINUTES, scheduleSummary } from "./reminderSchedule";
+import { serverDate } from "../../api/client";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monday
 const TYPES: ReminderType[] = ["medicine", "meal", "appointment", "other"];
 
-const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const clock = (iso: string) => serverDate(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
-/** Today's state in words, including "confirmed later" and "not sure" (CLAUDE.md section 6). */
-export function todayLabel(r: Reminder): string {
+/**
+ * Today's state in words, including "confirmed later" and "not sure" (CLAUDE.md section 6).
+ * `nowHHMM` is the app clock's time: a reminder an hour past its time with no answer is "Not
+ * answered yet", not "Pending".
+ */
+export function todayLabel(r: Reminder, nowHHMM?: string): string {
   if (r.today_status === null) return "—";
   if (r.today_status === "done") {
     const by = r.today_marked_by === "caregiver" ? " (by caregiver)" : "";
     return r.today_late && r.today_logged_at ? `Done, confirmed later at ${clock(r.today_logged_at)}${by}` : `Done${by}`;
   }
   if (r.today_status === "unsure") return "Not sure (family told)";
-  return r.today_status === "missed" ? "Missed" : "Pending";
+  if (r.today_status === "missed") return "Missed";
+  if (nowHHMM && minutes(nowHHMM) >= minutes(r.time_of_day) + 60) return "Not answered yet";
+  return "Pending";
+}
+
+function minutes(hhmm: string): number {
+  const [h = 0, m = 0] = hhmm.split(":").map(Number);
+  return h * 60 + m;
 }
 
 /** Medicine only: how long it may still say "It's time for this" (null = the standard hour). */
@@ -368,7 +380,7 @@ export function CaregiverReminders() {
     onSettled: refresh,
   });
   const update = useMutation({
-    mutationFn: ({ id, input }: { id: number; input: ReminderInput }) => updateReminder(patientId, id, input),
+    mutationFn: ({ id, input }: { id: number; input: ReminderInput; toggled?: boolean }) => updateReminder(patientId, id, input),
     onMutate: async ({ id, input }) => {
       await queryClient.cancelQueries({ queryKey: key });
       const before = snapshot();
@@ -380,9 +392,15 @@ export function CaregiverReminders() {
       put(context?.before);
       failed(error);
     },
-    onSuccess: (saved, { input }) => {
+    onSuccess: (saved, { input, toggled }) => {
       setHighlight(saved.id);
-      toast.show({ message: input.active ? `Saved: ${saved.title}.` : `Paused: ${saved.title}. It won't be shown until you resume it.` });
+      toast.show({
+        message: !toggled
+          ? `Saved: ${saved.title}.`
+          : input.active
+            ? `Resumed: ${saved.title}.`
+            : `Paused: ${saved.title}. It won't be shown until you resume it.`,
+      });
     },
     onSettled: refresh,
   });
@@ -414,7 +432,7 @@ export function CaregiverReminders() {
           size="sm"
           variant="quiet"
           icon={r.active ? <Pause /> : <Play />}
-          onClick={() => update.mutate({ id: r.id, input: { ...toInput(r, today), active: !r.active } })}
+          onClick={() => update.mutate({ id: r.id, input: { ...toInput(r, today), active: !r.active }, toggled: true })}
           aria-label={`${r.active ? "Pause" : "Resume"} ${r.title}`}
         >
           {r.active ? "Pause" : "Resume"}
@@ -533,7 +551,7 @@ export function CaregiverReminders() {
                       data-label="Today"
                       className={`py-2 pr-3 ${r.today_status === "missed" || r.today_status === "unsure" ? "font-medium text-accent-strong" : ""}`}
                     >
-                      {todayLabel(r)}
+                      {todayLabel(r, appNow(offset).time)}
                     </td>
                     <td role="cell" className="py-1.5">
                       {rowActions(r, r.id > 0)}
