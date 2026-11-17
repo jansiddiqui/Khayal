@@ -234,6 +234,20 @@ export const copy = {
       square: (n: number) => `Square ${n}`,
       tutorial: ["Some squares light up, one after another.", "Then tap the same squares in the same order."],
     },
+    objectLocation: {
+      title: "Where did it go?",
+      intro: "See where some everyday things are, then show where each one was.",
+      study: (n: number, total: number) => `Look where this is. (${n} of ${total})`,
+      next: "Next",
+      ready: "I'm ready",
+      whereWas: (thing: string) => `Where was the ${thing.toLowerCase()}?`,
+      again: "Here's where they were. Let's try those again.",
+      box: (n: number) => `Box ${n}`,
+      boxWith: (n: number, thing: string) => `Box ${n}, ${thing.toLowerCase()}`,
+      placedOf: (done: number, total: number) => `${done} of ${total} placed`,
+      practiceHint: "It was here. Tap this box.",
+      tutorial: ["Some things appear, one at a time, each in a box. Remember where each one is.", "Then each thing comes back. Tap the box where it was."],
+    },
   },
   days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   months: [
@@ -254,6 +268,19 @@ export const copy = {
   timesOfDay: { morning: "Morning", afternoon: "Afternoon", evening: "Evening", night: "Night" },
   // Other answers offered next to the patient's own city.
   cities: ["Delhi", "Mumbai", "Kolkata", "Chennai", "Bengaluru", "Hyderabad", "Pune", "Jaipur", "Lucknow", "Ahmedabad"],
+  /** "Where did it go?" objects (photos in games/objectLocation/photos). */
+  objects: {
+    key: "Key",
+    glasses: "Glasses",
+    lock: "Lock",
+    comb: "Comb",
+    cup: "Cup",
+    umbrella: "Umbrella",
+    spoon: "Spoon",
+    banana: "Bananas",
+    tomato: "Tomatoes",
+    onion: "Onion",
+  },
   /** Market day items (prices in games/moneyHandling/prices.ts); lower case, used inside sentences. */
   market: {
     biscuits: "a packet of biscuits",

@@ -68,6 +68,7 @@ class GameType(str, Enum):
     word_recall = "word_recall"
     daily_orientation = "daily_orientation"
     reaction_tap = "reaction_tap"
+    object_location = "object_location"
     spatial_span = "spatial_span"
     money_handling = "money_handling"
     clock_setting = "clock_setting"

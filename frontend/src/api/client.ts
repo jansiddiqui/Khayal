@@ -466,7 +466,8 @@ export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "dai
   | "colour_trails"
   | "clock_setting"
   | "money_handling"
-  | "spatial_span";
+  | "spatial_span"
+  | "object_location";
 
 export interface RoundResult {
   correct: boolean;
