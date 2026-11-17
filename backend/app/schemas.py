@@ -381,10 +381,14 @@ class ReminderIn(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     active: bool = True
+    # Medicine only: how long it may still say "It's time for this" (None = the standard hour).
+    late_window_minutes: Annotated[int, Field(ge=15, le=720)] | None = None
 
     @model_validator(mode="after")
     def _normalise(self) -> "ReminderIn":
         self.time_of_day = self.time_of_day.replace(second=0, microsecond=0, tzinfo=None)
+        if self.type != ReminderType.medicine:
+            self.late_window_minutes = None
         if self.repeat == ReminderRepeat.once:
             if self.on_date is None:
                 raise ValueError("Pick the date for a one-time reminder.")
@@ -402,7 +406,9 @@ class ReminderIn(BaseModel):
         return self
 
 
-TodayStatus = Literal["done", "missed", "pending"]
+TodayStatus = Literal["done", "missed", "pending", "unsure"]
+# upcoming: before its time; due: within its on-time window; overdue: after it (asked "Is it done?").
+ReminderPhase = Literal["upcoming", "due", "overdue", "done", "unsure"]
 
 
 class ReminderOut(BaseModel):
@@ -417,12 +423,16 @@ class ReminderOut(BaseModel):
     start_date: date | None
     end_date: date | None
     active: bool
+    late_window_minutes: int | None = None
     # Its one day or its end date has passed: shown under "Past reminders".
     past: bool
     # Status of today's occurrence; null when it isn't scheduled today (or is inactive).
     today_status: TodayStatus | None
     # Who marked today's occurrence done, if anyone.
     today_marked_by: MarkedBy | None = None
+    # Done today, but confirmed only after its on-time window, and when.
+    today_late: bool = False
+    today_logged_at: datetime | None = None
 
 
 class TodayReminderOut(BaseModel):
@@ -433,10 +443,15 @@ class TodayReminderOut(BaseModel):
     status: TodayStatus
     # True once its time has come.
     due: bool
+    phase: ReminderPhase
+    # Done after its on-time window ("confirmed later"), and when.
+    late: bool = False
+    confirmed_at: datetime | None = None
 
 
 class ReminderLogIn(BaseModel):
-    status: Literal["done"] = "done"
+    # "unsure" = the patient's "No / not sure" after the reminder's time (patients only).
+    status: Literal["done", "unsure"] = "done"
 
 
 class AlertOut(BaseModel):
@@ -456,6 +471,9 @@ class AdherenceOut(BaseModel):
     done_by_patient: int
     done_by_caregiver: int
     missed: int
+    # Done but confirmed later (already in the done counts), and "not sure" answers.
+    done_late: int = 0
+    unsure: int = 0
     rate: float | None
 
 

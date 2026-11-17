@@ -1,5 +1,11 @@
 """Reminders: today's list, done/missed logs, and the missed-reminders alert (CLAUDE.md section 6).
 
+Overdue reminders ask, they never urge (CLAUDE.md section 6, "Overdue reminders"): a reminder says
+"It's time for this" only during its on-time window (an hour, or a medicine's safe late window set
+by the caregiver). After that the patient is asked "Is it done?" with "Yes, it's done" (recorded as
+confirmed later) or "No / not sure" (the family is told at once). An earlier dose of the same
+medicine is no longer shown once the next dose's time has come.
+
 `sweep` runs every REMINDER_CHECK_MINUTES in the background (app.background) and also
 whenever reminders or alerts are read: any scheduled occurrence still not done GRACE
 after its time is logged as missed, and a warning alert is raised if MISSED_ALERT_COUNT
@@ -21,6 +27,7 @@ from app.models import (
     ReminderLog,
     ReminderRepeat,
     ReminderStatus,
+    ReminderType,
     Role,
     Severity,
     User,
@@ -29,12 +36,33 @@ from app.services.clock import as_utc, at_local, local
 
 # How long after its time a reminder can still be marked done before it counts as missed.
 GRACE = timedelta(hours=2)
+# How long a reminder says "It's time for this"; after that it only asks "Is it done?".
+ON_TIME_WINDOW = timedelta(hours=1)
 MISSED_WINDOW = timedelta(hours=48)
 MISSED_ALERT_COUNT = 3
 # Unlogged occurrences older than this are left alone.
 SWEEP_DAYS = 7
 
-TodayStatus = Literal["done", "missed", "pending"]
+TodayStatus = Literal["done", "missed", "pending", "unsure"]
+# Where a reminder stands for the patient right now (see the module docstring).
+Phase = Literal["upcoming", "due", "overdue", "done", "unsure"]
+
+
+def on_time_window(reminder: Reminder) -> timedelta:
+    """A medicine's safe late window if the caregiver set one, otherwise the standard hour."""
+    if reminder.type == ReminderType.medicine and reminder.late_window_minutes:
+        return timedelta(minutes=reminder.late_window_minutes)
+    return ON_TIME_WINDOW
+
+
+def missed_after(reminder: Reminder) -> timedelta:
+    """An occurrence not done this long after its time is logged as missed."""
+    return max(GRACE, on_time_window(reminder))
+
+
+def clock_label(t: time) -> str:
+    """09:00 -> "9:00 AM" (the same format the patient screens use)."""
+    return f"{t.hour % 12 or 12}:{t.minute:02d} {'AM' if t.hour < 12 else 'PM'}"
 
 
 def scheduled_on(reminder: Reminder, day: date) -> bool:
@@ -90,7 +118,7 @@ def sweep(db: Session, patient: User, now: datetime) -> None:
         for back in range(SWEEP_DAYS, -1, -1):
             day = today - timedelta(days=back)
             due = occurrence(reminder, day)
-            if not scheduled_on(reminder, day) or due < created or due + GRACE > now:
+            if not scheduled_on(reminder, day) or due < created or due + missed_after(reminder) > now:
                 continue
             if _log_for(db, reminder.id, day) is None:
                 db.add(ReminderLog(reminder_id=reminder.id, date=day, status=ReminderStatus.missed))
@@ -144,6 +172,10 @@ class TodayReminder:
     due_at: datetime
     status: TodayStatus
     due: bool
+    phase: Phase
+    # Done after the on-time window ("confirmed later"), and when it was confirmed.
+    late: bool = False
+    confirmed_at: datetime | None = None
 
 
 def today_marked_by(db: Session, reminder: Reminder, day: date) -> MarkedBy | None:
@@ -158,18 +190,65 @@ def today_status(db: Session, reminder: Reminder, day: date) -> TodayStatus | No
     log = _log_for(db, reminder.id, day)
     if log is None:
         return "pending"
-    return "done" if log.status == ReminderStatus.done else "missed"
+    return log.status.value  # type: ignore[return-value]
+
+
+def today_log(db: Session, reminder: Reminder, day: date) -> ReminderLog | None:
+    return _log_for(db, reminder.id, day)
+
+
+def _same_medicine(a: Reminder, b: Reminder) -> bool:
+    return (
+        a.id != b.id
+        and a.type == b.type == ReminderType.medicine
+        and a.title.strip().casefold() == b.title.strip().casefold()
+    )
+
+
+def superseded(reminder: Reminder, others: list[Reminder], day: date, now: datetime) -> bool:
+    """A later dose of the same medicine has reached its time today: the earlier one is no longer
+    shown to the patient (it stays in the caregiver's records)."""
+    return any(
+        _same_medicine(reminder, other)
+        and other.active
+        and scheduled_on(other, day)
+        and other.time_of_day > reminder.time_of_day
+        and occurrence(other, day) <= now
+        for other in others
+    )
+
+
+def phase_of(reminder: Reminder, status: TodayStatus, due_at: datetime, now: datetime) -> Phase:
+    if status in ("done", "unsure"):
+        return status  # type: ignore[return-value]
+    if now < due_at:
+        return "upcoming"
+    return "due" if now < due_at + on_time_window(reminder) else "overdue"
 
 
 def today_for(db: Session, patient: User, now: datetime) -> list[TodayReminder]:
+    """The patient's reminders for today, without earlier doses that a later dose has replaced."""
     today = local(now).date()
+    all_reminders = reminders_for(db, patient.id)
     out: list[TodayReminder] = []
-    for reminder in reminders_for(db, patient.id):
+    for reminder in all_reminders:
         status = today_status(db, reminder, today)
-        if status is None:
+        if status is None or superseded(reminder, all_reminders, today, now):
             continue
         due_at = occurrence(reminder, today)
-        out.append(TodayReminder(reminder=reminder, due_at=due_at, status=status, due=due_at <= now))
+        log = _log_for(db, reminder.id, today)
+        done_log = log if log is not None and log.status == ReminderStatus.done else None
+        out.append(
+            TodayReminder(
+                reminder=reminder,
+                due_at=due_at,
+                status=status,
+                due=due_at <= now,
+                phase=phase_of(reminder, status, due_at, now),
+                late=bool(done_log and done_log.late),
+                confirmed_at=done_log.logged_at if done_log else None,
+            )
+        )
     return out
 
 
@@ -178,20 +257,68 @@ class NotScheduledTodayError(Exception):
 
 
 def mark_done(db: Session, reminder: Reminder, now: datetime, by: MarkedBy) -> ReminderLog:
-    """Mark today's occurrence done. A late "done" replaces an automatic "missed"."""
+    """Mark today's occurrence done. A late "done" replaces "missed" or "not sure", and is
+    recorded as confirmed later when it comes after the on-time window."""
     today = local(now).date()
     if not reminder.active or not scheduled_on(reminder, today):
         raise NotScheduledTodayError(reminder.id)
+    late = now >= occurrence(reminder, today) + on_time_window(reminder)
     log = _log_for(db, reminder.id, today)
     if log is None:
         log = ReminderLog(
-            reminder_id=reminder.id, date=today, status=ReminderStatus.done, marked_by=by, logged_at=now
+            reminder_id=reminder.id, date=today, status=ReminderStatus.done, marked_by=by, logged_at=now, late=late
         )
         db.add(log)
     else:
         log.status = ReminderStatus.done
         log.marked_by = by
         log.logged_at = now
+        log.late = late
+    db.commit()
+    return log
+
+
+class NotOverdueError(Exception):
+    """"No / not sure" is only asked once a reminder's time has passed."""
+
+
+class AlreadyDoneError(Exception):
+    pass
+
+
+def mark_unsure(db: Session, reminder: Reminder, patient: User, now: datetime) -> ReminderLog:
+    """The patient answered "No / not sure": record it and tell the family at once (one notice per
+    reminder per day), without waiting for the missed-reminders rule. Never advice to take a dose."""
+    today = local(now).date()
+    if not reminder.active or not scheduled_on(reminder, today):
+        raise NotScheduledTodayError(reminder.id)
+    if now < occurrence(reminder, today):
+        raise NotOverdueError(reminder.id)
+    log = _log_for(db, reminder.id, today)
+    if log is not None and log.status == ReminderStatus.done:
+        raise AlreadyDoneError(reminder.id)
+    first_time = log is None or log.status != ReminderStatus.unsure
+    if log is None:
+        log = ReminderLog(
+            reminder_id=reminder.id, date=today, status=ReminderStatus.unsure, marked_by=MarkedBy.patient, logged_at=now
+        )
+        db.add(log)
+    else:
+        log.status = ReminderStatus.unsure
+        log.marked_by = MarkedBy.patient
+        log.logged_at = now
+        log.late = False
+    if first_time:
+        when = clock_label(reminder.time_of_day)
+        db.add(
+            Alert(
+                patient_id=patient.id,
+                type=AlertType.reminder_unsure,
+                severity=Severity.warning if reminder.type == ReminderType.medicine else Severity.info,
+                message=f"{patient.name} wasn't sure about the {when} reminder \"{reminder.title}\". Please check with them.",
+                created_at=now,
+            )
+        )
     db.commit()
     return log
 
@@ -213,6 +340,9 @@ class Adherence:
     done_by_patient: int
     done_by_caregiver: int
     missed: int
+    # Done but confirmed later (already counted in done_by_patient / done_by_caregiver), and "not sure".
+    done_late: int
+    unsure: int
     # done_by_patient / all finished occurrences; None when there were none.
     rate: float | None
 
@@ -230,12 +360,15 @@ def adherence(db: Session, patient_id: int, now: datetime, days: int = 7) -> Adh
     done = [log for log in logs if log.status == ReminderStatus.done]
     by_caregiver = sum(1 for log in done if log.marked_by == MarkedBy.caregiver)
     by_patient = len(done) - by_caregiver
-    missed = len(logs) - len(done)
+    unsure = sum(1 for log in logs if log.status == ReminderStatus.unsure)
+    missed = len(logs) - len(done) - unsure
     total = len(logs)
     return Adherence(
         days=days,
         done_by_patient=by_patient,
         done_by_caregiver=by_caregiver,
         missed=missed,
+        done_late=sum(1 for log in done if log.late),
+        unsure=unsure,
         rate=by_patient / total if total else None,
     )
