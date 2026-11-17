@@ -32,7 +32,7 @@ import { useToast } from "../../ui/Toast";
 import { serverDate } from "../../api/client";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
-const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap", "money_handling", "clock_setting", "colour_trails"];
+const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap", "spatial_span", "money_handling", "clock_setting", "colour_trails"];
 
 const START_LEVEL = 2;
 const ROUNDS_PER_SESSION = 5;

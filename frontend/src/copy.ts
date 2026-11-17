@@ -226,6 +226,14 @@ export const copy = {
       affordReply: (pair: string, sum: number, money: number) => `${pair} come to ₹${sum}, which fits in ₹${money}.`,
       tutorial: ["Tap a note or coin to put it on the counter. Tap it again to take it back.", "When it's the right money, tap Pay."],
     },
+    spatialSpan: {
+      title: "Tap the squares",
+      intro: "Watch the squares light up, then tap them in the same order.",
+      watch: "Watch the squares…",
+      yourTurn: "Your turn. Tap the same squares in the same order.",
+      square: (n: number) => `Square ${n}`,
+      tutorial: ["Some squares light up, one after another.", "Then tap the same squares in the same order."],
+    },
   },
   days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   months: [

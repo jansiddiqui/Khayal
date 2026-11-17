@@ -465,7 +465,8 @@ export const admin = {
 export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap"
   | "colour_trails"
   | "clock_setting"
-  | "money_handling";
+  | "money_handling"
+  | "spatial_span";
 
 export interface RoundResult {
   correct: boolean;

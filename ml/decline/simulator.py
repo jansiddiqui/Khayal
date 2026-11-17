@@ -48,10 +48,10 @@ CSV_COLUMNS = [
 ]
 
 ORIENTATION = "daily_orientation"
-LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling")
+LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
 CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
-HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall"})
+HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall", "spatial_span"})
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
     "memory_match": 2600,
@@ -59,6 +59,7 @@ BASE_RT_MS = {
     "word_recall": 6500,
     "daily_orientation": 3800,
     "reaction_tap": 480,
+    "spatial_span": 2300,
     "money_handling": 8000,
     "clock_setting": 9000,
     "colour_trails": 1500,
@@ -102,6 +103,7 @@ def _sigmoid(x: float) -> float:
 # Games v2: each game's curve is the shared one shifted a little, so a level means a comparable
 # challenge across games (docs/games/research.md section 4). Synthetic, not fitted to real data.
 DIFFICULTY_OFFSET: dict[str, float] = {
+    "spatial_span": 0.02,
     "money_handling": 0.0,
     "clock_setting": 0.0,
     "colour_trails": 0.0,
