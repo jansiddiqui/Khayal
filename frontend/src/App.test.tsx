@@ -318,6 +318,9 @@ describe("caregiver", () => {
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByText(/Automatic: About Today plus the two games played least recently/)).toBeInTheDocument();
+    // While automatic, nothing looks pinned: the choices open on request.
+    expect(screen.queryByLabelText("Slot 2")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose games to pin" }));
     fireEvent.change(screen.getByLabelText("Slot 2"), { target: { value: "reaction_tap" } });
     fireEvent.change(screen.getByLabelText("Slot 3"), { target: { value: "reaction_tap" } });
     expect(screen.getByText("Choose two different games.")).toBeInTheDocument();

@@ -47,8 +47,9 @@ export function VoiceRecordings({ patient }: { patient: Patient }) {
         {confirmOff && (
           <div role="alertdialog" aria-label="Turn off the voice task" className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
             <p className="min-w-0 flex-1">
-              Turning this off withdraws the consent and deletes {count === 1 ? "the 1 recording" : `all ${count} recordings`} for{" "}
-              {patient.name}. This cannot be undone.
+              {count === 0
+                ? `Turning this off withdraws the consent for ${patient.name}. There are no recordings to delete.`
+                : `Turning this off withdraws the consent and deletes ${count === 1 ? "the 1 recording" : `all ${count} recordings`} for ${patient.name}. This cannot be undone.`}
             </p>
             <button type="button" onClick={() => toggle.mutate(false)} className="rounded-md bg-danger px-3 py-1 font-medium text-white">
               Turn off and delete

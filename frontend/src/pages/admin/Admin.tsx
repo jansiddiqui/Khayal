@@ -5,10 +5,12 @@ import { admin, errorStatus, linkUrl, type SecretLink } from "../../api/client";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CopyLink } from "../../components/caregiver/PrivacyPanel";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { liftOnHover, pressable } from "../../ui/motion";
 
 const card = "flex flex-col gap-3 rounded-lg border border-line bg-surface p-4";
-const button = "rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken disabled:opacity-60";
-const primary = "rounded-md bg-brand px-3 py-1 font-medium text-white hover:bg-brand-dark disabled:opacity-60";
+// Same states as the shared Button (src/ui/Button.tsx): hover lift and shade, press, focus ring.
+const button = `rounded-lg border border-line-strong bg-surface px-3 py-1 hover:border-brand hover:bg-brand-soft disabled:opacity-60 ${pressable} ${liftOnHover}`;
+const primary = `rounded-lg bg-brand px-3 py-1 font-medium text-white shadow-lift hover:bg-brand-dark disabled:opacity-60 ${pressable} ${liftOnHover}`;
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const ROLE: Record<string, string> = { family: "Family member", doctor: "Doctor", care_home: "Care home" };
 const STATE: Record<string, string> = { open: "Open", used: "Used", revoked: "Revoked", expired: "Expired" };

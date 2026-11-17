@@ -147,7 +147,7 @@ function Devices({ patient }: { patient: Patient }) {
       <h3 className="font-semibold">Signed-in devices</h3>
       {devices.isPending && <p className="text-ink-muted">Loading devices…</p>}
       {devices.isError && <LoadError message="Could not load the devices." onRetry={() => void devices.refetch()} />}
-      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">No device is signed in. Pair one with a code above.</p>}
+      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">No device is signed in yet. Make a 6-digit code under “Pair a device”.</p>}
       {devices.isSuccess && devices.data.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
           {devices.data.map((d) => (

@@ -138,3 +138,13 @@ textarea {
   /* The glow still confirms the answer, without movement: a short ring that fades. */
   .calm-glow { animation-duration: 1ms; box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-success), transparent 50%); }
 }
+
+/* Caregiver sections settle in when opened. */
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+details[open] > .section-body { animation: section-in 220ms var(--ease-calm); }
+@media (prefers-reduced-motion: reduce) {
+  details[open] > .section-body { animation: none; }
+}

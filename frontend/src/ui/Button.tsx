@@ -1,7 +1,10 @@
 import { Check } from "lucide-react";
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { liftOnHover, pressable } from "./motion";
 import { Spinner } from "./Spinner";
+
+/** How long the success tick stays before the button reads as usual again. */
+export const SUCCESS_SHOW_MS = 2500;
 
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger" | "danger-quiet";
 export type ButtonSize = "sm" | "md";
@@ -29,7 +32,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Busy: a spinner replaces the icon, the button keeps its size and can't be pressed again. */
   loading?: boolean;
-  /** Just finished an important action: a tick and these words, e.g. "Saved". */
+  /** Just finished an important action: a tick and these words, e.g. "Saved", for a moment. */
   successLabel?: string | false;
   icon?: ReactNode;
   children: ReactNode;
@@ -45,7 +48,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { variant = "secondary", size = "md", loading = false, successLabel, icon, children, className = "", disabled, type = "button", ...rest },
   ref,
 ) {
-  const showSuccess = Boolean(successLabel) && !loading;
+  // The tick shows for SUCCESS_SHOW_MS each time `successLabel` turns on, then the usual words return.
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!successLabel) return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), SUCCESS_SHOW_MS);
+    return () => clearTimeout(t);
+  }, [successLabel]);
+  const showSuccess = flash && Boolean(successLabel) && !loading;
   return (
     <button
       ref={ref}

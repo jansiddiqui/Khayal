@@ -32,6 +32,9 @@ export const GAME_NAMES = {
 } as const;
 
 /** Rolling mean of the last `n` values at each point (the same 5-session average alerts use). */
+/** The trend lines draw themselves in once, when the chart first appears (not under reduced motion). */
+const DRAW_IN = typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export function rollingMean(values: readonly number[], n = 5): number[] {
   return values.map((_, i) => {
     const window = values.slice(Math.max(0, i + 1 - n), i + 1);
@@ -119,7 +122,7 @@ export function GameTrendChart({
               <Line type="monotone" dataKey="composite" stroke="none" isAnimationActive={false} legendType="none"
                 dot={{ r: 2.5, fill: SERIES, fillOpacity: 0.3, stroke: "none" }} activeDot={{ r: 4, fill: SERIES }} />
               <Line type="monotone" dataKey="average" stroke={SERIES} strokeWidth={3} dot={false}
-                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={false} />
+                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={DRAW_IN} animationDuration={700} animationEasing="ease-out" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -171,7 +174,7 @@ export function IndexChart({ trend }: { trend: Trend }) {
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
               <Line type="monotone" dataKey="index" stroke={SERIES} strokeWidth={2} dot={false}
-                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={false} />
+                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={DRAW_IN} animationDuration={700} animationEasing="ease-out" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

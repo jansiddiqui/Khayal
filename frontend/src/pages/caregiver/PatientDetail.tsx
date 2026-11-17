@@ -23,6 +23,10 @@ import { PrivacyPanel } from "../../components/caregiver/PrivacyPanel";
 import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
 import { formatZ, StatusBadge } from "../../components/caregiver/Status";
 import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
+import { Button } from "../../ui/Button";
+import { CountUp } from "../../ui/CountUp";
+import { Skeleton } from "../../ui/Skeleton";
+import { useToast } from "../../ui/Toast";
 
 /** About Today (Daily Orientation) has no difficulty levels. */
 const LEVELLED_GAMES: GameType[] = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"];
@@ -137,9 +141,18 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
       <h2 id="alerts-heading" className="mb-3 text-lg font-semibold">
         Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
       </h2>
-      {alerts.isPending && <p className="text-ink-muted">Loading alerts…</p>}
+      {alerts.isPending && (
+        <div role="status" aria-busy="true" aria-label="Loading alerts" className="flex flex-col gap-2">
+          <Skeleton className="h-12 w-full" />
+        </div>
+      )}
       {alerts.isError && <LoadError message="Could not load alerts." onRetry={() => void alerts.refetch()} />}
-      {alerts.isSuccess && alerts.data.length === 0 && <p className="text-ink-muted">No alerts.</p>}
+      {alerts.isSuccess && open.length === 0 && (
+        <p className="text-ink-muted">
+          No new alerts. A decline alert is sent only when a game stays below −1.5 for 3 sessions in a row, so a game can show
+          “Declining” for a session or two before an alert comes.
+        </p>
+      )}
       <ul className="flex flex-col gap-2">
         {shown.map((a) => {
           const look = SEVERITY_STYLE[a.severity];
@@ -174,14 +187,9 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
               </ul>
               <Disclaimer compact />
             </div>
-            <button
-              type="button"
-              onClick={() => ack.mutate(a.id)}
-              disabled={ack.isPending}
-              className="rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken"
-            >
+            <Button size="sm" onClick={() => ack.mutate(a.id)} loading={ack.isPending && ack.variables === a.id} disabled={ack.isPending}>
               Acknowledge
-            </button>
+            </Button>
           </li>
           );
         })}
@@ -212,9 +220,16 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
   const queryClient = useQueryClient();
   const [first, setFirst] = useState<GameType>(pinned?.[0] ?? LEVELLED_GAMES[0]!);
   const [second, setSecond] = useState<GameType>(pinned?.[1] ?? LEVELLED_GAMES[1]!);
+  // While automatic, the choices stay hidden, so nothing looks pinned when it isn't.
+  const [choosing, setChoosing] = useState(false);
+  const toast = useToast();
   const save = useMutation({
     mutationFn: (pins: GameType[] | null) => updatePatient(patientId, { pinned_games: pins }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["patients"] }),
+    onSuccess: (_, pins) => {
+      setChoosing(false);
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast.show({ message: pins ? `Pinned: ${GAME_NAMES[pins[0]!]} and ${GAME_NAMES[pins[1]!]}.` : "Games are automatic again." });
+    },
   });
 
   function onSubmit(event: FormEvent) {
@@ -250,27 +265,28 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
           ? `Pinned: About Today, ${GAME_NAMES[pinned[0]!]}, ${GAME_NAMES[pinned[1]!]}.`
           : "Automatic: About Today plus the two games played least recently."}
       </p>
-      <div className="flex flex-wrap items-end gap-3">
-        {select("pin-slot-2", "Slot 2", first, setFirst)}
-        {select("pin-slot-3", "Slot 3", second, setSecond)}
-        <button
-          type="submit"
-          disabled={save.isPending || first === second}
-          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
-        >
-          Pin these games
-        </button>
-        {pinned && (
-          <button
-            type="button"
-            onClick={() => save.mutate(null)}
-            disabled={save.isPending}
-            className="rounded-md border border-line-strong px-4 py-2 hover:bg-sunken"
-          >
-            Unpin (automatic)
-          </button>
-        )}
-      </div>
+      {pinned || choosing ? (
+        <div className="flex flex-wrap items-end gap-3">
+          {select("pin-slot-2", "Slot 2", first, setFirst)}
+          {select("pin-slot-3", "Slot 3", second, setSecond)}
+          <Button type="submit" variant="primary" loading={save.isPending && save.variables !== null} disabled={first === second}>
+            Pin these games
+          </Button>
+          {pinned ? (
+            <Button onClick={() => save.mutate(null)} loading={save.isPending && save.variables === null}>
+              Unpin (automatic)
+            </Button>
+          ) : (
+            <Button variant="quiet" onClick={() => setChoosing(false)}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      ) : (
+        <Button className="self-start" onClick={() => setChoosing(true)}>
+          Choose games to pin
+        </Button>
+      )}
       {first === second && <p className="text-accent-strong">Choose two different games.</p>}
       {save.isError && (
         <p role="alert" className="text-danger">
@@ -549,14 +565,31 @@ function Section({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
+  const openedByHand = useRef(false);
   return (
-    <details id={id} open={defaultOpen} className="section group mb-6 scroll-mt-20">
-      <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden">
+    <details
+      id={id}
+      open={defaultOpen}
+      className="section group mb-6 scroll-mt-20"
+      onToggle={(event) => {
+        // Opened by a click on its title: bring it into view, so its content doesn't open off-screen.
+        // (Opened by a link elsewhere, e.g. "See … chart", that link does its own scrolling.)
+        const el = event.currentTarget;
+        if (el.open && openedByHand.current && typeof el.scrollIntoView === "function") {
+          requestAnimationFrame(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+        }
+        openedByHand.current = false;
+      }}
+    >
+      <summary
+        onClick={() => (openedByHand.current = true)}
+        className="mb-3 flex cursor-pointer list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden"
+      >
         <ChevronRight aria-hidden="true" className="size-4 shrink-0 self-center text-ink-muted transition-transform group-open:rotate-90" />
         <h2 className="text-lg font-semibold">{title}</h2>
         {hint && <span className="text-sm text-ink-muted">{hint}</span>}
       </summary>
-      {children}
+      <div className="section-body">{children}</div>
     </details>
   );
 }
@@ -592,7 +625,7 @@ function SummaryCard({
             {trend.cognitive_index !== null && <span className="text-ink-muted">index {formatZ(trend.cognitive_index)}</span>}
           </p>
         ) : (
-          <p className="text-ink-muted">{trendFailed ? "Not available" : "Loading…"}</p>
+          trendFailed ? <p className="text-ink-muted">Not available</p> : <Skeleton className="mt-1 h-6 w-32" />
         )}
       </div>
       <div>
@@ -605,12 +638,18 @@ function SummaryCard({
             {alertLines(latest.message)[0]}
           </p>
         ) : (
-          <p>{alerts.isSuccess ? "No new alerts" : alerts.isError ? "Not available" : "Loading…"}</p>
+          alerts.isPending ? <Skeleton className="mt-1 h-6 w-40" /> : <p>{alerts.isSuccess ? "No new alerts" : "Not available"}</p>
         )}
       </div>
       <div>
         <p className="text-ink-muted">Reminders done by the patient</p>
-        <p className="text-lg font-semibold">{rate === undefined ? (signalsFailed ? "Not available" : "Loading…") : rate === null ? "—" : `${Math.round(rate * 100)}%`}</p>
+        {rate === undefined && !signalsFailed ? (
+          <Skeleton className="mt-1 h-7 w-16" />
+        ) : (
+          <p className="text-lg font-semibold tabular-nums">
+            {rate === undefined ? "Not available" : rate === null ? "—" : <CountUp value={Math.round(rate * 100)} format={(n) => `${Math.round(n)}%`} />}
+          </p>
+        )}
         {signals && <p className="text-ink-muted">last {signals.adherence.days} days</p>}
       </div>
       <div>
@@ -622,7 +661,7 @@ function SummaryCard({
             <span className="text-ink-muted">{alertTime(lastSession.started_at)}</span>
           </p>
         ) : (
-          <p className="text-ink-muted">{sessionsLoading ? "Loading…" : "Not played yet"}</p>
+          sessionsLoading ? <Skeleton className="mt-1 h-10 w-36" /> : <p className="text-ink-muted">Not played yet</p>
         )}
       </div>
     </section>
