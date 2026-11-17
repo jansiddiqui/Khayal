@@ -203,6 +203,7 @@ Each game is a self-contained component: it receives `level`, reports each round
 Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adaptive rule and composite; `errors` stored but not scored):
 
 6. **Join in order** (`colour_trails`, caregiver name "Colour Trails"; Trail Making / Color Trails idea): tap numbered marks in order; a line joins each right tap; a tap that doesn't join says "Let's look for 4". Levels 1–4: Part 1 with 5/7/9/12 numbers; 5–10: Part 2 with 6→16 numbers alternating teal circle and saffron square (shape and colour), half of the numbers also shown in the other colour to be left alone. Right = finished with at most 1 wrong tap. `reaction_ms` = median gap between joins, recorded silently (D2). `errors` = taps that didn't join.
+7. **Set the clock** (`clock_setting`, "Clock Setting"; Clock Setting / Reading idea, no free drawing): "Set the clock to 10 past 11" (words and digits); tap where the short hand goes, then the long hand; either can be moved again (tap, or the arrow keys) before Done. Levels: 1 read o'clock (3 choices) · 2 set o'clock · 3 half past · 4 quarter past/to · 5 five-minute steps · 6 "10 past 11" pull · 7 face with only 12/3/6/9 · 8 ticks only · 9 words only ("twenty to four") · 10 "what will the time be in an hour and a half?" (3 choices). Right = short hand in the right hour sector (on the hour at o'clock) and long hand within 5 minutes. `errors` bits: 1 = short hand, 2 = long hand.
 
 **No hidden timers (decided):** apart from Reaction Tap, nothing on a game screen ends by itself.
 

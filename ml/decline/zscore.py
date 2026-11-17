@@ -73,6 +73,7 @@ GAME_NAMES = {
     "word_recall": "Word Recall",
     "daily_orientation": "About Today",
     "reaction_tap": "Reaction Tap",
+    "clock_setting": "Clock Setting",
     "colour_trails": "Colour Trails",
 }
 

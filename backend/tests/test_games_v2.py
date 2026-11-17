@@ -9,7 +9,7 @@ from ml.decline import simulator, zscore
 from tests.conftest import Register, bearer, link_patient
 from tests.test_games import session_body
 
-NEW_LEVELLED = ["colour_trails"]
+NEW_LEVELLED = ["colour_trails", "clock_setting"]
 
 
 @pytest.mark.parametrize("game", NEW_LEVELLED)
