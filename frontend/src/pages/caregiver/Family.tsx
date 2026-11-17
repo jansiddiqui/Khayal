@@ -562,9 +562,15 @@ export function CaregiverFamily() {
 
       <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="add-person-title">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="add-person-title" className="text-lg font-semibold">
-            Add a person
-          </h2>
+          {adding || none ? (
+            <h2 id="add-person-title" className="text-lg font-semibold">
+              Add a person
+            </h2>
+          ) : (
+            <p id="add-person-title" className="text-ink-soft">
+              Add the people {first} sees often, each with a photo.
+            </p>
+          )}
           {!(adding || none) && (
             <Button variant="primary" size="sm" icon={<UserPlus />} onClick={() => setAdding(true)}>
               Add a person

@@ -42,7 +42,7 @@ export function PatientHome() {
     <Layout title={copy.patientHome.greetingAt(firstName, new Date().getHours())} snug>
       <section
         aria-labelledby="next-reminder"
-        className="flex items-start gap-3 rounded-2xl border-4 border-calm bg-calm-soft px-4 py-3"
+        className="flex items-start gap-3 rounded-2xl border-4 border-calm bg-calm-soft px-4 py-2.5"
       >
         <AlarmClock aria-hidden="true" className="mt-1 size-8 shrink-0 text-calm" />
         <div className="min-w-0 flex-1">

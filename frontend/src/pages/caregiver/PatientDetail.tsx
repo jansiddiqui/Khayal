@@ -428,7 +428,11 @@ export function PatientDetail() {
       <Section title="Overall trend and signals" defaultOpen>
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           {trend.isSuccess && <IndexChart trend={trend.data} />}
-          {trend.isPending && <p className="text-ink-muted">Loading trends…</p>}
+          {trend.isPending && (
+            <div role="status" aria-busy="true" aria-label="Loading trends">
+              <Skeleton className="h-[21rem] w-full" />
+            </div>
+          )}
           {trend.isError && <LoadError message="Could not load the trends." onRetry={() => void trend.refetch()} />}
           {signals.isSuccess && <SignalTiles signals={signals.data} />}
           {signals.isError && (
@@ -437,6 +441,17 @@ export function PatientDetail() {
         </div>
       </Section>
 
+      {/* Its place is kept while the trends load, so nothing below it jumps when they arrive. */}
+      {trend.isPending && (
+        <div aria-hidden="true" className="mb-6 flex flex-col gap-3">
+          <Skeleton className="h-6 w-24" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
+      )}
       {trend.isSuccess && (
         <Section title="Games" hint="Games on Watch or Declining are open; tap a game to open or close it." defaultOpen>
           <p className="mb-3 text-sm text-ink-muted">
@@ -456,7 +471,13 @@ export function PatientDetail() {
         </Section>
       )}
 
-      {sessions.isPending && <p className="text-ink-muted">Loading sessions…</p>}
+      {sessions.isPending && (
+        <div role="status" aria-busy="true" aria-label="Loading sessions" className="flex flex-col gap-2">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
+      )}
       {sessions.isError && (
         <LoadError message="Could not load sessions for this patient." onRetry={() => void sessions.refetch()} />
       )}

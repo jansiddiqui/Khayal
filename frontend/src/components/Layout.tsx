@@ -29,8 +29,8 @@ interface LayoutProps {
 
 const topBarButton =
   // Icon above the words on phones, so all three top-bar buttons fit one row at 375px.
-  "flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border-4 border-ink bg-surface text-center whitespace-nowrap " +
-  "px-1.5 py-1 text-xl leading-tight font-bold text-ink shadow-lift hover:bg-sunken active:bg-sunken " +
+  "flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border-4 border-ink bg-surface text-center whitespace-nowrap " +
+  "px-1.5 py-0.5 text-xl leading-tight font-bold text-ink shadow-lift hover:bg-sunken active:bg-sunken " +
   "sm:flex-row sm:gap-3 sm:px-5 sm:text-2xl " +
   pressable;
 
@@ -79,7 +79,7 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
           }}
           aria-current={onHome ? "page" : undefined}
         >
-          <House aria-hidden="true" className="size-7 shrink-0" />
+          <House aria-hidden="true" className="size-6 shrink-0 sm:size-7" />
           <span>{copy.nav.home}</span>
         </Link>
         <button
@@ -92,9 +92,9 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
           className={topBarButton}
         >
           {enabled ? (
-            <Volume2 aria-hidden="true" className="size-7 shrink-0" />
+            <Volume2 aria-hidden="true" className="size-6 shrink-0 sm:size-7" />
           ) : (
-            <VolumeX aria-hidden="true" className="size-7 shrink-0" />
+            <VolumeX aria-hidden="true" className="size-6 shrink-0 sm:size-7" />
           )}
           {/* Two short lines on a phone ("Read aloud:" / "Off"), one line on wider screens. */}
           <span className="flex flex-col sm:flex-row sm:gap-[0.3em]">
@@ -111,7 +111,7 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
           aria-label={copy.nav.moreSettings}
           className={topBarButton}
         >
-          <Settings aria-hidden="true" className="size-7 shrink-0" />
+          <Settings aria-hidden="true" className="size-6 shrink-0 sm:size-7" />
           {/* "More" fits beside Home and Read aloud on a 375px phone; "Settings" from 800px. */}
           <span className="sm:hidden">{copy.nav.more}</span>
           <span className="hidden sm:inline">{copy.nav.settings}</span>
@@ -124,7 +124,7 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
         animate={{ opacity: 1, y: 0 }}
         transition={calm(DURATION.page)}
         className={
-          compact ? "flex min-h-0 flex-1 flex-col gap-3 pt-3" : snug ? "flex flex-1 flex-col gap-4 py-4" : "flex flex-1 flex-col gap-8 py-8"
+          compact ? "flex min-h-0 flex-1 flex-col gap-3 pt-3" : snug ? "flex flex-1 flex-col gap-3 py-3" : "flex flex-1 flex-col gap-8 py-8"
         }
       >
         <motion.h1
