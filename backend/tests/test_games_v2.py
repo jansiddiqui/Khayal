@@ -39,3 +39,33 @@ def test_simulator_plays_new_games(game: str) -> None:
     assert game in simulator.LEVELLED
     assert game in simulator.BASE_RT_MS
     assert simulator.difficulty(game, 1) < simulator.difficulty(game, 10)
+
+
+def test_delayed_word_recall_is_scored_at_the_level_the_words_were_shown(client: TestClient, register: Register) -> None:
+    patient = bearer(register("Kamala", "k@example.com", "patient"))
+    # Remember the Words: 2 -> 3 after a perfect session (the words were shown at level 2).
+    assert client.post("/api/sessions", json=session_body("11111", "word_recall"), headers=patient).json()["new_level"] == 3
+
+    body = session_body("110", "word_recall_delayed", completed=True)
+    body["rounds"][0]["errors"] = 1  # a word picked that wasn't shown (false alarm)
+    out = client.post("/api/sessions", json=body, headers=patient).json()
+    assert (out["session"]["level_start"], out["new_level"], out["level_change"]) == (2, 2, "same")
+    # It never moves Remember the Words' level.
+    assert client.get("/api/games/word_recall/level", headers=patient).json()["level"] == 3
+
+    # Up to 12 words; always complete.
+    assert client.post("/api/sessions", json=session_body("1" * 8, "word_recall_delayed", completed=True), headers=patient).status_code == 201
+    assert client.post("/api/sessions", json=session_body("110", "word_recall_delayed", completed=False), headers=patient).status_code == 422
+    # Other games still have at most 5 rounds.
+    assert client.post("/api/sessions", json=session_body("111111", "memory_match", completed=False), headers=patient).status_code == 422
+
+
+def test_delayed_recall_counts_only_with_word_recall_in_the_core_set() -> None:
+    from app.models import User
+    from app.services import core_games
+
+    patient = User(name="K", role="patient", core_games=[g.value for g in core_games.LEGACY_CORE])
+    assert GameType.word_recall_delayed in core_games.tracked_games(patient)
+    patient.core_games = ["memory_match", "sequence_recall", "reaction_tap", "colour_trails"]
+    assert GameType.word_recall_delayed not in core_games.tracked_games(patient)
+    assert GameType.word_recall_delayed not in LEVELLED_GAMES

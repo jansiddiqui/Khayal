@@ -307,6 +307,9 @@ class LevelOut(BaseModel):
     tutorial: bool = False
 
 
+MAX_DELAYED_ROUNDS = 12
+
+
 class RoundIn(BaseModel):
     correct: bool
     reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
@@ -324,7 +327,8 @@ class SessionIn(BaseModel):
     game_type: GameType
     started_at: datetime
     ended_at: datetime
-    rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=BLOCK_SIZE)]
+    # Delayed word recall has one round per word shown (3-8; up to the 12-word pick list).
+    rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=MAX_DELAYED_ROUNDS)]
     # A finished session has all BLOCK_SIZE rounds; a stopped-early one has fewer.
     completed: bool = True
 
@@ -335,6 +339,12 @@ class SessionIn(BaseModel):
         self.ended_at = _to_utc(self.ended_at)
         if self.ended_at < self.started_at:
             raise ValueError("ended_at must not be before started_at")
+        if self.game_type == GameType.word_recall_delayed:
+            if not self.completed:
+                raise ValueError("a delayed recall check is always complete")
+            return self
+        if len(self.rounds) > BLOCK_SIZE:
+            raise ValueError(f"a session has at most {BLOCK_SIZE} rounds")
         if self.completed != (len(self.rounds) == BLOCK_SIZE):
             raise ValueError(f"a completed session has exactly {BLOCK_SIZE} rounds; a stopped one has fewer")
         return self

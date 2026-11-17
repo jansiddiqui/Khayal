@@ -48,8 +48,11 @@ def core_games(patient: User) -> list[GameType]:
 
 
 def tracked_games(patient: User) -> frozenset[GameType]:
-    """The games whose decline counts for alerts and the overall index."""
-    return frozenset(core_games(patient)) | ALWAYS_TRACKED
+    """The games whose decline counts for alerts and the overall index. Delayed word recall
+    counts when Remember the Words is in the core set (it follows those sessions)."""
+    core = frozenset(core_games(patient))
+    delayed = {GameType.word_recall_delayed} if GameType.word_recall in core else set()
+    return core | ALWAYS_TRACKED | delayed
 
 
 def valid_core(games: Iterable[GameType]) -> bool:

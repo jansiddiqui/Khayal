@@ -68,6 +68,8 @@ class GameType(str, Enum):
     word_recall = "word_recall"
     daily_orientation = "daily_orientation"
     reaction_tap = "reaction_tap"
+    # Games v2, D4: the words of the last Remember the Words round, asked again 3-30 minutes later.
+    word_recall_delayed = "word_recall_delayed"
     object_location = "object_location"
     spatial_span = "spatial_span"
     money_handling = "money_handling"
@@ -75,8 +77,9 @@ class GameType(str, Enum):
     colour_trails = "colour_trails"
 
 
-# Games without difficulty levels: stored at level 1, never adapted (results feed trends only).
-NON_ADAPTIVE_GAMES = frozenset({GameType.daily_orientation})
+# Games without their own difficulty levels: never adapted (results feed trends only). Delayed
+# word recall takes its level from the Word Recall session it follows (docs/games/research.md D4).
+NON_ADAPTIVE_GAMES = frozenset({GameType.daily_orientation, GameType.word_recall_delayed})
 # Games with levels; these fill slots 2-3 of "Today's games".
 LEVELLED_GAMES: tuple[GameType, ...] = tuple(g for g in GameType if g not in NON_ADAPTIVE_GAMES)
 

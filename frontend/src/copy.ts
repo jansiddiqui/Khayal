@@ -138,6 +138,9 @@ export const copy = {
       done: "Done",
       hintLetters: (letters: string) => `Look for words starting with: ${letters}`,
       tutorial: ["You will see a few words, one at a time.", "After a little break, tap the words you saw."],
+      /** Delayed check (D4), at the start of the next game: never says how it went. */
+      delayedAsk: "Earlier we saw some words. Which of these did you see?",
+      delayedThanks: "Thank you. Now on to the game.",
     },
     orientation: {
       title: "About Today",

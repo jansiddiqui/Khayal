@@ -19,6 +19,8 @@ import { copy } from "../copy";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
 import { findGame } from ".";
 import type { GameDefinition, Rng } from "./types";
+import { commitDelayed, dueDelayed, type PendingRecall } from "./wordRecall/delayed";
+import { DelayedRecall } from "./wordRecall/DelayedRecall";
 import { calm, DURATION, useLessMotion } from "../ui/motion";
 import { Spinner } from "../ui/Spinner";
 
@@ -43,6 +45,8 @@ export const ROUNDS_PER_SESSION = 5;
 
 type Phase =
   | { kind: "intro" }
+  | { kind: "delayed"; pending: PendingRecall }
+  | { kind: "delayedDone" }
   | { kind: "tutorial" }
   | { kind: "practice" }
   | { kind: "practiceDone" }
@@ -71,7 +75,11 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const tutorialShown = useRef(false);
   const queryClient = useQueryClient();
   const level = useQuery({ queryKey: ["level", game.type], queryFn: () => getLevel(game.type), staleTime: 0 });
-  const [phase, setPhase] = useState<Phase>({ kind: "intro" });
+  // A delayed word check is due (3–30 minutes after Remember the Words): it comes first (D4).
+  const [phase, setPhase] = useState<Phase>(() => {
+    const pending = game.type === "word_recall" ? null : dueDelayed();
+    return pending ? { kind: "delayed", pending } : { kind: "intro" };
+  });
   const results = useRef<RoundResult[]>([]);
   const startedAt = useRef<string>("");
   /** The ending picked for this session (varies from session to session). */
@@ -90,13 +98,13 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
 
   // First time with this game: a short spoken demo and a practice round first (research.md 3.4).
   useEffect(() => {
-    if (level.data?.tutorial && !tutorialShown.current) {
+    if (level.data?.tutorial && !tutorialShown.current && phase.kind === "intro") {
       tutorialShown.current = true;
       setPhase({ kind: "tutorial" });
       // Spoken even when Read aloud is off; the words are also on screen.
       speak(game.tutorial.steps.join(" "), { force: true });
     }
-  }, [level.data, game.tutorial.steps, speak]);
+  }, [level.data, game.tutorial.steps, speak, phase.kind]);
 
   const seen = useMutation({ mutationFn: () => markTutorialSeen(game.type) });
 
@@ -113,6 +121,8 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const save = useMutation({
     mutationFn: () => postSession(sessionInput()),
     onSuccess: (result: SessionResult) => {
+      // A finished Remember the Words session: its last words come back later (D4).
+      if (game.type === "word_recall" && result.session.completed) commitDelayed();
       void level.refetch();
       void queryClient.invalidateQueries({ queryKey: ["todaysGames"] });
       ending.current = endMessage(result, (rng ?? Math.random)());
@@ -206,6 +216,20 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
           <p className="text-2xl">{game.intro}</p>
           <BigButton label={copy.games.start} icon={<Play />} onClick={start} />
         </>
+      );
+
+    case "delayed":
+      return <DelayedRecall pending={phase.pending} onDone={() => setPhase({ kind: "delayedDone" })} />;
+
+    case "delayedDone":
+      return (
+        <Guarded className="flex flex-col gap-6 rounded-2xl border-4 border-calm bg-calm-soft p-6 shadow-lift">
+          <p className="flex items-start gap-3 text-3xl font-semibold" role="status">
+            <Check aria-hidden="true" className="mt-1 size-9 shrink-0 text-calm" />
+            <span>{copy.games.wordRecall.delayedThanks}</span>
+          </p>
+          <BigButton label={copy.games.next} icon={<ArrowRight />} onClick={() => setPhase({ kind: "intro" })} />
+        </Guarded>
       );
 
     case "tutorial":

@@ -48,6 +48,8 @@ CSV_COLUMNS = [
 ]
 
 ORIENTATION = "daily_orientation"
+# Games v2, D4: asked at the start of the next game, 3-30 minutes after Remember the Words.
+DELAYED = "word_recall_delayed"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span", "object_location")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
 CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
@@ -59,6 +61,7 @@ BASE_RT_MS = {
     "word_recall": 6500,
     "daily_orientation": 3800,
     "reaction_tap": 480,
+    DELAYED: 7000,
     "object_location": 3000,
     "spatial_span": 2300,
     "money_handling": 8000,
@@ -104,6 +107,7 @@ def _sigmoid(x: float) -> float:
 # Games v2: each game's curve is the shared one shifted a little, so a level means a comparable
 # challenge across games (docs/games/research.md section 4). Synthetic, not fitted to real data.
 DIFFICULTY_OFFSET: dict[str, float] = {
+    DELAYED: 0.08,  # recalling a few minutes later is harder than straight away (CERAD)
     "object_location": 0.02,
     "spatial_span": 0.02,
     "money_handling": 0.0,
@@ -139,6 +143,11 @@ def play_round(game: str, level: int, ability: float, rng: np.random.Generator) 
     return RoundSummary(correct=correct, hint_used=hint, reaction_ms=rt)
 
 
+def words_at(level: int) -> int:
+    """Remember the Words shows 3 words at level 1 up to 8 at level 10 (frontend wordCount)."""
+    return 3 + (level - 1) * 5 // 9
+
+
 def simulate_patient(
     patient_id: int,
     profile: Profile,
@@ -165,7 +174,8 @@ def simulate_patient(
         flex = sorted(rotation, key=lambda g: (last_played[g], tiebreak[rotation.index(g)]))[:2]
         clock = start + timedelta(days=day, hours=float(rng.uniform(9, 17)))
 
-        for game in (ORIENTATION, *flex):
+        todays = (ORIENTATION, *flex)
+        for position, game in enumerate(todays):
             # Stopped early more often as ability falls.
             p_stop = float(np.clip(0.03 + 0.5 * max(0.0, 0.75 - ability), 0.02, 0.4))
             stopped = rng.random() < p_stop
@@ -184,6 +194,11 @@ def simulate_patient(
                 SimSession(patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped)
             )
             clock += timedelta(minutes=float(rng.uniform(4, 9)))
+            # The delayed check comes at the start of the next game, if there is one today.
+            if game == "word_recall" and not stopped and position < len(todays) - 1:
+                delayed = tuple(play_round(DELAYED, level, ability, rng) for _ in range(words_at(level)))
+                out.append(SimSession(patient_id, profile, day, DELAYED, clock, level, level, delayed, completed=True))
+                clock += timedelta(minutes=1)
     return out
 
 
