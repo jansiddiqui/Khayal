@@ -217,6 +217,13 @@ Each game is a self-contained component: it receives `level`, reports each round
 - On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
 - "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
 
+**Core set (decided for games v2, `docs/games/research.md` D7; replaces "slots 2–3 = any levelled game" once the new games are built):**
+
+- Each patient has a **core set of 4 levelled games** for decline tracking, chosen to cover different domains (verbal memory, visuospatial memory, executive/speed, visuospatial/everyday function). The caregiver can change it on the patient page.
+- Slots 2–3 of Today's games rotate only through the core set (least recently played, as above). About Today stays slot 1, and the voice task still replaces slot 3 when due. "Pin games" picks from the core set.
+- Every other game is an optional **"More games"** game: playable any time and still recorded with its own warm-up and baseline, but not in the daily rotation and not part of decline alerts or the overall index unless it is in the core set.
+- The other games-v2 decisions (D1–D6, D8) are in `docs/games/research.md` section 6.
+
 **Voice task (decided, Milestone 8):**
 
 - **Picture:** an original flat illustration of a busy Indian home kitchen (`frontend/src/voice/KitchenScene.tsx`): a mother cooking at the stove, milk boiling over, a child on a stool reaching for the laddoo jar, a cat by a spilled glass, rain at the window. No text in the picture. Not a copy of the Cookie Theft picture.

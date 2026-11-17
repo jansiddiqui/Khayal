@@ -1,6 +1,7 @@
 # Games v2: research basis and design (for review before building)
 
-Status: **draft for review**. Nothing in this document is built yet. Branch `games-v2`.
+Status: **reviewed, decisions D1–D8 accepted (section 6)**. Nothing is built yet: the build
+waits for Phase C (the UX redesign). Branch `games-v2`.
 
 Every reference below was checked with a web search on 2026-11-17: title, authors, year,
 journal, volume/pages and DOI. Where one part could not be confirmed, it says so. References
@@ -326,7 +327,10 @@ keep a single style.
 
 ---
 
-## 6. Decisions needed before building
+## 6. Decisions (all accepted as recommended, 2026-11-17)
+
+The user accepted D1–D8 exactly as recommended below. The build (step 2) waits for Phase C, the
+UX redesign, so the new games use the new components.
 
 - **D1, new `errors` column:** add nullable `GameRound.errors` (int) with a migration, used by
   Where did it go?, Join in order, Set the clock, and as false alarms in delayed recall.
@@ -346,18 +350,40 @@ keep a single style.
   yearly date table. *Recommended: yes.*
 - **D7, rotation with 8–9 levelled games:** at 2 slots a day, baselines take about 2 months per
   game. Options:
-  - **(a)** a *core set* of 4 games per patient (caregiver-chosen, default: Find the Pairs,
-    Remember the Words, Where did it go?, Join in order) rotating in slots 2–3. Other games are
-    playable from "More games" but rotate less often.
+  - **(a)** a *core set* of 4 levelled games per patient for decline tracking, chosen to cover
+    different domains, which the caregiver can change. Only the core set rotates in slots 2–3 and
+    counts towards decline alerts. Every other game is an optional "More games" game: still
+    recorded, with its own baseline, but not in the daily rotation and not in alerts.
   - **(b)** a 4th daily slot.
   - **(c)** accept slower baselines.
 
-  *Recommended: (a).* The Today's games rule in section 7 would change.
+  *Accepted: (a).* It is recorded in CLAUDE.md section 7 ("Core set"). With 4 core games and 2
+  slots a day, each core game comes round about every 2 days, so a baseline takes about 30 days,
+  as now. The default set, and what existing patients get, is settled when building, from these
+  domains: verbal memory, visuospatial memory, executive/speed, visuospatial/everyday function.
 - **D8, CANTAB PAL is a proprietary test:** we copy the *task idea* only, with our own layout,
   objects and wording, and never use the name "PAL" in the patient UI. The same applies to the
   CTT (PAR) and the CDT.
 
-## 7. Not included (could not verify)
+## 7. Limitations (to state in the paper)
+
+- **"Set the clock" covers clock *setting* and *reading* only, not free drawing.** It leaves out
+  the planning and construction part of the Clock Drawing Test, the part most tied to executive
+  function, so its scores are not comparable to a scored CDT.
+- **The About Today festival question is our own item and is not validated.** It is a cultural
+  adaptation in the spirit of the Hindi MMSE's changed orientation items, not part of any tested
+  instrument.
+- **Photos are chosen for clarity and familiarity, not because they are easier for patients.**
+  The evidence in section 5 does not show that realistic photos help people with Alzheimer's
+  disease recognise objects (colour and surface detail helped controls, not patients). We use
+  clear, familiar, high-contrast photos on plain backgrounds, and make no claim that photos are
+  easier.
+- All games borrow the *task idea* of established tests (D8). None is the validated test, and
+  none has normative data. Scores are compared only with the patient's own baseline.
+- Speed is recorded silently in every game (D2). This is not a timed administration as in the
+  original Trail Making / Color Trails tests.
+
+## 8. Not included (could not verify)
 
 - A 2020 Indian Color Trails normative paper in *Applied Neuropsychology: Adult* (DOI
   10.1080/23279095.2020.1819279, PMID 32970488) was found, but its author list could not be
