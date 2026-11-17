@@ -20,10 +20,38 @@ export const copy = {
     home: "Home",
     readAloudOn: "Read aloud: On",
     readAloudOff: "Read aloud: Off",
+    /** The same, in two parts for the top bar ("Read aloud:" above "On" / "Off" on phones). */
+    readAloud: "Read aloud:",
+    on: "On",
+    off: "Off",
     sayItAgain: "Say it again",
+    settings: "Settings",
+    more: "More",
+    /** The settings button's name for screen readers; it contains both visible words. */
+    moreSettings: "More settings",
+  },
+  /** The small settings sheet next to Read aloud (Phase C): touch and sound feedback. */
+  settings: {
+    title: "Settings",
+    intro: "Choose how your phone answers when you tap.",
+    vibration: "Gentle vibration",
+    sound: "Soft sound",
+    on: "On",
+    off: "Off",
+    noVibration: "This phone can't vibrate, so there is nothing to switch here.",
+    done: "Done",
   },
   patientHome: {
     greeting: (name: string) => `Hello, ${name}!`,
+    /** By the time of day on the phone's clock; late at night simply "Hello" (never "Good night"). */
+    greetingAt: (name: string, hour: number) =>
+      hour >= 5 && hour < 12
+        ? `Good morning, ${name}`
+        : hour >= 12 && hour < 17
+          ? `Good afternoon, ${name}`
+          : hour >= 17 && hour < 22
+            ? `Good evening, ${name}`
+            : `Hello, ${name}`,
     nextReminderLabel: "Next reminder",
     noReminder: "Nothing planned right now. Enjoy your day.",
     /** When reminders can't be loaded: never claim there is nothing planned. */
@@ -79,6 +107,8 @@ export const copy = {
       watch: "Watch carefully…",
       replay: "Here's how it went.",
       yourTurn: "Your turn. Tap the tiles in the same order.",
+      /** How far the patient has got, so they don't have to remember it too. */
+      tapsOf: (done: number, total: number) => `${done} of ${total}`,
     },
     wordRecall: {
       title: "Remember the Words",
@@ -106,7 +136,7 @@ export const copy = {
       yes: "Yes! ",
       replyDay: (day: string) => `It's ${day} today.`,
       replyMonth: (month: string) => `It's ${month} now.`,
-      replySeason: (season: string) => `It's ${season} now.`,
+      replySeason: (season: string) => `It's ${season.toLowerCase()} now.`,
       replyTimeOfDay: (time: string) => `It's ${time.toLowerCase()} now.`,
       replyCity: (city: string) => `You're in ${city}.`,
       replyYear: (year: string) => `It's ${year}.`,
@@ -138,7 +168,7 @@ export const copy = {
     "December",
   ],
   seasons: { summer: "Summer", monsoon: "Monsoon", winter: "Winter" },
-  timesOfDay: { morning: "Morning", afternoon: "Afternoon", evening: "Evening" },
+  timesOfDay: { morning: "Morning", afternoon: "Afternoon", evening: "Evening", night: "Night" },
   // Other answers offered next to the patient's own city.
   cities: ["Delhi", "Mumbai", "Kolkata", "Chennai", "Bengaluru", "Hyderabad", "Pune", "Jaipur", "Lucknow", "Ahmedabad"],
   // Everyday words for Word Recall.
@@ -193,6 +223,14 @@ export const copy = {
     doneHeading: "Done",
     timeForThis: "It's time for this.",
     letsDoItNow: "Let's do this now.",
+    /** Overdue reminders ask, they never urge (CLAUDE.md section 6). */
+    overdueAsk: (time: string) => `This was for ${time}. Is it done?`,
+    yesDone: "Yes, it's done",
+    notSure: "No / not sure",
+    /** After "No / not sure": never a suggestion to take a dose. */
+    askFamilyMedicine: "Please ask your family before taking it. We've let them know.",
+    askFamilyOther: "That's all right. We've let your family know.",
+    familyKnows: "Your family knows about this one.",
     done: "Done",
     doneMark: "✓ Done",
     thanks: "Thank you! That's done.",
@@ -212,7 +250,7 @@ export const copy = {
   },
   whoIsThis: {
     title: "Who is this?",
-    intro: "Tap a photo to see who it is.",
+    intro: "Tap a photo to see it big and hear about them.",
     empty: "Family photos will appear here soon.",
     loadFailed: "We could not load the photos just now. Let's try again.",
     back: "Back",
@@ -231,6 +269,8 @@ export const copy = {
     saving: "Saving…",
     thanks: "Thank you, that was lovely.",
     micProblem: "We could not use the microphone just now. Please ask your family member to help.",
+    /** Before Start: the browser will ask once to use the microphone. */
+    micHeadsUp: "The first time, your phone may ask to use the microphone. Tap Allow.",
     saveFailed: "We could not save it just now. Let's try again.",
     tryAgain: "Try again",
     notOn: "This activity is not turned on yet. Your family member can turn it on.",
@@ -262,7 +302,13 @@ export const copy = {
     codeLabel: "6-digit code",
     submit: "Start",
     submitting: "Just a moment…",
-    failed: "That code did not work. Please ask for a new one.",
+    failed: "That code didn't work. Please check the 6 numbers and try again. If it still doesn't work, ask for a new code.",
+    /** Under the box: how many numbers are in so far. */
+    typed: (n: number) => `${n} of 6 numbers`,
+    /** After a good code: a moment to see it worked, then Start (never rushed). */
+    readyTitle: "All set",
+    ready: (name: string) => `This phone is now set up for ${name}.`,
+    readyStart: "Start",
     tooMany: "Let's wait a few minutes, then try a new code.",
     unavailable: "We could not reach Khayal just now. Please try again in a moment.",
     caregiverLink: "Family member or doctor? Sign in with email",

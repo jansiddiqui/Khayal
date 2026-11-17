@@ -116,7 +116,10 @@ describe("About Today 'Who is this?' question", () => {
 
     const wrong = choices.find((c) => !c.textContent?.includes("Rahul"))!;
     fireEvent.click(wrong);
-    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: false }), "This is Rahul, your grandson.");
+    // The chosen name is held for a moment before the kind reply.
+    await waitFor(() =>
+      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: false }), "This is Rahul, your grandson."),
+    );
   });
 
   it("asks the city when there are not enough photos", async () => {

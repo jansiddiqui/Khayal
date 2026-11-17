@@ -14,6 +14,7 @@ vi.mock("../api/client", async (importOriginal) => {
     getMe: vi.fn(),
     getTodayReminders: vi.fn(),
     markReminderDone: vi.fn(),
+    markReminderUnsure: vi.fn(),
     listPatients: vi.fn(),
     listSessions: vi.fn(),
     getTrend: vi.fn(),
@@ -39,13 +40,22 @@ function signInAs(user: User) {
   api.getMe.mockResolvedValue(user);
 }
 
-const today = (id: number, title: string, time: string, status: TodayReminder["status"], due: boolean): TodayReminder => ({
+/** A patient reminder; its phase follows from status and due unless given (overdue = past its hour). */
+const today = (
+  id: number,
+  title: string,
+  time: string,
+  status: TodayReminder["status"],
+  due: boolean,
+  phase?: TodayReminder["phase"],
+): TodayReminder => ({
   id,
   title,
   type: "medicine",
   time_of_day: `${time}:00`,
   status,
   due,
+  phase: phase ?? (status === "done" ? "done" : status === "unsure" ? "unsure" : !due ? "upcoming" : status === "missed" ? "overdue" : "due"),
 });
 
 beforeEach(() => {
@@ -69,7 +79,7 @@ describe("patient Home next reminder card", () => {
   beforeEach(() => signInAs(kamala));
   const card = async () => within(await screen.findByRole("region", { name: copy.patientHome.nextReminderLabel }));
 
-  it("shows something due now first", async () => {
+  it("shows something within its hour first", async () => {
     api.getTodayReminders.mockResolvedValue([
       today(1, "Blood pressure tablet", "09:00", "pending", true),
       today(2, "Lunch", "13:00", "pending", false),
@@ -78,13 +88,15 @@ describe("patient Home next reminder card", () => {
     expect(await (await card()).findByText("Now · Blood pressure tablet")).toBeInTheDocument();
   });
 
-  it("otherwise shows the next one later today", async () => {
+  it("never calls an overdue reminder 'Now'; shows the next one later today instead", async () => {
     api.getTodayReminders.mockResolvedValue([
-      today(1, "Blood pressure tablet", "09:00", "done", true),
+      today(1, "Blood pressure tablet", "09:00", "missed", true, "overdue"),
       today(2, "Lunch", "13:00", "pending", false),
     ]);
     renderWithProviders(<App />, { route: "/patient" });
-    expect(await (await card()).findByText("1:00 PM · Lunch")).toBeInTheDocument();
+    const c = await card();
+    expect(await c.findByText("1:00 PM · Lunch")).toBeInTheDocument();
+    expect(c.queryByText(/Now/)).toBeNull();
   });
 
   it("is calm when nothing is left", async () => {
@@ -92,17 +104,32 @@ describe("patient Home next reminder card", () => {
     renderWithProviders(<App />, { route: "/patient" });
     expect(await (await card()).findByText(copy.patientHome.noReminder)).toBeInTheDocument();
   });
+
+  it("greets by the time of day and shows today's progress in words", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 17, 9, 0));
+    api.getTodayReminders.mockResolvedValue([today(1, "Tea", "06:00", "done", true), today(2, "Lunch", "13:00", "pending", false)]);
+    api.getTodaysGames.mockResolvedValue({ games: [{ game_type: "daily_orientation", done_today: true }, { game_type: "memory_match", done_today: false }, { game_type: "word_recall", done_today: false }], pinned: false });
+    renderWithProviders(<App />, { route: "/patient" });
+    expect(await screen.findByRole("heading", { name: "Good morning, Kamala" })).toBeInTheDocument();
+    // Today's progress is in the buttons it belongs to.
+    expect(await screen.findByRole("link", { name: /Play a game.*1 of 3 done today/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Today's reminders.*1 of 2 done today/ })).toBeInTheDocument();
+    vi.useRealTimers();
+    expect(copy.patientHome.greetingAt("Kamala", 14)).toBe("Good afternoon, Kamala");
+    expect(copy.patientHome.greetingAt("Kamala", 19)).toBe("Good evening, Kamala");
+    expect(copy.patientHome.greetingAt("Kamala", 23)).toBe("Hello, Kamala");
+  });
 });
 
 describe("patient Today's reminders", () => {
   beforeEach(() => signInAs(kamala));
 
-  it("shows Done buttons only for reminders whose time has come, at most 3", async () => {
+  it("asks about overdue ones and offers Done within the hour, never more than 3 buttons", async () => {
     api.getTodayReminders.mockResolvedValue([
-      today(1, "Tablet A", "07:00", "missed", true),
-      today(2, "Tablet B", "08:00", "pending", true),
-      today(3, "Tablet C", "08:30", "pending", true),
-      today(4, "Tablet D", "08:45", "pending", true),
+      today(1, "Tablet A", "07:00", "missed", true, "overdue"),
+      today(2, "Tablet B", "08:00", "pending", true, "due"),
+      today(3, "Tablet C", "08:30", "pending", true, "due"),
       today(5, "Lunch", "13:00", "pending", false),
       today(6, "Tea", "06:00", "done", true),
     ]);
@@ -110,19 +137,24 @@ describe("patient Today's reminders", () => {
 
     await screen.findByRole("heading", { name: copy.reminders.nowHeading });
     const main = within(screen.getByRole("main"));
-    expect(main.getAllByRole("button", { name: copy.reminders.done })).toHaveLength(3);
-    expect(within(screen.getByRole("region", { name: "Tablet A" })).getByText(copy.reminders.letsDoItNow)).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Tablet B" })).getByText(copy.reminders.timeForThis)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Tablet D" })).toBeNull(); // appears after one is done
+    const a = within(screen.getByRole("region", { name: "Tablet A" }));
+    expect(a.getByText("This was for 7:00 AM. Is it done?")).toBeInTheDocument();
+    expect(a.getByRole("button", { name: copy.reminders.yesDone })).toBeInTheDocument();
+    expect(a.getByRole("button", { name: copy.reminders.notSure })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Tablet B" })).getByRole("button", { name: copy.reminders.done })).toBeInTheDocument();
+    // Tablet C waits its turn (2 + 1 buttons already on screen): it appears once one is answered.
+    expect(screen.queryByRole("region", { name: "Tablet C" })).toBeNull();
+    expect(main.getAllByRole("button").filter((b) => b.closest("header") === null)).toHaveLength(3);
+    // Never urges: no "Now" wording on an overdue card, no negative words anywhere.
+    expect(a.queryByText(copy.reminders.letsDoItNow)).toBeNull();
+    expect(screen.getByRole("main").textContent).not.toMatch(/\b(missed|wrong|late)\b/i);
 
     expect(screen.getByRole("heading", { name: copy.reminders.laterHeading })).toBeInTheDocument();
     expect(screen.getByText("Lunch")).toBeInTheDocument();
     expect(screen.getByText(copy.reminders.doneMark)).toBeInTheDocument();
-    // No negative words anywhere.
-    expect(screen.getByRole("main").textContent).not.toMatch(/\b(missed|wrong|late)\b/i);
   });
 
-  it("marks a reminder done and thanks the patient", async () => {
+  it("ticks a reminder off where it is and thanks the patient", async () => {
     api.getTodayReminders
       .mockResolvedValueOnce([today(1, "Tablet", "09:00", "pending", true)])
       .mockResolvedValue([today(1, "Tablet", "09:00", "done", true)]);
@@ -130,9 +162,26 @@ describe("patient Today's reminders", () => {
     renderWithProviders(<App />, { route: "/patient/reminders" });
 
     fireEvent.click(await screen.findByRole("button", { name: copy.reminders.done }));
-    expect(await screen.findByRole("status")).toHaveTextContent(copy.reminders.thanks);
+    const card = within(screen.getByRole("region", { name: "Tablet" }));
+    expect(await card.findByRole("status")).toHaveTextContent(copy.reminders.thanks);
     expect(api.markReminderDone.mock.calls[0]?.[0]).toBe(1);
     expect(await screen.findByText(copy.reminders.allDone)).toBeInTheDocument();
+    // It stays in the same place on this visit (not moved to the Done list).
+    expect(screen.queryByRole("heading", { name: copy.reminders.doneHeading })).toBeNull();
+  });
+
+  it("'No / not sure' never suggests a dose and tells the family", async () => {
+    api.getTodayReminders
+      .mockResolvedValueOnce([today(1, "Blood pressure tablet", "09:00", "missed", true, "overdue")])
+      .mockResolvedValue([today(1, "Blood pressure tablet", "09:00", "unsure", true)]);
+    api.markReminderUnsure.mockResolvedValue({} as Reminder);
+    renderWithProviders(<App />, { route: "/patient/reminders" });
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.reminders.notSure }));
+    await waitFor(() => expect(api.markReminderUnsure.mock.calls[0]?.[0]).toBe(1));
+    const card = within(screen.getByRole("region", { name: "Blood pressure tablet" }));
+    expect(await card.findByRole("status")).toHaveTextContent("Please ask your family before taking it. We've let them know.");
+    expect(card.queryByRole("button")).toBeNull();
   });
 
   it("is calm when nothing is planned or nothing is due yet", async () => {

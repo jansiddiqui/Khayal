@@ -1,6 +1,7 @@
-import { ArrowRight, House, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, House, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   getLevel,
   getTodaysGames,
@@ -17,6 +18,24 @@ import { copy } from "../copy";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
 import { findGame } from ".";
 import type { GameDefinition, Rng } from "./types";
+import { calm, DURATION, useLessMotion } from "../ui/motion";
+import { Spinner } from "../ui/Spinner";
+
+/**
+ * When a new board or a reply appears, taps are ignored this long, so a second tap meant for the
+ * last screen can't answer the next one (the elderly double-tap). Nothing visible changes.
+ */
+export const INPUT_GUARD_MS = 400;
+
+/** Ignores pointer input for INPUT_GUARD_MS after it appears; keyboard and screen readers are unaffected. */
+function Guarded({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), INPUT_GUARD_MS);
+    return () => clearTimeout(t);
+  }, []);
+  return <div className={`${className} ${ready ? "" : "pointer-events-none"}`}>{children}</div>;
+}
 
 /** Agreed for M3: one session = 5 rounds, so the level can only change at the end. */
 export const ROUNDS_PER_SESSION = 5;
@@ -24,7 +43,7 @@ export const ROUNDS_PER_SESSION = 5;
 type Phase =
   | { kind: "intro" }
   | { kind: "playing"; round: number }
-  | { kind: "between"; round: number; feedback: string }
+  | { kind: "between"; round: number; feedback: string; correct: boolean }
   | { kind: "done"; lastFeedback?: string };
 
 interface GameSessionProps {
@@ -55,7 +74,9 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   /** The kind reply to the last answer, read aloud together with the ending. */
   const lastFeedback = useRef<string | undefined>(undefined);
 
-  const playing = phase.kind === "playing";
+  // Play mode for the whole session (rounds, replies and the end), so nothing jumps between screens.
+  const playing = phase.kind !== "intro";
+  const less = useLessMotion();
   useEffect(() => {
     onPlayingChange?.(playing);
   }, [playing, onPlayingChange]);
@@ -122,7 +143,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       setPhase({ kind: "done", lastFeedback: feedback });
       submit();
     } else {
-      setPhase({ kind: "between", round, feedback: message });
+      setPhase({ kind: "between", round, feedback: message, correct: result.correct });
       speak(message);
     }
   }
@@ -140,7 +161,14 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       ? { to: "/patient/voice", title: copy.voiceTask.title }
       : { to: `/patient/games/${next.game_type}`, title: findGame(next.game_type)?.title ?? "" };
 
-  if (level.isPending) return <p className="text-2xl">{copy.common.loading}</p>;
+  if (level.isPending) {
+    return (
+      <p role="status" className="flex items-center gap-3 text-2xl text-ink-soft">
+        <Spinner />
+        {copy.common.loading}
+      </p>
+    );
+  }
   if (level.isError) {
     return (
       <Card>
@@ -163,28 +191,39 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
           <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
-          <game.Round
-            key={phase.round}
-            level={level.data}
-            roundIndex={phase.round - 1}
-            rng={rng}
-            onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
-          />
+          <Guarded key={phase.round} className="flex min-h-0 flex-1 flex-col">
+            <game.Round
+              level={level.data}
+              roundIndex={phase.round - 1}
+              rng={rng}
+              onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
+            />
+          </Guarded>
         </div>
       );
 
     case "between":
       return (
-        <Card>
-          <p className="mb-6 text-3xl font-semibold" role="status">
-            {phase.feedback}
-          </p>
-          <BigButton
-            label={copy.games.next}
-            icon={<ArrowRight />}
-            onClick={() => setPhase({ kind: "playing", round: phase.round + 1 })}
-          />
-        </Card>
+        <Guarded key={`between-${phase.round}`}>
+          <motion.div
+            initial={less ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={calm(DURATION.base)}
+            className={`flex flex-col gap-6 rounded-2xl border-4 p-6 shadow-lift ${
+              phase.correct ? "border-calm bg-calm-soft" : "border-line bg-surface"
+            }`}
+          >
+            <p className="flex items-start gap-3 text-3xl font-semibold" role="status">
+              {phase.correct && <Check aria-hidden="true" className="mt-1 size-9 shrink-0 text-calm" />}
+              <span>{phase.feedback}</span>
+            </p>
+            <BigButton
+              label={copy.games.next}
+              icon={<ArrowRight />}
+              onClick={() => setPhase({ kind: "playing", round: phase.round + 1 })}
+            />
+          </motion.div>
+        </Guarded>
       );
 
     case "done":
@@ -196,18 +235,44 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
           </Card>
         );
       }
-      if (!save.isSuccess) return <p className="text-2xl">{copy.games.saving}</p>;
+      if (!save.isSuccess) {
+        return (
+          <p role="status" className="flex items-center gap-3 text-2xl text-ink-soft">
+            <Spinner />
+            {copy.games.saving}
+          </p>
+        );
+      }
       return (
         // Kept compact so "Next game" is always on screen on a phone (CLAUDE.md section 4).
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 rounded-2xl border-2 border-line bg-surface p-4" role="status">
-            {phase.lastFeedback && <p className="text-2xl">{phase.lastFeedback}</p>}
-            <p className="flex items-start gap-2 text-2xl font-semibold">
-              <Sparkles aria-hidden="true" className="mt-1 size-7 shrink-0 text-accent-strong" />
+        <Guarded className="flex flex-col gap-4">
+          {/* A calm celebration: a soft marigold light and a gentle sparkle, never confetti. */}
+          <motion.div
+            initial={less ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={calm(DURATION.slow)}
+            className="relative flex flex-col gap-2 overflow-hidden rounded-2xl border-2 border-accent bg-surface p-4 shadow-lift"
+            role="status"
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-16 -right-10 size-48 rounded-full bg-[radial-gradient(circle,var(--color-accent-soft)_0%,transparent_70%)]"
+            />
+            {phase.lastFeedback && <p className="relative text-2xl">{phase.lastFeedback}</p>}
+            <p className="relative flex items-start gap-2 text-2xl font-semibold">
+              <motion.span
+                aria-hidden="true"
+                className="mt-1 flex shrink-0 text-accent-strong"
+                initial={less ? false : { scale: 0.6, rotate: -20, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                transition={calm(DURATION.slow * 1.5)}
+              >
+                <Sparkles className="size-7" />
+              </motion.span>
               <span>{ending.current.replace(copy.games.endUp, "").trim()}</span>
             </p>
-            {ending.current.includes(copy.games.endUp) && <p className="text-xl">{copy.games.endUp}</p>}
-          </div>
+            {ending.current.includes(copy.games.endUp) && <p className="relative text-xl">{copy.games.endUp}</p>}
+          </motion.div>
           {nextGame ? (
             <BigButton
               to={nextGame.to}
@@ -219,7 +284,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
             <BigButton to="/patient" label={copy.games.backHome} icon={<House />} />
           )}
           <BigButton label={copy.games.playAgain} icon={<RotateCw />} variant="secondary" onClick={start} />
-        </div>
+        </Guarded>
       );
   }
 }

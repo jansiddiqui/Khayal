@@ -106,6 +106,7 @@ const ALERT_TYPE_LABEL = {
   decline: "Decline",
   missed_reminders: "Missed reminders",
   speech_risk: "Speech",
+  reminder_unsure: "Not sure about a reminder",
 } as const;
 
 /** A decline alert explains each declining game in its own sentence ending "(z = …)."; show one per line. */

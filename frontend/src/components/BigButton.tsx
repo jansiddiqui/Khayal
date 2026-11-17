@@ -38,6 +38,8 @@ interface CommonProps {
   busy?: boolean;
   /** Just done: a tick replaces the icon. */
   done?: boolean;
+  /** A small mark at the start of the note line, e.g. today's progress ring (its words are the note). */
+  noteMark?: ReactNode;
 }
 
 type BigButtonProps = CommonProps &
@@ -47,7 +49,7 @@ type BigButtonProps = CommonProps &
  * The patient's big button. It sinks a little under the finger (press feedback that works on
  * touch, not only hover), with an optional light vibration or soft sound (settings sheet).
  */
-export function BigButton({ label, icon, variant = "primary", size = "normal", note, busy = false, done = false, ...rest }: BigButtonProps) {
+export function BigButton({ label, icon, variant = "primary", size = "normal", note, busy = false, done = false, noteMark, ...rest }: BigButtonProps) {
   const { cue } = useFeedback();
   const className = `${base} ${sizes[size]} ${variants[variant]}`;
   const mark = busy ? <Spinner /> : done ? <Check /> : icon;
@@ -61,7 +63,10 @@ export function BigButton({ label, icon, variant = "primary", size = "normal", n
       {note ? (
         <span className="flex flex-col items-center leading-tight">
           <span>{label}</span>
-          <span className="mt-1 text-xl font-medium">{note}</span>
+          <span className="mt-1 flex items-center gap-2 text-xl font-medium">
+            {noteMark}
+            {note}
+          </span>
         </span>
       ) : (
         <span>{label}</span>

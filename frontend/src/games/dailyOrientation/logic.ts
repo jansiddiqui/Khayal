@@ -13,12 +13,13 @@ export function seasonOf(date: Date): Season {
   return "winter";
 }
 
-/** 5:00–11:59 morning, 12:00–16:59 afternoon, otherwise evening. */
+/** 5:00–11:59 morning, 12:00–16:59 afternoon, 17:00–20:59 evening, otherwise night (Phase C). */
 export function timeOfDayOf(date: Date): TimeOfDay {
   const h = date.getHours();
   if (h >= 5 && h < 12) return "morning";
   if (h >= 12 && h < 17) return "afternoon";
-  return "evening";
+  if (h >= 17 && h < 21) return "evening";
+  return "night";
 }
 
 export interface Question {

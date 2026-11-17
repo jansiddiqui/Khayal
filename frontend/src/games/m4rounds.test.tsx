@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import { copy } from "../copy";
 import { renderWithProviders } from "../test/renderWithProviders";
+import { ANSWER_HOLD_MS } from "./Answer";
 import { DailyOrientationRound } from "./dailyOrientation/DailyOrientation";
 import { buildDeck, memoryMatchConfig } from "./memoryMatch/logic";
 import { MemoryMatchRound } from "./memoryMatch/MemoryMatch";
@@ -139,6 +140,12 @@ describe("DailyOrientationRound", () => {
     expect(screen.getByText(copy.games.orientation.askDay)).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1500));
     fireEvent.click(screen.getByRole("button", { name: "Wednesday" }));
+    // The chosen answer is held (a calm glow) for a moment; a second tap changes nothing.
+    expect(screen.getByRole("button", { name: "Wednesday" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Wednesday" }));
+    expect(onComplete).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(ANSWER_HOLD_MS));
+    expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledWith(
       { correct: true, reaction_ms: 1500, hint_used: false },
       "Yes! It's Wednesday today.",
@@ -150,6 +157,7 @@ describe("DailyOrientationRound", () => {
     renderWithProviders(<DailyOrientationRound level={1} roundIndex={1} onComplete={onComplete} rng={rng} />);
     const other = screen.getAllByRole("button").find((b) => b.textContent?.includes("November") === false)!;
     fireEvent.click(other);
+    act(() => vi.advanceTimersByTime(ANSWER_HOLD_MS));
     expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: false }), "It's November now.");
   });
 });

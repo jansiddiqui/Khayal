@@ -546,7 +546,13 @@ export async function listSessions(patientId: number): Promise<GameSession[]> {
 }
 
 export type ReminderType = "medicine" | "meal" | "appointment" | "other";
-export type ReminderStatus = "done" | "missed" | "pending";
+export type ReminderStatus = "done" | "missed" | "pending" | "unsure";
+/**
+ * Where a reminder stands for the patient now (CLAUDE.md section 6, "Overdue reminders"):
+ * upcoming (before its time), due (within its on-time window: "It's time for this"), overdue
+ * (after it: only "Is it done?"), done, or unsure (answered "No / not sure").
+ */
+export type ReminderPhase = "upcoming" | "due" | "overdue" | "done" | "unsure";
 
 /** "HH:MM:SS" local wall-clock time from the server. */
 export type TimeOfDay = string;
@@ -559,6 +565,10 @@ export interface TodayReminder {
   status: ReminderStatus;
   /** True once its time has come. */
   due: boolean;
+  phase: ReminderPhase;
+  /** Done after its on-time window ("confirmed later"). */
+  late?: boolean;
+  confirmed_at?: string | null;
 }
 
 export interface Reminder {
@@ -582,6 +592,11 @@ export interface Reminder {
   today_status: ReminderStatus | null;
   /** Who marked today's occurrence done, if anyone. */
   today_marked_by: "patient" | "caregiver" | null;
+  /** Done today but confirmed only after its on-time window, and when it was confirmed or answered. */
+  today_late?: boolean;
+  today_logged_at?: string | null;
+  /** Medicine only: how long it still says "It's time for this" (null = the standard hour). */
+  late_window_minutes?: number | null;
 }
 
 /** "once": on `on_date`. "daily": every day. "weekly_days": on `days_of_week`. */
@@ -597,6 +612,8 @@ export interface ReminderInput {
   start_date: string | null;
   end_date: string | null;
   active: boolean;
+  /** Medicine only: the safe late window in minutes, or null for the standard hour. */
+  late_window_minutes?: number | null;
 }
 
 export async function getTodayReminders(): Promise<TodayReminder[]> {
@@ -609,12 +626,21 @@ export async function markReminderDone(reminderId: number): Promise<Reminder> {
   return data;
 }
 
+/** The patient's "No / not sure" after a reminder's time: the family is told at once. */
+export async function markReminderUnsure(reminderId: number): Promise<Reminder> {
+  const { data } = await api.post<Reminder>(`/reminders/${reminderId}/log`, { status: "unsure" });
+  return data;
+}
+
 /** Over the last `days` days; `rate` counts only reminders the patient marked done themself. */
 export interface Adherence {
   days: number;
   done_by_patient: number;
   done_by_caregiver: number;
   missed: number;
+  /** Done but confirmed later (already counted as done), and "not sure" answers. */
+  done_late?: number;
+  unsure?: number;
   rate: number | null;
 }
 
@@ -642,7 +668,7 @@ export async function deleteReminder(patientId: number, reminderId: number): Pro
   await api.delete(`/patients/${patientId}/reminders/${reminderId}`);
 }
 
-export type AlertType = "decline" | "missed_reminders" | "speech_risk";
+export type AlertType = "decline" | "missed_reminders" | "speech_risk" | "reminder_unsure";
 export type Severity = "info" | "warning" | "critical";
 
 export interface Alert {
