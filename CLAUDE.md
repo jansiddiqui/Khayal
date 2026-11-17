@@ -200,6 +200,10 @@ Each game is a self-contained component: it receives `level`, reports each round
 4. **Daily Orientation**: day, date, season, and "Which of these is your grandson?" using family photos. No difficulty levels; results go to the trend only.
 5. **Reaction Tap**: tap when the circle turns green. The only game with timing.
 
+Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adaptive rule and composite; `errors` stored but not scored):
+
+6. **Join in order** (`colour_trails`, caregiver name "Colour Trails"; Trail Making / Color Trails idea): tap numbered marks in order; a line joins each right tap; a tap that doesn't join says "Let's look for 4". Levels 1–4: Part 1 with 5/7/9/12 numbers; 5–10: Part 2 with 6→16 numbers alternating teal circle and saffron square (shape and colour), half of the numbers also shown in the other colour to be left alone. Right = finished with at most 1 wrong tap. `reaction_ms` = median gap between joins, recorded silently (D2). `errors` = taps that didn't join.
+
 **No hidden timers (decided):** apart from Reaction Tap, nothing on a game screen ends by itself.
 
 - **Memory Match:** the preview stays until the patient taps "I've looked — hide the cards". Difficulty = number of pairs only (there is no preview time any more).

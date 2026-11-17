@@ -29,6 +29,7 @@ export const GAME_NAMES = {
   word_recall: "Word Recall",
   daily_orientation: "About Today",
   reaction_tap: "Reaction Tap",
+  colour_trails: "Colour Trails",
 } as const;
 
 /** Rolling mean of the last `n` values at each point (the same 5-session average alerts use). */

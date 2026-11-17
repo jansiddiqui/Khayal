@@ -462,7 +462,8 @@ export const admin = {
   },
 };
 
-export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap";
+export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap"
+  | "colour_trails";
 
 export interface RoundResult {
   correct: boolean;

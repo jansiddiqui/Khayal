@@ -169,6 +169,20 @@ export const copy = {
       tooEarly: "Wait for green.",
       tutorial: ["Wait for the circle to turn green.", "Then tap it."],
     },
+    colourTrails: {
+      title: "Join in order",
+      intro: "Tap the numbers in order, one after another.",
+      promptPart1: "Tap the numbers in order: 1, then 2, then 3, and on.",
+      promptPart2: "Tap in order, changing each time: teal circle 1, then saffron square 2, then teal circle 3.",
+      /** After a tap that doesn't join: which number comes next (never "wrong"). */
+      lookFor: (n: number, mark: "circle" | "square" | null) =>
+        mark === null ? `Let's look for ${n}.` : `Let's look for the ${mark === "circle" ? "teal circle" : "saffron square"} ${n}.`,
+      joinedOf: (done: number, total: number) => `${done} of ${total} joined`,
+      markName: (n: number, mark: "circle" | "square" | null) =>
+        mark === null ? `${n}` : `${mark === "circle" ? "Teal circle" : "Saffron square"} ${n}`,
+      joinedName: (name: string) => `${name}, joined`,
+      tutorial: ["Tap the numbers in order: 1, then 2, then 3.", "A line joins them as you go. Take your time."],
+    },
   },
   days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   months: [

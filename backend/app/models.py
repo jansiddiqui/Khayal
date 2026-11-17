@@ -68,6 +68,7 @@ class GameType(str, Enum):
     word_recall = "word_recall"
     daily_orientation = "daily_orientation"
     reaction_tap = "reaction_tap"
+    colour_trails = "colour_trails"
 
 
 # Games without difficulty levels: stored at level 1, never adapted (results feed trends only).

@@ -73,6 +73,7 @@ GAME_NAMES = {
     "word_recall": "Word Recall",
     "daily_orientation": "About Today",
     "reaction_tap": "Reaction Tap",
+    "colour_trails": "Colour Trails",
 }
 
 Status = Literal["insufficient", "stable", "warning", "critical"]

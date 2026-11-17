@@ -48,7 +48,7 @@ CSV_COLUMNS = [
 ]
 
 ORIENTATION = "daily_orientation"
-LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
+LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
 CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall"})
@@ -59,6 +59,7 @@ BASE_RT_MS = {
     "word_recall": 6500,
     "daily_orientation": 3800,
     "reaction_tap": 480,
+    "colour_trails": 1500,
 }
 
 
@@ -96,11 +97,18 @@ def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
+# Games v2: each game's curve is the shared one shifted a little, so a level means a comparable
+# challenge across games (docs/games/research.md section 4). Synthetic, not fitted to real data.
+DIFFICULTY_OFFSET: dict[str, float] = {
+    "colour_trails": 0.0,
+}
+
+
 def difficulty(game: str, level: int) -> float:
     """0..1 difficulty of a round; About Today questions are easy for a healthy adult."""
     if game == ORIENTATION:
         return 0.30
-    return 0.35 + 0.055 * (level - 1)
+    return 0.35 + DIFFICULTY_OFFSET.get(game, 0.0) + 0.055 * (level - 1)
 
 
 def red_chance(level: int) -> float:
