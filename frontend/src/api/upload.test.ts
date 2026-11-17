@@ -28,6 +28,17 @@ describe("family photo upload", () => {
     expect(describeRequestError(await result.catch((e: unknown) => e))).toBe("No answer from the server after 60 seconds.");
   });
 
+  it("reports how much of the photo has been sent", async () => {
+    api.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      config.onUploadProgress?.({ loaded: 25, total: 100, bytes: 25, lengthComputable: true });
+      config.onUploadProgress?.({ loaded: 100, total: 100, bytes: 75, lengthComputable: true });
+      return { data: { id: 1 }, status: 201, statusText: "Created", headers: { "content-type": "application/json" }, config };
+    };
+    const progress: number[] = [];
+    await uploadFamilyPhoto(2, 1, new Blob(["x"], { type: "image/jpeg" }), (fraction) => progress.push(fraction));
+    expect(progress).toEqual([0.25, 1]);
+  });
+
   it("passes the server's error through, with its status", async () => {
     api.defaults.adapter = (config: InternalAxiosRequestConfig) =>
       Promise.reject(

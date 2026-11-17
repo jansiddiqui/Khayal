@@ -14,6 +14,7 @@ import {
   type FamilyMember,
   type FamilyMemberInput,
 } from "../../api/client";
+import { shrinkPhoto } from "../../api/photoResize";
 import { AuthedImage } from "../../components/AuthedImage";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
@@ -29,6 +30,55 @@ export function photoProblem(file: File): string | null {
   if (!PHOTO_TYPES.includes(file.type)) return "Only JPG and PNG photos are allowed.";
   if (file.size > MAX_PHOTO_BYTES) return "Photos must be 5 MB or smaller.";
   return null;
+}
+
+/**
+ * Which of the chosen files to upload: the good ones, up to the `free` places left (5 per person),
+ * in the order chosen. `notes` says what was left out and why.
+ */
+export function pickPhotos(files: File[], free: number): { accepted: File[]; notes: string[] } {
+  const notes: string[] = [];
+  const good: File[] = [];
+  for (const file of files) {
+    const issue = photoProblem(file);
+    if (issue) notes.push(files.length > 1 ? `${file.name}: ${issue}` : issue);
+    else good.push(file);
+  }
+  const accepted = good.slice(0, Math.max(0, free));
+  if (good.length > accepted.length) {
+    notes.push(
+      accepted.length === 0
+        ? `This person already has ${MAX_PHOTOS} photos.`
+        : `Only ${accepted.length} more photo${accepted.length === 1 ? "" : "s"} fit (${MAX_PHOTOS} per person), so the first ${accepted.length} ${accepted.length === 1 ? "is" : "are"} added.`,
+    );
+  }
+  return { accepted, notes };
+}
+
+interface UploadJob {
+  index: number;
+  total: number;
+  /** Object URL of the resized photo, once it is ready. */
+  preview: string | null;
+  percent: number;
+}
+
+/** The photo being uploaded: a thumbnail, "Uploading 2 of 3 · 45%", and a progress bar. */
+function UploadPreview({ job }: { job: UploadJob }) {
+  const label = job.total > 1 ? `photo ${job.index} of ${job.total}` : "photo";
+  return (
+    <figure className="flex w-28 flex-col gap-1" aria-live="polite">
+      {job.preview ? (
+        <img src={job.preview} alt={`Uploading ${label}`} className="h-28 w-28 rounded-md object-cover opacity-80" />
+      ) : (
+        <div className="h-28 w-28 rounded-md bg-sunken" aria-hidden="true" />
+      )}
+      <progress value={job.percent} max={100} aria-label={`Uploading ${label}`} className="h-2 w-28 accent-brand" />
+      <figcaption className="text-sm text-ink-soft">
+        {job.preview ? `Uploading${job.total > 1 ? ` ${job.index} of ${job.total}` : ""} · ${job.percent}%` : "Preparing…"}
+      </figcaption>
+    </figure>
+  );
 }
 
 function MemberForm({
@@ -126,32 +176,45 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
     },
   });
   const remove = useMutation({ mutationFn: () => deleteFamilyMember(patientId, member.id), onSuccess: refresh });
-  // The file of the last failed upload, for "Try again".
-  const [failed, setFailed] = useState<File | null>(null);
-  const upload = useMutation({
-    mutationFn: (file: File) => uploadFamilyPhoto(patientId, member.id, file),
-    onMutate: () => {
-      setProblem(null);
-      setFailed(null);
-    },
-    onSuccess: refresh,
-    onError: (error, file) => {
-      setProblem(`Could not upload the photo. ${describeRequestError(error)}`);
-      setFailed(file);
-    },
-  });
+  // The photo being sent now (one at a time), and the ones still to send after a failure ("Try again").
+  const [job, setJob] = useState<UploadJob | null>(null);
+  const [failed, setFailed] = useState<File[] | null>(null);
   const removePhoto = useMutation({ mutationFn: (photoId: string) => deleteFamilyPhoto(patientId, member.id, photoId), onSuccess: refresh });
 
-  function onFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = ""; // allow choosing the same file again
-    if (!file) return;
-    const issue = photoProblem(file);
-    setProblem(issue);
+  async function uploadAll(files: File[]) {
     setFailed(null);
-    if (!issue) upload.mutate(file);
+    for (const [i, file] of files.entries()) {
+      const step = { index: i + 1, total: files.length };
+      setJob({ ...step, preview: null, percent: 0 });
+      const photo = await shrinkPhoto(file);
+      const preview = URL.createObjectURL(photo);
+      setJob({ ...step, preview, percent: 0 });
+      try {
+        await uploadFamilyPhoto(patientId, member.id, photo, (fraction) =>
+          setJob((current) => (current ? { ...current, percent: Math.round(fraction * 100) } : current)),
+        );
+        refresh();
+      } catch (error) {
+        setProblem(`Could not upload ${files.length > 1 ? file.name : "the photo"}. ${describeRequestError(error)}`);
+        setFailed(files.slice(i));
+        return;
+      } finally {
+        URL.revokeObjectURL(preview);
+        setJob(null);
+      }
+    }
   }
 
+  function onFiles(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = ""; // allow choosing the same files again
+    if (chosen.length === 0) return;
+    const { accepted, notes } = pickPhotos(chosen, MAX_PHOTOS - member.photos.length);
+    setProblem(notes.length ? notes.join(" ") : null);
+    if (accepted.length) void uploadAll(accepted);
+  }
+
+  const busy = job !== null;
   const full = member.photos.length >= MAX_PHOTOS;
 
   return (
@@ -201,14 +264,15 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
             </button>
           </figure>
         ))}
+        {job && <UploadPreview job={job} />}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <label className={`rounded-md border border-line-strong px-3 py-1 ${full ? "opacity-60" : "cursor-pointer hover:bg-sunken"}`}>
-          {upload.isPending ? "Uploading…" : "Add photo"}
-          <input type="file" accept="image/jpeg,image/png" className="sr-only" disabled={full || upload.isPending} onChange={onFile} />
+        <label className={`rounded-md border border-line-strong px-3 py-1 ${full || busy ? "opacity-60" : "cursor-pointer hover:bg-sunken"}`}>
+          {busy ? "Uploading…" : "Add photos"}
+          <input type="file" accept="image/jpeg,image/png" multiple className="sr-only" disabled={full || busy} onChange={onFiles} />
         </label>
         <span className="text-ink-muted">
-          {member.photos.length} / {MAX_PHOTOS} photos · JPG or PNG, up to 5 MB
+          {member.photos.length} / {MAX_PHOTOS} photos · JPG or PNG, up to 5 MB each
         </span>
       </div>
       {problem && (
@@ -216,8 +280,15 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
           <p role="alert" className="text-danger">
             {problem}
           </p>
-          {failed && !upload.isPending && (
-            <button type="button" onClick={() => upload.mutate(failed)} className="rounded-md border border-line-strong px-3 py-1 hover:bg-sunken">
+          {failed && !busy && (
+            <button
+              type="button"
+              onClick={() => {
+                setProblem(null);
+                void uploadAll(failed);
+              }}
+              className="rounded-md border border-line-strong px-3 py-1 hover:bg-sunken"
+            >
               Try again
             </button>
           )}

@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosResponse } from "axios";
+import { shrinkPhoto } from "./photoResize";
 
 /**
  * Where the backend lives. In development the Vite dev server proxies /api to FastAPI
@@ -292,8 +293,10 @@ export async function addElder(input: AddElderInput): Promise<Patient> {
   return data;
 }
 
+/** The elder's own photo, made small in the browser first (photoResize.ts). */
 export async function uploadElderPhoto(patientId: number, file: File): Promise<Patient> {
-  const { data } = await api.post<Patient>(`/patients/${patientId}/photo`, file, { headers: { "Content-Type": file.type } });
+  const photo = await shrinkPhoto(file);
+  const { data } = await api.post<Patient>(`/patients/${patientId}/photo`, photo, { headers: { "Content-Type": photo.type } });
   return data;
 }
 
@@ -696,8 +699,16 @@ export class UploadTimeoutError extends Error {
   }
 }
 
-/** Sends the image file itself as the request body; cancelled after UPLOAD_TIMEOUT_MS. */
-export async function uploadFamilyPhoto(patientId: number, memberId: number, file: File): Promise<FamilyMember> {
+/**
+ * Sends the image itself as the request body (resize it first with `shrinkPhoto`); cancelled after
+ * UPLOAD_TIMEOUT_MS. `onProgress` gets the share of the file sent so far, from 0 to 1.
+ */
+export async function uploadFamilyPhoto(
+  patientId: number,
+  memberId: number,
+  photo: Blob,
+  onProgress?: (fraction: number) => void,
+): Promise<FamilyMember> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -705,9 +716,13 @@ export async function uploadFamilyPhoto(patientId: number, memberId: number, fil
     controller.abort();
   }, UPLOAD_TIMEOUT_MS);
   try {
-    const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos`, file, {
-      headers: { "Content-Type": file.type },
+    const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos`, photo, {
+      headers: { "Content-Type": photo.type },
       signal: controller.signal,
+      onUploadProgress: (event) => {
+        const total = event.total ?? photo.size;
+        if (onProgress && total > 0) onProgress(Math.min(1, event.loaded / total));
+      },
     });
     return data;
   } catch (error) {

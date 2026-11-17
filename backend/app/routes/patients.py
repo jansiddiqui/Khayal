@@ -18,6 +18,7 @@ from app.schemas import (
     ShareOut,
 )
 from app.services import auth, care, consent, decline, devices, elders, family, invites, pairing
+from app.uploads import blocking, content_type, read_body
 
 router = APIRouter(tags=["patients"])
 
@@ -103,18 +104,18 @@ def list_consents(patient_id: int, caregiver: CurrentCaregiver, db: DbSession) -
 
 @router.post("/patients/{patient_id}/photo", response_model=PatientOut)
 async def upload_elder_photo(patient_id: int, request: Request, caregiver: CurrentCaregiver, db: DbSession) -> PatientOut:
-    """The request body is the image (JPG or PNG). Needs the photos opt-in."""
-    patient = _elder(db, caregiver, patient_id)
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type not in PHOTO_TYPES:
+    """The request body is the image (JPG or PNG). Needs the photos opt-in. Database and image
+    work run off the event loop (app/uploads.py)."""
+    patient = await blocking(_elder, db, caregiver, patient_id)
+    if content_type(request) not in PHOTO_TYPES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only JPG and PNG photos are allowed.")
-    data = bytearray()
-    async for chunk in request.stream():
-        data.extend(chunk)
-        if len(data) > family.MAX_PHOTO_BYTES:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Photos must be 5 MB or smaller.")
+    data = await read_body(request, family.MAX_PHOTO_BYTES, "Photos must be 5 MB or smaller.")
+    return await blocking(_set_elder_photo, db, patient, data)
+
+
+def _set_elder_photo(db: DbSession, patient: User, data: bytes) -> PatientOut:
     try:
-        elders.set_photo(db, patient, bytes(data))
+        elders.set_photo(db, patient, data)
     except elders.PhotosOffError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Turn on photos for this person first.")
     except family.PhotoError as exc:
