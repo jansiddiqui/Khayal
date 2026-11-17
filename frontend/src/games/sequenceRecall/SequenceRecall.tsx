@@ -1,4 +1,5 @@
 import { Palette } from "lucide-react";
+import { SequenceRecallDemo } from "../tutorial/demos";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copy } from "../../copy";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
@@ -158,4 +159,5 @@ export const sequenceRecall: GameDefinition = {
   intro: copy.games.sequenceRecall.intro,
   icon: Palette,
   Round: SequenceRecallRound,
+  tutorial: { steps: copy.games.sequenceRecall.tutorial, Demo: SequenceRecallDemo },
 };

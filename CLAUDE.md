@@ -112,11 +112,12 @@ The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
 
-- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable)
+- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable), core_games (nullable = default core set, section 7), festivals (nullable = festival question off)
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
-- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
+- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7), errors (nullable int, games v2 D1: wrong placements/taps, clock error bits, delayed-recall false alarms; not in the composite)
 - **PlayerLevel**: patient_id, game_type, current_level (1–10), updated_at
+- **TutorialState**: patient_id, game_type, seen_at (nullable: a caregiver asked to show it again)
 - **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, repeat (`once` | `daily` | `weekly_days`), on_date (once), start_date + optional end_date (daily / weekly_days), days_of_week (weekly_days), active. Dates are days on the app clock; a reminder whose day or end date has passed is listed under "Past reminders" (kept with its history).
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
@@ -205,6 +206,8 @@ Each game is a self-contained component: it receives `level`, reports each round
 - **Word Recall:** each word stays until the patient taps "Next word". The star distraction ends once 5 stars are tapped. The pick list has at most 12 words: every shown word plus new ones up to 12.
 - **End of a session:** warm, varied encouragement (never a level number). The main button is "Next game" (the next game on today's list not finished today), or "Back to Home" when all are done; "Play again" is secondary.
 - **Read aloud in games:** when on, each question is spoken with its answer choices, and the kind reply after answering.
+- **First-time tutorial (games v2, research.md 3.4):** the first time a patient opens a game, a short spoken demo (spoken even when Read aloud is off, words also on screen, a hand showing one move), then one practice round at level 1 or easier, never stored. Patients who already played a game skip it. The caregiver can ask for it again per game.
+- **Between rounds:** "Round X of 5" stays on the reply card, and the praise after a right answer varies from round to round.
 - **Sequence Recall:** after a wrong tap, the game gently replays the right order ("Here's how it went") before moving on.
 - Each round records how long the patient looked before playing as `study_ms` on `GameRound` (nullable: Memory Match preview time, Word Recall total word-viewing time; empty for the other games). It is stored for the decline analysis but is not part of the composite score yet.
 

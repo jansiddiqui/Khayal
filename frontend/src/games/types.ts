@@ -17,6 +17,17 @@ export interface RoundProps {
   roundIndex: number;
   onComplete: (result: RoundResult, feedback?: string) => void;
   rng?: Rng;
+  /**
+   * The first-time practice round (research.md 3.4): easier than level 1, the answer is shown
+   * gently if needed, and the result is never stored.
+   */
+  practice?: boolean;
+}
+
+/** The first-time tutorial: a few short spoken sentences and a small demo of one move. */
+export interface Tutorial {
+  steps: readonly string[];
+  Demo: ComponentType;
 }
 
 export interface GameDefinition {
@@ -25,6 +36,7 @@ export interface GameDefinition {
   intro: string;
   icon: LucideIcon;
   Round: ComponentType<RoundProps>;
+  tutorial: Tutorial;
 }
 
 /** Fisher–Yates shuffle that returns a new array. */

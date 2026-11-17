@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Puzzle } from "lucide-react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
@@ -13,6 +13,7 @@ vi.mock("../api/client", async (importOriginal) => {
   return {
     ...actual,
     getLevel: vi.fn(),
+    markTutorialSeen: vi.fn(),
     postSession: vi.fn(),
     postSessionOnPageHide: vi.fn(),
     getTodaysGames: vi.fn(),
@@ -28,7 +29,15 @@ function FakeRound({ level, onComplete }: RoundProps) {
     </button>
   );
 }
-const fakeGame: GameDefinition = { type: "memory_match", title: "Fake", intro: "Play the fake game.", icon: Puzzle, Round: FakeRound };
+const fakeGame: GameDefinition = {
+  type: "memory_match",
+  title: "Fake",
+  intro: "Play the fake game.",
+  icon: Puzzle,
+  Round: FakeRound,
+  tutorial: { steps: ["Tap the button.", "That's all."], Demo: () => <p>Demo board</p> },
+};
+const isPraise = (text: string) => (copy.games.praise as readonly string[]).some((p) => text.includes(p));
 
 /** The end message: one of the encouragements, plus the gentle note only when the game got harder. */
 const isEncouragement = (text: string) => (copy.games.encouragement as readonly string[]).includes(text);
@@ -67,7 +76,9 @@ async function playFullSession() {
     expect(screen.getByText(copy.games.roundOf(round, ROUNDS_PER_SESSION))).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Finish round" }));
     if (round < ROUNDS_PER_SESSION) {
-      expect(screen.getByRole("status")).toHaveTextContent(copy.games.roundWell);
+      expect(isPraise(screen.getByRole("status").textContent ?? "")).toBe(true);
+      // The place in the session stays on screen on the reply card.
+      expect(screen.getByText(copy.games.roundOf(round, ROUNDS_PER_SESSION))).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
     }
   }
@@ -75,7 +86,8 @@ async function playFullSession() {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  api.getLevel.mockResolvedValue(3);
+  api.getLevel.mockResolvedValue({ level: 3, tutorial: false });
+  api.markTutorialSeen.mockResolvedValue();
   api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
 });
 
@@ -210,6 +222,44 @@ describe("GameSession", () => {
     expect(next).toHaveAttribute("href", "/patient/games/word_recall");
     expect(next).toHaveTextContent(copy.games.wordRecall.title);
     expect(screen.getByRole("button", { name: copy.games.playAgain })).toBeInTheDocument();
+  });
+
+  it("varies the praise between rounds instead of repeating the same words", async () => {
+    api.postSession.mockResolvedValue(result("same"));
+    renderWithProviders(<GameSession game={fakeGame} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    const said: string[] = [];
+    for (let round = 1; round < ROUNDS_PER_SESSION; round++) {
+      fireEvent.click(screen.getByRole("button", { name: "Finish round" }));
+      said.push(screen.getByRole("status").textContent ?? "");
+      fireEvent.click(screen.getByRole("button", { name: copy.games.next }));
+    }
+    for (let i = 1; i < said.length; i++) expect(said[i]).not.toBe(said[i - 1]);
+  });
+
+  it("shows a first-time tutorial and a practice round that is never saved", async () => {
+    api.getLevel.mockResolvedValue({ level: 3, tutorial: true });
+    api.postSession.mockResolvedValue(result("same"));
+    renderWithProviders(<GameSession game={fakeGame} />);
+
+    expect(await screen.findByRole("heading", { name: copy.games.tutorialHeading })).toBeInTheDocument();
+    expect(screen.getByText("Demo board")).toBeInTheDocument();
+    expect(screen.getByText("Tap the button.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: copy.games.tryOne }));
+
+    // The practice round is played at the easiest setting, without "Round 1 of 5".
+    const practice = screen.getByRole("button", { name: "Finish round" });
+    expect(practice).toHaveAttribute("data-level", "1");
+    expect(screen.queryByText(copy.games.roundOf(1, ROUNDS_PER_SESSION))).toBeNull();
+    fireEvent.click(practice);
+    expect(screen.getByRole("status")).toHaveTextContent(copy.games.practiceDone);
+    expect(api.postSession).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.games.start }));
+    await waitFor(() => expect(api.markTutorialSeen).toHaveBeenCalledWith("memory_match"));
+    // The real session starts at the stored level.
+    expect(screen.getByRole("button", { name: "Finish round" })).toHaveAttribute("data-level", "3");
+    expect(screen.getByText(copy.games.roundOf(1, ROUNDS_PER_SESSION))).toBeInTheDocument();
   });
 
   it("ends with Back to Home when every game today is done", async () => {

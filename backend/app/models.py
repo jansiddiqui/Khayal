@@ -45,6 +45,12 @@ class User(Base):
     photos_enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Patients only: storage key of the elder's own photo (services/storage.py), if any.
     photo_key: Mapped[str | None] = mapped_column(String(200), default=None)
+    # Patients only: the 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set").
+    # None = the default core set (services/core_games.py).
+    core_games: Mapped[list[str] | None] = mapped_column(JSON, default=None)
+    # Patients only: festivals the family celebrates (About Today's festival question). None or
+    # empty = the question is off (docs/games/research.md D6).
+    festivals: Mapped[list[str] | None] = mapped_column(JSON, default=None)
 
 
 class CareLink(Base):
@@ -111,6 +117,10 @@ class GameRound(Base):
     hint_used: Mapped[bool]
     # How long the patient looked before playing (CLAUDE.md section 7); None for games without a study phase.
     study_ms: Mapped[int | None]
+    # Games v2 (docs/games/research.md D1): wrong placements, wrong taps, the clock's error bits
+    # (1 = hour, 2 = minute) or delayed-recall false alarms. None for games that don't count errors.
+    # Stored for analysis; not part of the composite score.
+    errors: Mapped[int | None] = mapped_column(default=None)
 
     session: Mapped[GameSession] = relationship(back_populates="rounds")
 
@@ -122,6 +132,20 @@ class PlayerLevel(Base):
     game_type: Mapped[GameType] = mapped_column(SAEnum(GameType, native_enum=False, length=32), primary_key=True)
     current_level: Mapped[int]
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class TutorialState(Base):
+    """First-time tutorial per patient per game (docs/games/research.md 3.4).
+
+    No row: the tutorial is shown until the patient has seen it or has played the game.
+    `seen_at` None: a caregiver asked for it again ("Show the tutorial again").
+    """
+
+    __tablename__ = "tutorial_states"
+
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    game_type: Mapped[GameType] = mapped_column(SAEnum(GameType, native_enum=False, length=32), primary_key=True)
+    seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
 
 class ReminderType(str, Enum):

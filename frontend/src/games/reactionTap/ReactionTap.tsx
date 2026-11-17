@@ -1,4 +1,5 @@
 import { CircleDot, Hand } from "lucide-react";
+import { ReactionTapDemo } from "../tutorial/demos";
 import { useEffect, useRef, useState } from "react";
 import { copy } from "../../copy";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
@@ -114,4 +115,5 @@ export const reactionTap: GameDefinition = {
   intro: copy.games.reactionTap.intro,
   icon: CircleDot,
   Round: ReactionTapRound,
+  tutorial: { steps: copy.games.reactionTap.tutorial, Demo: ReactionTapDemo },
 };

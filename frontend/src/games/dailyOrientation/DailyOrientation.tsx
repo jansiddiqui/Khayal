@@ -1,4 +1,5 @@
 import { CalendarDays } from "lucide-react";
+import { OrientationDemo } from "../tutorial/demos";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
@@ -92,4 +93,5 @@ export const dailyOrientation: GameDefinition = {
   intro: copy.games.orientation.intro,
   icon: CalendarDays,
   Round: DailyOrientationRound,
+  tutorial: { steps: copy.games.orientation.tutorial, Demo: OrientationDemo },
 };

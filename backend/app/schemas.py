@@ -294,6 +294,8 @@ class PatientUpdateIn(BaseModel):
 class LevelOut(BaseModel):
     game_type: GameType
     level: int
+    # True when the first-time tutorial and practice round should be shown before playing.
+    tutorial: bool = False
 
 
 class RoundIn(BaseModel):
@@ -301,6 +303,8 @@ class RoundIn(BaseModel):
     reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
     hint_used: bool = False
     study_ms: Annotated[int, Field(ge=0, le=3_600_000)] | None = None
+    # Games v2 (docs/games/research.md D1); None for games that don't count errors.
+    errors: Annotated[int, Field(ge=0, le=100)] | None = None
 
 
 def _to_utc(dt: datetime) -> datetime:

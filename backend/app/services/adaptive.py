@@ -63,6 +63,7 @@ def record_session(
                 reaction_ms=r.reaction_ms,
                 hint_used=r.hint_used,
                 study_ms=r.study_ms,
+                errors=r.errors,
             )
             for r in rounds
         ],

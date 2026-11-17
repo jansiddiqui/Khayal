@@ -6,8 +6,11 @@ const STORAGE_KEY = "khayal.readAloud";
 interface ReadAloudValue {
   enabled: boolean;
   toggle: () => void;
-  /** Speak `text` with the browser's speechSynthesis, if read-aloud is on and supported. */
-  speak: (text: string) => void;
+  /**
+   * Speak `text` with the browser's speechSynthesis, if read-aloud is on and supported.
+   * `force` speaks even when read-aloud is off (first-time game tutorials, research.md 3.4).
+   */
+  speak: (text: string, options?: { force?: boolean }) => void;
 }
 
 const ReadAloudContext = createContext<ReadAloudValue | null>(null);
@@ -41,9 +44,9 @@ export function ReadAloudProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const speak = useCallback(
-    (text: string) => {
+    (text: string, options?: { force?: boolean }) => {
       const s = synth();
-      if (!enabled || !s) return;
+      if ((!enabled && !options?.force) || !s) return;
       s.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9; // a little slower than default

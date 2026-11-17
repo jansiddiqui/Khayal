@@ -29,6 +29,7 @@ from app.models import (
     PasswordReset,
     PlayerLevel,
     Reminder,
+    TutorialState,
     ReminderLog,
     Role,
     SignupInvite,
@@ -68,6 +69,7 @@ def delete_user(db: Session, user_id: int) -> None:
     db.execute(delete(GameRound).where(GameRound.session_id.in_(session_ids)))
     db.execute(delete(GameSession).where(GameSession.patient_id == user_id))
     db.execute(delete(PlayerLevel).where(PlayerLevel.patient_id == user_id))
+    db.execute(delete(TutorialState).where(TutorialState.patient_id == user_id))
     reminder_ids = select(Reminder.id).where(Reminder.patient_id == user_id)
     db.execute(delete(ReminderLog).where(ReminderLog.reminder_id.in_(reminder_ids)))
     db.execute(delete(Reminder).where(Reminder.patient_id == user_id))

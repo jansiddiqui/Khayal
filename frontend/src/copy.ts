@@ -72,8 +72,13 @@ export const copy = {
     empty: "Your games will be ready soon. Please come back a little later.",
     start: "Start",
     roundOf: (n: number, total: number) => `Round ${n} of ${total}`,
-    roundWell: "Well done!",
+    /** Kind words after a right answer, taken in turn so the same words don't repeat round after round. */
+    praise: ["Well done!", "Lovely.", "That's right.", "Nicely done.", "Good, that's it.", "Very good."],
     roundTryAnother: "Let's try another.",
+    /** First-time tutorial (research.md 3.4). */
+    tutorialHeading: "Let's see how it works",
+    tryOne: "Let's try one",
+    practiceDone: "That's how it works. Now let's play.",
     next: "Next one",
     saving: "Just a moment…",
     saveFailed: "We could not save your game just now. Let's try again.",
@@ -100,6 +105,10 @@ export const copy = {
       hideCards: "I've looked — hide the cards",
       findPairs: "Now find the pairs.",
       faceDown: (n: number) => `Card ${n}, face down`,
+      tutorial: [
+        "First the cards are face up. Look at them as long as you like.",
+        "Then tap two cards to turn them over. When they match, they stay.",
+      ],
     },
     sequenceRecall: {
       title: "Follow the Colours",
@@ -109,6 +118,7 @@ export const copy = {
       yourTurn: "Your turn. Tap the tiles in the same order.",
       /** How far the patient has got, so they don't have to remember it too. */
       tapsOf: (done: number, total: number) => `${done} of ${total}`,
+      tutorial: ["Watch the tiles light up, one after another.", "Then tap them in the same order. Take your time."],
     },
     wordRecall: {
       title: "Remember the Words",
@@ -122,6 +132,7 @@ export const copy = {
       choose: "Which words did you see?",
       done: "Done",
       hintLetters: (letters: string) => `Look for words starting with: ${letters}`,
+      tutorial: ["You will see a few words, one at a time.", "After a little break, tap the words you saw."],
     },
     orientation: {
       title: "About Today",
@@ -140,6 +151,7 @@ export const copy = {
       replyTimeOfDay: (time: string) => `It's ${time.toLowerCase()} now.`,
       replyCity: (city: string) => `You're in ${city}.`,
       replyYear: (year: string) => `It's ${year}.`,
+      tutorial: ["A few gentle questions about today.", "Tap the answer you think is right."],
     },
     reactionTap: {
       title: "Tap When Green",
@@ -150,6 +162,7 @@ export const copy = {
       green: "Tap!",
       red: "Don't tap",
       tooEarly: "Wait for green.",
+      tutorial: ["Wait for the circle to turn green.", "Then tap it."],
     },
   },
   days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],

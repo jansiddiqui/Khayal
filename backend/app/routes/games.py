@@ -1,9 +1,9 @@
 from fastapi import APIRouter, status
 
-from app.deps import CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
+from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import GameType
 from app.schemas import LevelChange, LevelOut, SessionIn, SessionOut, SessionResultOut, TodayGameOut, TodayGamesOut
-from app.services import adaptive, decline, today_games
+from app.services import adaptive, decline, today_games, tutorials
 from app.services.clock import local
 from ml.adaptive.rule_based import Round
 
@@ -12,7 +12,24 @@ router = APIRouter(tags=["games"])
 
 @router.get("/games/{game_type}/level", response_model=LevelOut)
 def get_level(game_type: GameType, patient: CurrentPatient, db: DbSession) -> LevelOut:
-    return LevelOut(game_type=game_type, level=adaptive.current_level(db, patient.id, game_type))
+    return LevelOut(
+        game_type=game_type,
+        level=adaptive.current_level(db, patient.id, game_type),
+        tutorial=tutorials.needed(db, patient.id, game_type),
+    )
+
+
+@router.post("/games/{game_type}/tutorial-seen", status_code=status.HTTP_204_NO_CONTENT)
+def tutorial_seen(game_type: GameType, patient: CurrentPatient, db: DbSession, now: Now) -> None:
+    """The patient finished the first-time tutorial and practice round for this game."""
+    tutorials.mark_seen(db, patient.id, game_type, now)
+
+
+@router.post("/patients/{patient_id}/tutorials/{game_type}/reset", status_code=status.HTTP_204_NO_CONTENT)
+def show_tutorial_again(patient_id: int, game_type: GameType, caregiver: CurrentCaregiver, db: DbSession) -> None:
+    """"Show the tutorial again": the next time the patient opens this game."""
+    ensure_patient_access(db, caregiver, patient_id)
+    tutorials.reset(db, patient_id, game_type)
 
 
 @router.post("/sessions", response_model=SessionResultOut, status_code=status.HTTP_201_CREATED)
@@ -24,7 +41,9 @@ def create_session(body: SessionIn, patient: CurrentPatient, db: DbSession, now:
         started_at=body.started_at,
         ended_at=body.ended_at,
         rounds=[
-            Round(correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used, study_ms=r.study_ms)
+            Round(
+                correct=r.correct, reaction_ms=r.reaction_ms, hint_used=r.hint_used, study_ms=r.study_ms, errors=r.errors
+            )
             for r in body.rounds
         ],
         completed=body.completed,

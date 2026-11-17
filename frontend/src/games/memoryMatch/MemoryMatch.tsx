@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { MemoryMatchDemo } from "../tutorial/demos";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFeedback } from "../../ui/feedback";
 import { calm, DURATION, useLessMotion } from "../../ui/motion";
@@ -176,4 +177,5 @@ export const memoryMatch: GameDefinition = {
   intro: copy.games.memoryMatch.intro,
   icon: LayoutGrid,
   Round: MemoryMatchRound,
+  tutorial: { steps: copy.games.memoryMatch.tutorial, Demo: MemoryMatchDemo },
 };
