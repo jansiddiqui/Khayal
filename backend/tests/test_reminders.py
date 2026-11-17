@@ -213,7 +213,8 @@ def test_marked_by_and_adherence(client: TestClient, register: Register, clock: 
     assert (listed["Walk"]["today_status"], listed["Walk"]["today_marked_by"]) == ("missed", None)
 
     adherence = client.get(f"/api/patients/{s.pid}/reminders/adherence", headers=s.cg).json()
-    assert adherence == {"days": 7, "done_by_patient": 1, "done_by_caregiver": 1, "missed": 1, "rate": 1 / 3}
+    assert adherence == {"days": 7, "done_by_patient": 1, "done_by_caregiver": 1, "missed": 1, "rate": 1 / 3,
+                         "done_late": 2, "unsure": 0}  # both confirmed after their hour
 
     # The patient still sees a caregiver-marked reminder as simply done.
     assert {r["title"]: r["status"] for r in s.today()}["Lunch"] == "done"

@@ -1,4 +1,5 @@
 import { ArrowRight, BookOpen, Check, Eye, Star } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BigButton } from "../../components/BigButton";
 import { copy } from "../../copy";
@@ -15,6 +16,8 @@ import {
   wordCount,
   type WordId,
 } from "./logic";
+import { useFeedback } from "../../ui/feedback";
+import { calm, DURATION, pressable, useLessMotion } from "../../ui/motion";
 
 type Step = { kind: "showing"; index: number } | { kind: "stars" } | { kind: "choosing" };
 
@@ -37,6 +40,8 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
   );
 
   const [step, setStep] = useState<Step>({ kind: "showing", index: 0 });
+  const { cue } = useFeedback();
+  const less = useLessMotion();
   const [tappedStars, setTappedStars] = useState<ReadonlySet<number>>(new Set());
   const [picked, setPicked] = useState<ReadonlySet<WordId>>(new Set());
   const [hintLetters, setHintLetters] = useState<string[] | null>(null);
@@ -102,10 +107,18 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
           <p className="text-2xl">{copy.games.wordRecall.remember}</p>
         </QuestionRow>
         <p
-          className="flex min-h-[10rem] items-center justify-center rounded-2xl border-4 border-brand bg-surface text-center text-5xl font-bold"
+          className="flex min-h-[10rem] items-center justify-center overflow-hidden rounded-2xl border-4 border-brand bg-surface text-center text-5xl font-bold"
           aria-live="polite"
         >
-          {copy.words[round.shown[step.index]!]}
+          {/* Each new word settles in gently, so the change is noticed. */}
+          <motion.span
+            key={step.index}
+            initial={less ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={calm(DURATION.page)}
+          >
+            {copy.words[round.shown[step.index]!]}
+          </motion.span>
         </p>
         <BigButton label={copy.games.wordRecall.nextWord} icon={<ArrowRight />} size="compact" onClick={nextWord} />
       </div>
@@ -130,10 +143,13 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
               <button
                 key={cell}
                 type="button"
-                onClick={() => setTappedStars(new Set([...tappedStars, cell]))}
+                onClick={() => {
+                  cue("tap");
+                  setTappedStars(new Set([...tappedStars, cell]));
+                }}
                 aria-label={tapped ? copy.games.wordRecall.starTapped(n) : copy.games.wordRecall.star(n)}
                 className={
-                  "aspect-square min-h-[64px] rounded-full border-4 text-4xl transition-colors " +
+                  "aspect-square min-h-[64px] rounded-full border-4 text-4xl " + pressable + " " +
                   (tapped ? "border-accent bg-accent-soft" : "border-line-strong bg-surface hover:bg-accent-soft")
                 }
               >
@@ -168,9 +184,12 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
               key={word}
               type="button"
               aria-pressed={on}
-              onClick={() => toggle(word)}
+              onClick={() => {
+                cue("tap");
+                toggle(word);
+              }}
               className={
-                "flex min-h-[64px] items-center justify-center gap-1 rounded-2xl border-4 px-1 font-semibold " +
+                "flex min-h-[64px] items-center justify-center gap-1 rounded-2xl border-4 px-1 font-semibold " + pressable + " " +
                 (wide ? "text-base " : "text-2xl ") +
                 (on ? "border-calm bg-calm-soft text-ink" : "border-line-strong bg-surface text-ink hover:bg-sunken")
               }

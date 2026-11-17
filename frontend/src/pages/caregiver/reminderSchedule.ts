@@ -69,12 +69,20 @@ export function emptyReminder(today: string, type: ReminderType = "medicine"): R
     start_date: today,
     end_date: null,
     active: true,
+    late_window_minutes: null,
   };
 }
 
 /** Only the fields that apply to the chosen repeat are sent. */
 export function cleanInput(form: ReminderInput): ReminderInput {
-  const base = { title: form.title.trim(), type: form.type, time_of_day: form.time_of_day, active: form.active, repeat: form.repeat };
+  const base = {
+    title: form.title.trim(),
+    type: form.type,
+    time_of_day: form.time_of_day,
+    active: form.active,
+    repeat: form.repeat,
+    late_window_minutes: form.type === "medicine" ? form.late_window_minutes ?? null : null,
+  };
   if (form.repeat === "once") return { ...base, days_of_week: [], on_date: form.on_date, start_date: null, end_date: null };
   return {
     ...base,

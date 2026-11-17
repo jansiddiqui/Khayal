@@ -6,6 +6,7 @@ import { App } from "../App";
 import { copy } from "../copy";
 import { EMPTY_SIGNALS, EMPTY_TREND } from "../test/fixtures";
 import { renderWithProviders } from "../test/renderWithProviders";
+import { todayLabel } from "./caregiver/Reminders";
 
 vi.mock("../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/client")>();
@@ -14,6 +15,7 @@ vi.mock("../api/client", async (importOriginal) => {
     getMe: vi.fn(),
     getTodayReminders: vi.fn(),
     markReminderDone: vi.fn(),
+    markReminderUnsure: vi.fn(),
     listPatients: vi.fn(),
     listSessions: vi.fn(),
     getTrend: vi.fn(),
@@ -39,13 +41,22 @@ function signInAs(user: User) {
   api.getMe.mockResolvedValue(user);
 }
 
-const today = (id: number, title: string, time: string, status: TodayReminder["status"], due: boolean): TodayReminder => ({
+/** A patient reminder; its phase follows from status and due unless given (overdue = past its hour). */
+const today = (
+  id: number,
+  title: string,
+  time: string,
+  status: TodayReminder["status"],
+  due: boolean,
+  phase?: TodayReminder["phase"],
+): TodayReminder => ({
   id,
   title,
   type: "medicine",
   time_of_day: `${time}:00`,
   status,
   due,
+  phase: phase ?? (status === "done" ? "done" : status === "unsure" ? "unsure" : !due ? "upcoming" : status === "missed" ? "overdue" : "due"),
 });
 
 beforeEach(() => {
@@ -69,7 +80,7 @@ describe("patient Home next reminder card", () => {
   beforeEach(() => signInAs(kamala));
   const card = async () => within(await screen.findByRole("region", { name: copy.patientHome.nextReminderLabel }));
 
-  it("shows something due now first", async () => {
+  it("shows something within its hour first", async () => {
     api.getTodayReminders.mockResolvedValue([
       today(1, "Blood pressure tablet", "09:00", "pending", true),
       today(2, "Lunch", "13:00", "pending", false),
@@ -78,13 +89,15 @@ describe("patient Home next reminder card", () => {
     expect(await (await card()).findByText("Now · Blood pressure tablet")).toBeInTheDocument();
   });
 
-  it("otherwise shows the next one later today", async () => {
+  it("never calls an overdue reminder 'Now'; shows the next one later today instead", async () => {
     api.getTodayReminders.mockResolvedValue([
-      today(1, "Blood pressure tablet", "09:00", "done", true),
+      today(1, "Blood pressure tablet", "09:00", "missed", true, "overdue"),
       today(2, "Lunch", "13:00", "pending", false),
     ]);
     renderWithProviders(<App />, { route: "/patient" });
-    expect(await (await card()).findByText("1:00 PM · Lunch")).toBeInTheDocument();
+    const c = await card();
+    expect(await c.findByText("1:00 PM · Lunch")).toBeInTheDocument();
+    expect(c.queryByText(/Now/)).toBeNull();
   });
 
   it("is calm when nothing is left", async () => {
@@ -92,37 +105,73 @@ describe("patient Home next reminder card", () => {
     renderWithProviders(<App />, { route: "/patient" });
     expect(await (await card()).findByText(copy.patientHome.noReminder)).toBeInTheDocument();
   });
+
+  it("greets by the time of day and shows today's progress in words", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 17, 9, 0));
+    api.getTodayReminders.mockResolvedValue([today(1, "Tea", "06:00", "done", true), today(2, "Lunch", "13:00", "pending", false)]);
+    api.getTodaysGames.mockResolvedValue({ games: [{ game_type: "daily_orientation", done_today: true }, { game_type: "memory_match", done_today: false }, { game_type: "word_recall", done_today: false }], pinned: false });
+    renderWithProviders(<App />, { route: "/patient" });
+    expect(await screen.findByRole("heading", { name: "Good morning, Kamala" })).toBeInTheDocument();
+    // Today's progress is in the buttons it belongs to.
+    expect(await screen.findByRole("link", { name: /Play a game.*1 of 3 done today/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Today's reminders.*1 of 2 done today/ })).toBeInTheDocument();
+    vi.useRealTimers();
+    expect(copy.patientHome.greetingAt("Kamala", 14)).toBe("Good afternoon, Kamala");
+    expect(copy.patientHome.greetingAt("Kamala", 19)).toBe("Good evening, Kamala");
+    expect(copy.patientHome.greetingAt("Kamala", 23)).toBe("Hello, Kamala");
+  });
 });
 
 describe("patient Today's reminders", () => {
   beforeEach(() => signInAs(kamala));
 
-  it("shows Done buttons only for reminders whose time has come, at most 3", async () => {
+  it("asks about one reminder at a time, overdue ones first, and never urges", async () => {
     api.getTodayReminders.mockResolvedValue([
-      today(1, "Tablet A", "07:00", "missed", true),
-      today(2, "Tablet B", "08:00", "pending", true),
-      today(3, "Tablet C", "08:30", "pending", true),
-      today(4, "Tablet D", "08:45", "pending", true),
+      today(1, "Tablet A", "07:00", "missed", true, "overdue"),
+      today(2, "Tablet B", "08:00", "pending", true, "due"),
+      today(3, "Tablet C", "08:30", "pending", true, "due"),
       today(5, "Lunch", "13:00", "pending", false),
       today(6, "Tea", "06:00", "done", true),
     ]);
+    api.markReminderDone.mockResolvedValue({} as Reminder);
     renderWithProviders(<App />, { route: "/patient/reminders" });
 
-    await screen.findByRole("heading", { name: copy.reminders.nowHeading });
+    // Only an overdue card is on screen, so the heading never says "Now".
+    await screen.findByRole("heading", { name: copy.reminders.earlierHeading });
     const main = within(screen.getByRole("main"));
-    expect(main.getAllByRole("button", { name: copy.reminders.done })).toHaveLength(3);
-    expect(within(screen.getByRole("region", { name: "Tablet A" })).getByText(copy.reminders.letsDoItNow)).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Tablet B" })).getByText(copy.reminders.timeForThis)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Tablet D" })).toBeNull(); // appears after one is done
+    const a = within(screen.getByRole("region", { name: "Tablet A" }));
+    expect(a.getByText("This was for 7:00 AM. Is it done?")).toBeInTheDocument();
+    expect(a.getByRole("button", { name: copy.reminders.yesDone })).toBeInTheDocument();
+    expect(a.getByRole("button", { name: copy.reminders.notSure })).toBeInTheDocument();
+    // B and C wait their turn; the patient is told how many.
+    expect(screen.queryByRole("region", { name: "Tablet B" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Tablet C" })).toBeNull();
+    expect(screen.getByText(copy.reminders.moreAfter(2))).toBeInTheDocument();
+    expect(main.getAllByRole("button").filter((b) => b.closest("header") === null)).toHaveLength(2);
+    expect(a.queryByText(copy.reminders.letsDoItNow)).toBeNull();
+    expect(screen.getByRole("main").textContent).not.toMatch(/\b(missed|wrong|late)\b/i);
 
     expect(screen.getByRole("heading", { name: copy.reminders.laterHeading })).toBeInTheDocument();
     expect(screen.getByText("Lunch")).toBeInTheDocument();
     expect(screen.getByText(copy.reminders.doneMark)).toBeInTheDocument();
-    // No negative words anywhere.
-    expect(screen.getByRole("main").textContent).not.toMatch(/\b(missed|wrong|late)\b/i);
+
+    // Answering A brings B (due now, with one Done button).
+    fireEvent.click(a.getByRole("button", { name: copy.reminders.yesDone }));
+    const b = within(await screen.findByRole("region", { name: "Tablet B" }));
+    expect(b.getByRole("button", { name: copy.reminders.done })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: copy.reminders.nowHeading })).toBeInTheDocument();
+    expect(screen.getByText(copy.reminders.moreAfter(1))).toBeInTheDocument();
   });
 
-  it("marks a reminder done and thanks the patient", async () => {
+  it("thanks gently, without 'All done', when something was 'not sure'", async () => {
+    api.getTodayReminders.mockResolvedValue([today(1, "Blood pressure tablet", "09:00", "unsure", true, "unsure")]);
+    renderWithProviders(<App />, { route: "/patient/reminders" });
+    expect(await screen.findByText(copy.reminders.familyWillHelp)).toBeInTheDocument();
+    expect(screen.queryByText(copy.reminders.allDone)).toBeNull();
+  });
+
+  it("ticks a reminder off where it is and thanks the patient", async () => {
     api.getTodayReminders
       .mockResolvedValueOnce([today(1, "Tablet", "09:00", "pending", true)])
       .mockResolvedValue([today(1, "Tablet", "09:00", "done", true)]);
@@ -130,9 +179,26 @@ describe("patient Today's reminders", () => {
     renderWithProviders(<App />, { route: "/patient/reminders" });
 
     fireEvent.click(await screen.findByRole("button", { name: copy.reminders.done }));
-    expect(await screen.findByRole("status")).toHaveTextContent(copy.reminders.thanks);
+    const card = within(screen.getByRole("region", { name: "Tablet" }));
+    expect(await card.findByRole("status")).toHaveTextContent(copy.reminders.thanks);
     expect(api.markReminderDone.mock.calls[0]?.[0]).toBe(1);
     expect(await screen.findByText(copy.reminders.allDone)).toBeInTheDocument();
+    // It stays in the same place on this visit (not moved to the Done list).
+    expect(screen.queryByRole("heading", { name: copy.reminders.doneHeading })).toBeNull();
+  });
+
+  it("'No / not sure' never suggests a dose and tells the family", async () => {
+    api.getTodayReminders
+      .mockResolvedValueOnce([today(1, "Blood pressure tablet", "09:00", "missed", true, "overdue")])
+      .mockResolvedValue([today(1, "Blood pressure tablet", "09:00", "unsure", true)]);
+    api.markReminderUnsure.mockResolvedValue({} as Reminder);
+    renderWithProviders(<App />, { route: "/patient/reminders" });
+
+    fireEvent.click(await screen.findByRole("button", { name: copy.reminders.notSure }));
+    await waitFor(() => expect(api.markReminderUnsure.mock.calls[0]?.[0]).toBe(1));
+    const card = within(screen.getByRole("region", { name: "Blood pressure tablet" }));
+    expect(await card.findByRole("status")).toHaveTextContent("Please ask your family before taking it. We've let them know.");
+    expect(card.queryByRole("button")).toBeNull();
   });
 
   it("is calm when nothing is planned or nothing is due yet", async () => {
@@ -177,7 +243,17 @@ describe("caregiver reminders and alerts", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  const addForm = async () => within(await screen.findByRole("form", { name: "Add reminder" }));
+  /** The add form opens from "Add a reminder" (the list comes first). */
+  const addForm = async () => {
+    const open = screen.queryByRole("button", { name: "Add a reminder" }) ?? (await screen.findByRole("button", { name: "Add a reminder" }));
+    fireEvent.click(open);
+    return within(await screen.findByRole("form", { name: "Add reminder" }));
+  };
+  /** Deletes wait for their Undo window; closing the message carries them out at once. */
+  const closeToast = async (text: RegExp) => {
+    const toast = (await screen.findByText(text)).closest("[role=status]") as HTMLElement;
+    fireEvent.click(within(toast).getByRole("button", { name: "Close message" }));
+  };
 
   it("shows adherence and caregiver-marked reminders", async () => {
     api.listReminders.mockResolvedValue([
@@ -216,8 +292,11 @@ describe("caregiver reminders and alerts", () => {
     expect(past.getByRole("cell", { name: "Once · Tue 10 Nov · 9:00 AM" })).toBeInTheDocument();
     expect(past.queryByRole("button", { name: /Edit/ })).toBeNull();
     api.deleteReminder.mockResolvedValue(undefined);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.click(past.getByRole("button", { name: "Delete Blood test" }));
+    // Gone at once, with Undo for a few seconds; only then is it deleted on the server.
+    await waitFor(() => expect(screen.queryByText("Blood test")).toBeNull());
+    expect(api.deleteReminder).not.toHaveBeenCalled();
+    await closeToast(/Reminder deleted: Blood test/);
     await waitFor(() => expect(api.deleteReminder).toHaveBeenCalledWith(2, 13));
   });
 
@@ -269,6 +348,7 @@ describe("caregiver reminders and alerts", () => {
         on_date: "2026-11-17",
         start_date: null,
         end_date: null,
+        late_window_minutes: null,
       }),
     );
   });
@@ -299,6 +379,7 @@ describe("caregiver reminders and alerts", () => {
       expect(api.createReminder).toHaveBeenLastCalledWith(2, {
         title: "Walk", type: "other", time_of_day: "18:00", active: true,
         repeat: "weekly_days", days_of_week: [0, 2, 4], on_date: null, start_date: "2026-11-17", end_date: "2026-11-30",
+        late_window_minutes: null,
       }),
     );
   });
@@ -326,7 +407,6 @@ describe("caregiver reminders and alerts", () => {
   it("edits and deletes a reminder", async () => {
     api.updateReminder.mockResolvedValue(reminder);
     api.deleteReminder.mockResolvedValue(undefined);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit Blood pressure tablet" }));
@@ -341,7 +421,57 @@ describe("caregiver reminders and alerts", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Delete Blood pressure tablet" }));
+    await closeToast(/Reminder deleted: Blood pressure tablet/);
     await waitFor(() => expect(api.deleteReminder).toHaveBeenCalledWith(2, 7));
+  });
+
+  it("Undo brings a deleted reminder back without touching the server", async () => {
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Blood pressure tablet" }));
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Blood pressure tablet" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("cell", { name: "Blood pressure tablet" })).toBeInTheDocument();
+    expect(api.deleteReminder).not.toHaveBeenCalled();
+  });
+
+  it("adds optimistically, confirms, and rolls back with a message if the server refuses", async () => {
+    let refuse: (e: unknown) => void = () => undefined;
+    api.createReminder.mockImplementation(() => new Promise((_, reject) => (refuse = reject)));
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Evening walk" } });
+    fireEvent.change(form.getByLabelText("Type"), { target: { value: "other" } });
+    fireEvent.click(form.getByLabelText("Every day"));
+    fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
+    // In the list at once, before the server answers.
+    expect(await screen.findByRole("cell", { name: "Evening walk" })).toBeInTheDocument();
+    refuse(Object.assign(new Error("500"), { isAxiosError: true, response: { status: 500, data: {} } }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the change.");
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Evening walk" })).toBeNull());
+  });
+
+  it("a medicine can have a safe late window; other types can't", async () => {
+    api.createReminder.mockResolvedValue(reminder);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/reminders" });
+    const form = await addForm();
+    fireEvent.change(form.getByLabelText("Title"), { target: { value: "Tablet" } });
+    fireEvent.change(form.getByLabelText("Safe late window"), { target: { value: "180" } });
+    fireEvent.click(form.getByRole("button", { name: "Add reminder" }));
+    await waitFor(() => expect(api.createReminder).toHaveBeenLastCalledWith(2, expect.objectContaining({ late_window_minutes: 180 })));
+    const again = await addForm();
+    fireEvent.change(again.getByLabelText("Type"), { target: { value: "meal" } });
+    expect(again.queryByLabelText("Safe late window")).toBeNull();
+  });
+
+  it("shows confirmed-later and not-sure answers in words", () => {
+    expect(todayLabel({ ...reminder, today_status: "done", today_marked_by: "patient", today_late: true, today_logged_at: "2026-11-17T15:10:00Z" })).toBe(
+      "Done, confirmed later at 8:40 pm",
+    );
+    expect(todayLabel({ ...reminder, today_status: "unsure" })).toBe("Not sure (family told)");
+    // No answer yet: "Pending" within the hour, then said plainly (not "Missed" before it is logged).
+    const nine = { ...reminder, time_of_day: "09:00:00", today_status: "pending" as const };
+    expect(todayLabel(nine, "09:40")).toBe("Pending");
+    expect(todayLabel(nine, "10:05")).toBe("Not answered yet");
   });
 
   it("shows the server's reason when a save is refused", async () => {

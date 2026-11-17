@@ -6,7 +6,7 @@ import { QuestionRow } from "../QuestionRow";
 import { listFamily } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AuthedImage } from "../../components/AuthedImage";
-import { BigButton } from "../../components/BigButton";
+import { AnswerButton, answerState, useChoice } from "../Answer";
 import { copy } from "../../copy";
 import type { GameDefinition, RoundProps } from "../types";
 import { buildQuestion } from "./logic";
@@ -36,6 +36,16 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
   );
   const askedAt = useRef(Date.now());
   const reported = useRef(false);
+  const answeredIn = useRef(0);
+  // The chosen answer is held for a moment (glow or gentle nudge), then the round reports.
+  const { chosen, choose } = useChoice<string>(({ correct }) => {
+    if (reported.current || !question) return;
+    reported.current = true;
+    onComplete(
+      { correct, reaction_ms: answeredIn.current, hint_used: false },
+      correct ? copy.games.orientation.yes + question.reply : question.reply,
+    );
+  });
 
   useEffect(() => {
     askedAt.current = Date.now();
@@ -47,12 +57,9 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
 
   function answer(option: string) {
     if (reported.current || !question) return;
-    reported.current = true;
-    const correct = option === question.answer;
-    onComplete(
-      { correct, reaction_ms: Date.now() - askedAt.current, hint_used: false },
-      correct ? copy.games.orientation.yes + question.reply : question.reply,
-    );
+    const reaction = Date.now() - askedAt.current;
+    choose(option, option === question.answer);
+    answeredIn.current = reaction;
   }
 
   return (
@@ -72,7 +79,7 @@ export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.rando
       )}
       <div className="flex flex-col gap-3">
         {question.options.map((option) => (
-          <BigButton key={option} label={option} variant="secondary" size="compact" onClick={() => answer(option)} />
+          <AnswerButton key={option} label={option} state={answerState(chosen, option)} onClick={() => answer(option)} />
         ))}
       </div>
     </div>

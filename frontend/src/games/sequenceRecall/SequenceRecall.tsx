@@ -6,6 +6,7 @@ import { QuestionRow } from "../QuestionRow";
 import { HintButton } from "../HintButton";
 import type { GameDefinition, RoundProps, RoundResult } from "../types";
 import { buildSequence, sequenceConfig, TILES, type TileId } from "./logic";
+import { useFeedback } from "../../ui/feedback";
 
 /** Short settle time before playback starts, so the patient is looking. */
 export const PLAYBACK_DELAY_MS = 800;
@@ -28,6 +29,10 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
   const [plays, setPlays] = useState(1);
   const [mode, setMode] = useState<Mode>("watch");
   const [lit, setLit] = useState<TileId | null>(null);
+  // The last tile the patient tapped (and a counter, so the same tile can light up twice in a row).
+  const [tapped, setTapped] = useState<{ tile: TileId; n: number } | null>(null);
+  const [taps, setTaps] = useState(0);
+  const { cue } = useFeedback();
   const position = useRef(0);
   const playbackEnd = useRef(0);
   const missed = useRef<RoundResult | null>(null);
@@ -41,6 +46,8 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
   useEffect(() => {
     if (!playing) return;
     position.current = 0;
+    setTaps(0);
+    setTapped(null);
     const timers: ReturnType<typeof setTimeout>[] = [];
     let t = PLAYBACK_DELAY_MS;
     for (const tile of sequence) {
@@ -70,6 +77,8 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
 
   function tap(tile: TileId) {
     if (mode !== "yourTurn" || reported.current) return;
+    setTapped((prev) => ({ tile, n: (prev?.n ?? 0) + 1 }));
+    cue("tap");
     const result = (correct: boolean): RoundResult => ({
       correct,
       reaction_ms: Date.now() - playbackEnd.current,
@@ -81,6 +90,7 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
       return;
     }
     position.current += 1;
+    setTaps(position.current);
     if (position.current === sequence.length) {
       reported.current = true;
       onComplete(result(true));
@@ -107,10 +117,16 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
         <p className="text-2xl" aria-live="polite">
           {prompt}
         </p>
+        {mode === "yourTurn" && (
+          <p className="mt-1 text-xl font-semibold text-brand-dark" aria-live="polite">
+            {copy.games.sequenceRecall.tapsOf(taps, sequence.length)}
+          </p>
+        )}
       </QuestionRow>
       <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3" style={{ maxHeight: "22rem" }}>
         {TILES.map((tile) => {
           const isLit = lit === tile.id;
+          const justTapped = tapped?.tile === tile.id;
           return (
             <button
               key={tile.id}
@@ -119,10 +135,12 @@ export function SequenceRecallRound({ level, onComplete, rng = Math.random }: Ro
               disabled={mode !== "yourTurn"}
               data-lit={isLit}
               className={
-                "min-h-[64px] rounded-2xl border-8 text-2xl font-bold transition-transform duration-150 " +
+                "relative min-h-[64px] touch-manipulation overflow-hidden rounded-2xl border-8 text-2xl font-bold transition-transform duration-150 ease-calm active:scale-[0.96] motion-reduce:active:scale-100 " +
                 (isLit ? `${tile.lit} scale-105 shadow-lg` : `${tile.idle} border-transparent`)
+
               }
             >
+              {justTapped && <span key={tapped.n} aria-hidden="true" className="tile-flash pointer-events-none absolute inset-0" />}
               {isLit && <span aria-hidden="true">● </span>}
               {copy.tiles[tile.id]}
             </button>

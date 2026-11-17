@@ -7,6 +7,9 @@ import { copy } from "./copy";
 import { EMPTY_SIGNALS, EMPTY_TREND } from "./test/fixtures";
 import { renderWithProviders } from "./test/renderWithProviders";
 
+/** Patient Home greets by the time of day (Good morning / afternoon / evening, or Hello late at night). */
+const KAMALA_GREETING = /^(Good (morning|afternoon|evening)|Hello), Kamala$/;
+
 vi.mock("./api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api/client")>();
   return {
@@ -72,7 +75,10 @@ describe("signed out", () => {
     fireEvent.change(screen.getByLabelText(copy.pair.codeLabel), { target: { value: "12 34-56x7" } });
     expect(screen.getByLabelText(copy.pair.codeLabel)).toHaveValue("123456"); // digits only, 6 at most
     fireEvent.click(screen.getByRole("button", { name: copy.pair.submit }));
-    expect(await screen.findByRole("heading", { name: "Hello, Kamala!" })).toBeInTheDocument();
+    // A moment to see it worked, then Start (never rushed).
+    expect(await screen.findByText(copy.pair.ready("Kamala"))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: copy.pair.readyStart }));
+    expect(await screen.findByRole("heading", { name: KAMALA_GREETING })).toBeInTheDocument();
     expect(api.pairDevice).toHaveBeenCalledWith("123456");
     expect(localStorage.getItem("khayal.token")).toBe("paired");
   });
@@ -93,7 +99,7 @@ describe("signed out", () => {
     fireEvent.change(screen.getByLabelText(copy.login.password), { target: { value: "khayal-demo" } });
     fireEvent.click(screen.getByRole("button", { name: copy.login.submit }));
 
-    expect(await screen.findByRole("heading", { name: "Hello, Kamala!" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: KAMALA_GREETING })).toBeInTheDocument();
     expect(api.login).toHaveBeenCalledWith("kamala@khayal.test", "khayal-demo");
     expect(localStorage.getItem("khayal.token")).toBe("t");
   });
@@ -152,7 +158,7 @@ describe("patient", () => {
 
   it("Home has the reminder card and exactly 3 main buttons", async () => {
     renderWithProviders(<App />, { route: "/patient" });
-    await screen.findByRole("heading", { name: "Hello, Kamala!" });
+    await screen.findByRole("heading", { name: KAMALA_GREETING });
 
     expect(screen.getByRole("region", { name: copy.patientHome.nextReminderLabel })).toBeInTheDocument();
     const main = within(screen.getByRole("navigation", { name: "Main actions" }));
@@ -206,7 +212,7 @@ describe("patient", () => {
 
   it("is sent home from caregiver pages", async () => {
     renderWithProviders(<App />, { route: "/caregiver" });
-    expect(await screen.findByRole("heading", { name: "Hello, Kamala!" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: KAMALA_GREETING })).toBeInTheDocument();
   });
 });
 
@@ -224,6 +230,9 @@ describe("caregiver", () => {
     expect(await screen.findByText("Kamala Devi")).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("not a medical device");
 
+    // With someone already added, the form waits behind a button instead of filling half the page.
+    expect(screen.queryByLabelText("Their name")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add another person" }));
     fireEvent.change(screen.getByLabelText("Their name"), { target: { value: "Rahim Khan" } });
     fireEvent.change(screen.getByLabelText(/City/), { target: { value: "Pune" } });
     const add = screen.getByRole("button", { name: "Add" });
@@ -309,6 +318,9 @@ describe("caregiver", () => {
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByText(/Automatic: About Today plus the two games played least recently/)).toBeInTheDocument();
+    // While automatic, nothing looks pinned: the choices open on request.
+    expect(screen.queryByLabelText("Slot 2")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose games to pin" }));
     fireEvent.change(screen.getByLabelText("Slot 2"), { target: { value: "reaction_tap" } });
     fireEvent.change(screen.getByLabelText("Slot 3"), { target: { value: "reaction_tap" } });
     expect(screen.getByText("Choose two different games.")).toBeInTheDocument();

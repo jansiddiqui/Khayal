@@ -164,6 +164,9 @@ class Reminder(Base):
     # daily / weekly_days: first and last day (inclusive). No start = since it was made; no end = until stopped.
     start_date: Mapped[date | None] = mapped_column(Date, default=None)
     end_date: Mapped[date | None] = mapped_column(Date, default=None)
+    # Medicine only: how long after its time the reminder still says "It's time for this", set by
+    # the caregiver. None = the standard hour (services/reminders.py ON_TIME_WINDOW). Never advice.
+    late_window_minutes: Mapped[int | None] = mapped_column(default=None)
     active: Mapped[bool] = mapped_column(default=True)
     # Occurrences before this are never counted as missed.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -174,6 +177,8 @@ class Reminder(Base):
 class ReminderStatus(str, Enum):
     done = "done"
     missed = "missed"
+    # The patient answered "No / not sure" after the reminder's time had passed; the family is told.
+    unsure = "unsure"
 
 
 class MarkedBy(str, Enum):
@@ -191,6 +196,8 @@ class ReminderLog(Base):
     status: Mapped[ReminderStatus] = mapped_column(SAEnum(ReminderStatus, native_enum=False, length=16))
     # Who pressed Done; None for automatic "missed" logs. Only patient-marked ones count as adherence.
     marked_by: Mapped[MarkedBy | None] = mapped_column(SAEnum(MarkedBy, native_enum=False, length=16), default=None)
+    # Done, but confirmed only after the reminder's on-time window ("confirmed later" at logged_at).
+    late: Mapped[bool] = mapped_column(default=False, server_default=false())
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     reminder: Mapped[Reminder] = relationship(back_populates="logs")
@@ -200,6 +207,8 @@ class AlertType(str, Enum):
     decline = "decline"
     missed_reminders = "missed_reminders"
     speech_risk = "speech_risk"
+    # The patient answered "No / not sure" to a reminder whose time had passed (services/reminders.py).
+    reminder_unsure = "reminder_unsure"
 
 
 class Severity(str, Enum):

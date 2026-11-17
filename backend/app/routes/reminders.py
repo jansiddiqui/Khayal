@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
-from app.models import MarkedBy, Reminder, ReminderRepeat, Role, User
+from app.models import MarkedBy, Reminder, ReminderRepeat, ReminderStatus, Role, User
 from app.schemas import AdherenceOut, ReminderIn, ReminderLogIn, ReminderOut, TodayReminderOut
 from app.services import reminders
 from app.services.clock import local
@@ -13,6 +13,7 @@ router = APIRouter(tags=["reminders"])
 
 
 def _out(db: Session, reminder: Reminder, today: date) -> ReminderOut:
+    log = reminders.today_log(db, reminder, today)
     return ReminderOut(
         id=reminder.id,
         patient_id=reminder.patient_id,
@@ -25,9 +26,12 @@ def _out(db: Session, reminder: Reminder, today: date) -> ReminderOut:
         start_date=reminder.start_date,
         end_date=reminder.end_date,
         active=reminder.active,
+        late_window_minutes=reminder.late_window_minutes,
         past=reminders.is_past(reminder, today),
         today_status=reminders.today_status(db, reminder, today),
         today_marked_by=reminders.today_marked_by(db, reminder, today),
+        today_late=bool(log and log.status == ReminderStatus.done and log.late),
+        today_logged_at=log.logged_at if log and log.status != ReminderStatus.missed else None,
     )
 
 
@@ -85,6 +89,8 @@ def get_adherence(patient_id: int, user: CurrentUser, db: DbSession, now: Now, d
         done_by_patient=a.done_by_patient,
         done_by_caregiver=a.done_by_caregiver,
         missed=a.missed,
+        done_late=a.done_late,
+        unsure=a.unsure,
         rate=a.rate,
     )
 
@@ -120,16 +126,26 @@ def delete_reminder(patient_id: int, reminder_id: int, caregiver: CurrentCaregiv
 
 @router.post("/reminders/{reminder_id}/log", response_model=ReminderOut)
 def log_reminder(reminder_id: int, body: ReminderLogIn, user: CurrentUser, db: DbSession, now: Now) -> ReminderOut:
-    """Mark today's occurrence done (the patient, or a linked caregiver on their behalf)."""
+    """Mark today's occurrence done (the patient, or a linked caregiver on their behalf), or, for the
+    patient only, answer "No / not sure" once its time has passed (the family is told at once)."""
     reminder = db.get(Reminder, reminder_id)
     if reminder is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reminder not found")
     ensure_patient_access(db, user, reminder.patient_id)
     try:
-        by = MarkedBy.patient if user.role == Role.patient else MarkedBy.caregiver
-        reminders.mark_done(db, reminder, now, by)
+        if body.status == "unsure":
+            if user.role != Role.patient:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the patient can answer this")
+            reminders.mark_unsure(db, reminder, user, now)
+        else:
+            by = MarkedBy.patient if user.role == Role.patient else MarkedBy.caregiver
+            reminders.mark_done(db, reminder, now, by)
     except reminders.NotScheduledTodayError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This reminder is not scheduled today")
+    except reminders.NotOverdueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This reminder's time has not come yet")
+    except reminders.AlreadyDoneError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This reminder is already done")
     return _out(db, reminder, local(now).date())
 
 
@@ -144,6 +160,9 @@ def my_reminders_today(patient: CurrentPatient, db: DbSession, now: Now) -> list
             time_of_day=t.reminder.time_of_day,
             status=t.status,
             due=t.due,
+            phase=t.phase,
+            late=t.late,
+            confirmed_at=t.confirmed_at,
         )
         for t in reminders.today_for(db, patient, now)
     ]

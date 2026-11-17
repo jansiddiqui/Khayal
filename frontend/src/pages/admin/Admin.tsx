@@ -5,11 +5,15 @@ import { admin, errorStatus, linkUrl, type SecretLink } from "../../api/client";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CopyLink } from "../../components/caregiver/PrivacyPanel";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
+import { liftOnHover, pressable } from "../../ui/motion";
+import { serverDate } from "../../api/client";
+import { Skeleton } from "../../ui/Skeleton";
 
 const card = "flex flex-col gap-3 rounded-lg border border-line bg-surface p-4";
-const button = "rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken disabled:opacity-60";
-const primary = "rounded-md bg-brand px-3 py-1 font-medium text-white hover:bg-brand-dark disabled:opacity-60";
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+// Same states as the shared Button (src/ui/Button.tsx): hover lift and shade, press, focus ring.
+const button = `rounded-lg border border-line-strong bg-surface px-3 py-1 hover:border-brand hover:bg-brand-soft disabled:opacity-60 ${pressable} ${liftOnHover}`;
+const primary = `rounded-lg bg-brand px-3 py-1 font-medium text-white shadow-lift hover:bg-brand-dark disabled:opacity-60 ${pressable} ${liftOnHover}`;
+const day = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const ROLE: Record<string, string> = { family: "Family member", doctor: "Doctor", care_home: "Care home" };
 const STATE: Record<string, string> = { open: "Open", used: "Used", revoked: "Revoked", expired: "Expired" };
 
@@ -33,7 +37,7 @@ function Requests({ onLink }: { onLink: (made: Made) => void }) {
   return (
     <section className={card} aria-labelledby="requests-title">
       <h2 id="requests-title" className="text-lg font-semibold">Invite requests</h2>
-      {requests.isPending && <p className="text-ink-muted">Loading…</p>}
+      {requests.isPending && <Skeleton className="h-16 w-full" />}
       {requests.isError && <LoadError message="Could not load the requests." onRetry={() => void requests.refetch()} />}
       {requests.isSuccess && requests.data.length === 0 && <p className="text-ink-muted">No requests yet.</p>}
       {requests.isSuccess && requests.data.length > 0 && (

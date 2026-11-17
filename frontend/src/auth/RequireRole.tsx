@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 import type { Role } from "../api/client";
-import { copy } from "../copy";
+import { RouteSkeleton } from "../ui/PageSkeleton";
 
 // The public landing page is its own chunk: signed-in people never download it.
 const Landing = lazy(() => import("../pages/landing/Landing"));
@@ -13,7 +13,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
   const location = useLocation();
 
   if (state.status === "loading") {
-    return <p className="p-8 text-2xl">{copy.common.loading}</p>;
+    return <RouteSkeleton />;
   }
   if (state.status === "anonymous") {
     return <Navigate to={role === "patient" ? "/pair" : "/login"} replace state={{ from: location.pathname }} />;
@@ -30,10 +30,10 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
  */
 export function RootRedirect() {
   const { state } = useAuth();
-  if (state.status === "loading") return <p className="p-8 text-2xl">{copy.common.loading}</p>;
+  if (state.status === "loading") return <RouteSkeleton />;
   if (state.status === "authenticated") return <Navigate to={homePathFor(state.user)} replace />;
   return (
-    <Suspense fallback={<p className="p-8 text-2xl">{copy.common.loading}</p>}>
+    <Suspense fallback={<RouteSkeleton />}>
       <Landing />
     </Suspense>
   );

@@ -57,11 +57,12 @@ describe("daily orientation logic", () => {
     expect([5, 6, 7, 8].map(season)).toEqual(Array(4).fill("monsoon"));
   });
 
-  it("maps hours to morning, afternoon and evening", () => {
+  it("maps hours to morning, afternoon, evening and night", () => {
     const at = (h: number) => timeOfDayOf(new Date(2026, 10, 4, h));
     expect([5, 11].map(at)).toEqual(["morning", "morning"]);
     expect([12, 16].map(at)).toEqual(["afternoon", "afternoon"]);
-    expect([17, 23, 2].map(at)).toEqual(["evening", "evening", "evening"]);
+    expect([17, 20].map(at)).toEqual(["evening", "evening"]);
+    expect([21, 23, 2, 4].map(at)).toEqual(["night", "night", "night", "night"]);
   });
 
   const wednesday = new Date(2026, 10, 4, 10, 30); // Wed 4 Nov 2026, morning

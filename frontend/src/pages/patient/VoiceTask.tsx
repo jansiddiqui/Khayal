@@ -69,6 +69,7 @@ export function VoiceTask() {
             <p className="text-2xl font-semibold leading-snug">{message}</p>
           </QuestionRow>
           {state.kind === "recording" && <SoundLevel level={recorder.level} />}
+          {state.kind === "idle" && !notOn && message === v.instruction && <p className="text-xl text-ink-soft">{v.micHeadsUp}</p>}
         </div>
       </div>
       <div className="flex shrink-0 flex-col gap-3">
@@ -115,7 +116,10 @@ function SoundLevel({ level }: { level: number }) {
         aria-valuemax={100}
         aria-valuenow={Math.round(level * 100)}
       >
-        <div className="h-full rounded-full bg-calm transition-[width] duration-100" style={{ width: `${Math.max(4, level * 100)}%` }} />
+        <div
+          className="h-full origin-left rounded-full bg-calm transition-transform duration-100"
+          style={{ transform: `scaleX(${Math.max(0.04, level)})` }}
+        />
       </div>
     </div>
   );

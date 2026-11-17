@@ -1,6 +1,7 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BellPlus, Pause, Pencil, Play, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import {
   createReminder,
@@ -19,31 +20,82 @@ import { useAppConfig } from "../../api/useAppConfig";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { copy } from "../../copy";
+import { Button } from "../../ui/Button";
+import { CountUp } from "../../ui/CountUp";
+import { SelectInput, TextInput } from "../../ui/Field";
+import { calm, DURATION, useLessMotion } from "../../ui/motion";
+import { Skeleton } from "../../ui/Skeleton";
+import { EmptyState } from "../../ui/States";
+import { useToast } from "../../ui/Toast";
+import { useUndoable } from "../../ui/undo";
 import { appNow, cleanInput, defaultRepeat, emptyReminder, formProblem, IST_MINUTES, scheduleSummary } from "./reminderSchedule";
+import { serverDate } from "../../api/client";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monday
 const TYPES: ReminderType[] = ["medicine", "meal", "appointment", "other"];
 
-function todayLabel(r: Reminder): string {
+const clock = (iso: string) => serverDate(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+
+/**
+ * Today's state in words, including "confirmed later" and "not sure" (CLAUDE.md section 6).
+ * `nowHHMM` is the app clock's time: a reminder an hour past its time with no answer is "Not
+ * answered yet", not "Pending".
+ */
+export function todayLabel(r: Reminder, nowHHMM?: string): string {
   if (r.today_status === null) return "—";
-  if (r.today_status === "done") return r.today_marked_by === "caregiver" ? "Done (by caregiver)" : "Done";
-  return r.today_status === "missed" ? "Missed" : "Pending";
+  if (r.today_status === "done") {
+    const by = r.today_marked_by === "caregiver" ? " (by caregiver)" : "";
+    return r.today_late && r.today_logged_at ? `Done, confirmed later at ${clock(r.today_logged_at)}${by}` : `Done${by}`;
+  }
+  if (r.today_status === "unsure") return "Not sure (family told)";
+  if (r.today_status === "missed") return "Missed";
+  if (nowHHMM && minutes(nowHHMM) >= minutes(r.time_of_day) + 60) return "Not answered yet";
+  return "Pending";
 }
+
+function minutes(hhmm: string): number {
+  const [h = 0, m = 0] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Medicine only: how long it may still say "It's time for this" (null = the standard hour). */
+const LATE_WINDOWS: { value: string; label: string }[] = [
+  { value: "", label: "1 hour (standard)" },
+  { value: "120", label: "2 hours" },
+  { value: "180", label: "3 hours" },
+  { value: "240", label: "4 hours" },
+];
 
 function AdherenceSummary({ patientId, patientName }: { patientId: number; patientName: string }) {
   const adherence = useQuery({ queryKey: ["adherence", patientId], queryFn: () => getAdherence(patientId) });
-  if (!adherence.isSuccess) return null;
+  // The card keeps its place while loading, so nothing below it jumps when it arrives.
+  if (!adherence.isSuccess) {
+    return (
+      <section className="mb-6 flex h-[8.5rem] flex-col gap-2 rounded-lg border border-line bg-surface p-4" aria-busy="true" aria-label="Loading adherence">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-9 w-20" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </section>
+    );
+  }
   const a = adherence.data;
+  const extra = [a.done_late ? `${a.done_late} confirmed later` : null, a.unsure ? `${a.unsure} not sure` : null].filter(Boolean);
   return (
-    <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="adherence-heading">
+    <section className="mb-6 flex min-h-[8.5rem] flex-col rounded-lg border border-line bg-surface p-4" aria-labelledby="adherence-heading">
       <h2 id="adherence-heading" className="text-lg font-semibold">
         Adherence, last {a.days} days
       </h2>
-      <p className="text-3xl font-semibold">{a.rate === null ? "—" : `${Math.round(a.rate * 100)}%`}</p>
+      <p className="text-3xl font-semibold tabular-nums">
+        {a.rate === null ? "—" : <CountUp value={Math.round(a.rate * 100)} format={(n) => `${Math.round(n)}%`} />}
+      </p>
       <p className="text-ink-soft">
         {a.done_by_patient} done by {patientName} · {a.done_by_caregiver} done by caregiver · {a.missed} missed
+        {extra.length > 0 && ` · ${extra.join(" · ")}`}
       </p>
-      <p className="text-ink-muted">Only reminders the patient marked done themself count toward the rate.</p>
+      <p className="text-ink-muted">
+        Only reminders the patient marked done themself count toward the rate; "confirmed later" counts, and shows that it
+        wasn't on time.
+      </p>
     </section>
   );
 }
@@ -53,7 +105,7 @@ const REPEATS: { value: ReminderRepeat; label: string }[] = [
   { value: "daily", label: "Every day" },
   { value: "weekly_days", label: "On some days" },
 ];
-const field = "rounded-md border border-line-strong bg-surface px-3 py-2";
+const field = "rounded-lg border border-line-strong bg-surface px-3 py-2 transition-colors hover:border-teal-600 focus:border-brand";
 
 function ReminderForm({
   initial,
@@ -75,6 +127,7 @@ function ReminderForm({
   const today = appNow(offset).date;
   const [form, setForm] = useState<ReminderInput>(initial);
   const [repeatChosen, setRepeatChosen] = useState(!isNew);
+  const [tried, setTried] = useState(false);
   const problem = formProblem(form, offset);
   const valid = form.title.trim().length > 0 && problem === null;
   const set = (change: Partial<ReminderInput>) => setForm((f) => ({ ...f, ...change }));
@@ -86,6 +139,7 @@ function ReminderForm({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    setTried(true);
     if (valid) onSubmit(cleanInput(form));
   }
 
@@ -93,10 +147,17 @@ function ReminderForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label={submitLabel}>
       <div className="flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-ink-soft">Title</span>
-          <input value={form.title} maxLength={120} required onChange={(e) => set({ title: e.target.value })} className={`w-64 ${field}`} />
-        </label>
+        <TextInput
+          label="Title"
+          value={form.title}
+          maxLength={120}
+          required
+          onChange={(e) => set({ title: e.target.value })}
+          error={form.title.trim() ? null : "Give it a short name, e.g. “Blood pressure tablet”."}
+          forceError={tried}
+          wrapperClassName="w-64"
+          autoComplete="off"
+        />
         <label className="flex flex-col gap-1">
           <span className="text-ink-soft">Type</span>
           <select
@@ -199,20 +260,28 @@ function ReminderForm({
         </fieldset>
       )}
 
+      {form.type === "medicine" && (
+        <SelectInput
+          label="Safe late window"
+          wrapperClassName="max-w-md"
+          value={form.late_window_minutes ? String(form.late_window_minutes) : ""}
+          onChange={(e) => set({ late_window_minutes: e.target.value ? Number(e.target.value) : null })}
+          hint="How long after its time the reminder may still say “It's time for this”. After that it only asks whether it is done, and never suggests taking it. Ask the doctor if unsure: Khayal gives no medical advice."
+        >
+          {LATE_WINDOWS.map((w) => (
+            <option key={w.value} value={w.value}>
+              {w.label}
+            </option>
+          ))}
+        </SelectInput>
+      )}
+
       {problem && <p className="text-accent-strong">{problem}</p>}
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={!valid || busy}
-          className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
-        >
+        <Button type="submit" variant="primary" disabled={!valid} loading={busy}>
           {submitLabel}
-        </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-md border border-line-strong px-4 py-2 hover:bg-sunken">
-            Cancel
-          </button>
-        )}
+        </Button>
+        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
       </div>
     </form>
   );
@@ -229,89 +298,220 @@ function toInput(r: Reminder, today: string): ReminderInput {
     start_date: r.start_date ?? today,
     end_date: r.end_date,
     active: r.active,
+    late_window_minutes: r.late_window_minutes ?? null,
+  };
+}
+
+/** What a reminder will look like in the list straight away, before the server has answered. */
+function optimisticReminder(id: number, patientId: number, input: ReminderInput, today: string): Reminder {
+  const end = input.repeat === "once" ? input.on_date : input.end_date;
+  return {
+    id,
+    patient_id: patientId,
+    title: input.title,
+    type: input.type,
+    time_of_day: `${input.time_of_day}:00`,
+    repeat: input.repeat,
+    days_of_week: input.days_of_week,
+    on_date: input.on_date,
+    start_date: input.start_date,
+    end_date: input.end_date,
+    active: input.active,
+    late_window_minutes: input.late_window_minutes ?? null,
+    past: end !== null && end < today,
+    today_status: null,
+    today_marked_by: null,
   };
 }
 
 export function CaregiverReminders() {
   const patientId = Number(useParams().patientId);
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const undoable = useUndoable();
+  const less = useLessMotion();
   const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients });
-  const reminders = useQuery({ queryKey: ["reminders", patientId], queryFn: () => listReminders(patientId) });
+  const key = ["reminders", patientId] as const;
+  const reminders = useQuery({ queryKey: key, queryFn: () => listReminders(patientId) });
   const patient = patients.data?.find((p) => p.id === patientId);
   const [editing, setEditing] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  // The row just added or changed glows softly for 2 seconds and is scrolled into view.
+  const [highlight, setHighlight] = useState<number | null>(null);
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["reminders", patientId] });
-    void queryClient.invalidateQueries({ queryKey: ["adherence", patientId] });
-  };
-  const create = useMutation({
-    mutationFn: (input: ReminderInput) => createReminder(patientId, input),
-    onSuccess: () => {
-      setFormKey((k) => k + 1); // reset the form
-      refresh();
-    },
-  });
-  const update = useMutation({
-    mutationFn: ({ id, input }: { id: number; input: ReminderInput }) => updateReminder(patientId, id, input),
-    onSuccess: () => {
-      setEditing(null);
-      refresh();
-    },
-  });
-  const remove = useMutation({ mutationFn: (id: number) => deleteReminder(patientId, id), onSuccess: refresh });
-
-  const failure = [create, update, remove].find((m) => m.isError)?.error;
   const offset = useAppConfig()?.utc_offset_minutes ?? IST_MINUTES;
   const today = appNow(offset).date;
+  const snapshot = () => queryClient.getQueryData<Reminder[]>(key);
+  const put = (list: Reminder[] | undefined) => queryClient.setQueryData(key, list);
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: key });
+    void queryClient.invalidateQueries({ queryKey: ["adherence", patientId] });
+  };
+  const failed = (error: unknown) => toast.show({ tone: "error", message: `Could not save the change. ${errorDetail(error) ?? "Try again."}` });
+
+  useEffect(() => {
+    if (highlight === null) return;
+    const row = document.getElementById(`reminder-${highlight}`);
+    if (row && typeof row.scrollIntoView === "function") row.scrollIntoView({ block: "nearest", behavior: less ? "auto" : "smooth" });
+    const t = setTimeout(() => setHighlight(null), 2000);
+    return () => clearTimeout(t);
+  }, [highlight, less]);
+
+  // Optimistic: the list changes at once and rolls back with a message if the server refuses.
+  const create = useMutation({
+    mutationFn: (input: ReminderInput) => createReminder(patientId, input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const before = snapshot();
+      put([...(before ?? []), optimisticReminder(-Date.now(), patientId, input, today)]);
+      return { before };
+    },
+    onError: (error, _input, context) => {
+      put(context?.before);
+      failed(error);
+    },
+    onSuccess: (created) => {
+      toast.show({ message: `Reminder added: ${created.title}, ${scheduleSummary(created, today)}.` });
+      setHighlight(created.id);
+      setAdding(false);
+      setFormKey((k) => k + 1);
+    },
+    onSettled: refresh,
+  });
+  const update = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: ReminderInput; toggled?: boolean }) => updateReminder(patientId, id, input),
+    onMutate: async ({ id, input }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const before = snapshot();
+      put(before?.map((r) => (r.id === id ? { ...optimisticReminder(id, patientId, input, today), today_status: r.today_status, today_marked_by: r.today_marked_by } : r)));
+      setEditing(null);
+      return { before };
+    },
+    onError: (error, _vars, context) => {
+      put(context?.before);
+      failed(error);
+    },
+    onSuccess: (saved, { input, toggled }) => {
+      setHighlight(saved.id);
+      toast.show({
+        message: !toggled
+          ? `Saved: ${saved.title}.`
+          : input.active
+            ? `Resumed: ${saved.title}.`
+            : `Paused: ${saved.title}. It won't be shown until you resume it.`,
+      });
+    },
+    onSettled: refresh,
+  });
+
+  function remove(r: Reminder) {
+    const before = snapshot();
+    undoable({
+      message: `Reminder deleted: ${r.title}.`,
+      apply: () => put(before?.filter((x) => x.id !== r.id)),
+      revert: () => put(before),
+      commit: () => deleteReminder(patientId, r.id),
+      failureMessage: `Could not delete “${r.title}”. It is back in the list.`,
+      onCommitted: refresh,
+    });
+  }
+
   const current = reminders.data?.filter((r) => !r.past) ?? [];
   const past = reminders.data?.filter((r) => r.past) ?? [];
 
-  const deleteButton = (r: Reminder) => (
-    <button
-      type="button"
-      onClick={() => {
-        if (window.confirm(`Delete the reminder "${r.title}"? Its done and missed history goes too.`)) remove.mutate(r.id);
-      }}
-      className="text-danger underline"
-      aria-label={`Delete ${r.title}`}
-    >
-      Delete
-    </button>
+  const rowActions = (r: Reminder, withEdit: boolean) => (
+    <div className="flex flex-wrap gap-1">
+      {withEdit && (
+        <Button size="sm" variant="quiet" icon={<Pencil />} onClick={() => setEditing(r.id)} aria-label={`Edit ${r.title}`}>
+          Edit
+        </Button>
+      )}
+      {withEdit && (
+        <Button
+          size="sm"
+          variant="quiet"
+          icon={r.active ? <Pause /> : <Play />}
+          onClick={() => update.mutate({ id: r.id, input: { ...toInput(r, today), active: !r.active }, toggled: true })}
+          aria-label={`${r.active ? "Pause" : "Resume"} ${r.title}`}
+        >
+          {r.active ? "Pause" : "Resume"}
+        </Button>
+      )}
+      <Button size="sm" variant="danger-quiet" icon={<Trash2 />} onClick={() => remove(r)} aria-label={`Delete ${r.title}`}>
+        Delete
+      </Button>
+    </div>
   );
+
+  const rowClass = (r: Reminder) =>
+    `border-b border-line transition-colors duration-700 ease-calm last:border-0 hover:bg-brand-soft/60 ${
+      highlight === r.id ? "bg-accent-soft" : ""
+    } ${r.active ? "" : "text-ink-muted"} ${r.id < 0 ? "opacity-70" : ""}`;
 
   return (
     <CaregiverLayout title={`Reminders${patient ? ` · ${patient.name}` : ""}`}>
-      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 text-brand-dark underline">
+      <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 text-brand-dark underline-offset-2 hover:underline">
         <ArrowLeft aria-hidden="true" className="size-4" />
         Back to patient
       </Link>
 
-      {failure !== undefined && (
-        <p role="alert" className="mb-4 text-danger">
-          Could not save the change. {errorDetail(failure) ?? "Try again."}
-        </p>
-      )}
-
       <AdherenceSummary patientId={patientId} patientName={patient?.name.split(" ")[0] ?? "patient"} />
 
-      <section className="mb-6 rounded-lg border border-line bg-surface p-4">
-        <h2 className="mb-3 text-lg font-semibold">Add a reminder</h2>
-        <ReminderForm
-          key={`${formKey}-${today}`}
-          initial={emptyReminder(today)}
-          isNew
-          submitLabel="Add reminder"
-          busy={create.isPending}
-          onSubmit={(input) => create.mutate(input)}
-        />
-      </section>
-
       <section className="mb-6 overflow-x-auto rounded-lg border border-line bg-surface p-4" aria-labelledby="current-reminders">
-        <h2 id="current-reminders" className="mb-3 text-lg font-semibold">Reminders</h2>
-        {reminders.isPending && <p className="text-ink-muted">Loading reminders…</p>}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="current-reminders" className="text-lg font-semibold">
+            Reminders
+          </h2>
+          {!adding && (
+            <Button variant="primary" size="sm" icon={<BellPlus />} onClick={() => setAdding(true)}>
+              Add a reminder
+            </Button>
+          )}
+        </div>
+        <AnimatePresence initial={false}>
+          {adding && (
+            <motion.div
+              key="add-form"
+              initial={less ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={calm(DURATION.base)}
+              className="mb-4 rounded-lg border border-line bg-desk p-4"
+            >
+              <ReminderForm
+                key={`${formKey}-${today}`}
+                initial={emptyReminder(today)}
+                isNew
+                submitLabel="Add reminder"
+                busy={create.isPending}
+                onSubmit={(input) => create.mutate(input)}
+                onCancel={() => setAdding(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {reminders.isPending && (
+          <div role="status" aria-busy="true" aria-label="Loading reminders" className="flex flex-col gap-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        )}
         {reminders.isError && <LoadError message="Could not load reminders." onRetry={() => void reminders.refetch()} />}
-        {reminders.isSuccess && current.length === 0 && <p className="text-ink-muted">No reminders yet.</p>}
+        {reminders.isSuccess && current.length === 0 && !adding && (
+          <EmptyState
+            icon={<BellPlus />}
+            title="No reminders yet"
+            action={
+              <Button variant="primary" size="sm" icon={<BellPlus />} onClick={() => setAdding(true)}>
+                Add the first reminder
+              </Button>
+            }
+          >
+            Medicine, meals or an appointment. {patient?.name.split(" ")[0] ?? "They"} sees them on Today's reminders.
+          </EmptyState>
+        )}
         {current.length > 0 && (
           <table role="table" className="stack-table w-full text-left">
             <thead role="rowgroup" className="border-b border-line text-ink-muted">
@@ -326,8 +526,8 @@ export function CaregiverReminders() {
             <tbody role="rowgroup">
               {current.map((r) =>
                 editing === r.id ? (
-                  <tr role="row" key={r.id} className="border-b border-line">
-                    <td role="cell" colSpan={5} className="py-3">
+                  <tr role="row" key={r.id} id={`reminder-${r.id}`} className="border-b border-line bg-desk">
+                    <td role="cell" colSpan={5} className="p-3">
                       <ReminderForm
                         initial={toInput(r, today)}
                         isNew={false}
@@ -339,21 +539,22 @@ export function CaregiverReminders() {
                     </td>
                   </tr>
                 ) : (
-                  <tr role="row" key={r.id} className={`border-b border-line last:border-0 ${r.active ? "" : "text-ink-muted"}`}>
-                    <td role="cell" data-label="Title" className="py-2 pr-3">
+                  <tr role="row" key={r.id} id={`reminder-${r.id}`} className={rowClass(r)}>
+                    <td role="cell" data-label="Title" className="py-2 pr-3 pl-1">
                       {r.title}
                       {!r.active && " (paused)"}
                     </td>
                     <td role="cell" data-label="Type" className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
                     <td role="cell" data-label="When" className="py-2 pr-3">{scheduleSummary(r, today)}</td>
-                    <td role="cell" data-label="Today" className={`py-2 pr-3 ${r.today_status === "missed" ? "font-medium text-accent-strong" : ""}`}>
-                      {todayLabel(r)}
+                    <td
+                      role="cell"
+                      data-label="Today"
+                      className={`py-2 pr-3 ${r.today_status === "missed" || r.today_status === "unsure" ? "font-medium text-accent-strong" : ""}`}
+                    >
+                      {todayLabel(r, appNow(offset).time)}
                     </td>
-                    <td role="cell" className="flex gap-2 py-2">
-                      <button type="button" onClick={() => setEditing(r.id)} className="text-brand-dark underline" aria-label={`Edit ${r.title}`}>
-                        Edit
-                      </button>
-                      {deleteButton(r)}
+                    <td role="cell" className="py-1.5">
+                      {rowActions(r, r.id > 0)}
                     </td>
                   </tr>
                 ),
@@ -378,11 +579,11 @@ export function CaregiverReminders() {
             </thead>
             <tbody role="rowgroup">
               {past.map((r) => (
-                <tr role="row" key={r.id} className="border-b border-line text-ink-soft last:border-0">
-                  <td role="cell" data-label="Title" className="py-2 pr-3">{r.title}</td>
+                <tr role="row" key={r.id} id={`reminder-${r.id}`} className="border-b border-line text-ink-soft transition-colors last:border-0 hover:bg-brand-soft/60">
+                  <td role="cell" data-label="Title" className="py-2 pr-3 pl-1">{r.title}</td>
                   <td role="cell" data-label="Type" className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
                   <td role="cell" data-label="When" className="py-2 pr-3">{scheduleSummary(r, today)}</td>
-                  <td role="cell" className="py-2">{deleteButton(r)}</td>
+                  <td role="cell" className="py-1.5">{rowActions(r, false)}</td>
                 </tr>
               ))}
             </tbody>

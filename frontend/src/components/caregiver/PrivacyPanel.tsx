@@ -18,9 +18,10 @@ import {
   type SecretLink,
 } from "../../api/client";
 import { LoadError } from "./LoadError";
+import { serverDate } from "../../api/client";
 
-const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const when = (iso: string) => serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const day = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 const button = "inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken disabled:opacity-60";
 
@@ -147,7 +148,7 @@ function Devices({ patient }: { patient: Patient }) {
       <h3 className="font-semibold">Signed-in devices</h3>
       {devices.isPending && <p className="text-ink-muted">Loading devices…</p>}
       {devices.isError && <LoadError message="Could not load the devices." onRetry={() => void devices.refetch()} />}
-      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">No device is signed in. Pair one with a code above.</p>}
+      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">No device is signed in yet. Make a 6-digit code under “Pair a device”.</p>}
       {devices.isSuccess && devices.data.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
           {devices.data.map((d) => (

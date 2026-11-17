@@ -20,6 +20,7 @@ vi.mock("../api/client", async (importOriginal) => {
     updateFamilyMember: vi.fn(),
     deleteFamilyMember: vi.fn(),
     uploadFamilyPhoto: vi.fn(),
+    setElderConsent: vi.fn(),
     deleteFamilyPhoto: vi.fn(),
     fetchPhotoBlob: vi.fn(),
   };
@@ -116,7 +117,10 @@ describe("About Today 'Who is this?' question", () => {
 
     const wrong = choices.find((c) => !c.textContent?.includes("Rahul"))!;
     fireEvent.click(wrong);
-    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: false }), "This is Rahul, your grandson.");
+    // The chosen name is held for a moment before the kind reply.
+    await waitFor(() =>
+      expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ correct: false }), "This is Rahul, your grandson."),
+    );
   });
 
   it("asks the city when there are not enough photos", async () => {
@@ -185,7 +189,7 @@ describe("patient Who is this?", () => {
 describe("caregiver family page", () => {
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listFamily.mockResolvedValue([rahul]);
   });
 
@@ -210,6 +214,7 @@ describe("caregiver family page", () => {
   it("adds a person with a custom relation and a note", async () => {
     api.createFamilyMember.mockResolvedValue(meena);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    fireEvent.click(await screen.findByRole("button", { name: "Add a person" }));
     const form = within(await screen.findByRole("form", { name: "Add person" }));
     fireEvent.change(form.getByLabelText("Name"), { target: { value: " Raju " } });
     fireEvent.change(form.getByLabelText("Relation"), { target: { value: "Other" } });
@@ -226,12 +231,11 @@ describe("caregiver family page", () => {
     api.deleteFamilyMember.mockResolvedValue(undefined);
     api.deleteFamilyPhoto.mockResolvedValue(rahul);
     api.uploadFamilyPhoto.mockResolvedValue(rahul);
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
 
     const card = within(await screen.findByRole("listitem", { name: "Rahul" }));
     expect(card.getAllByRole("img")).toHaveLength(2);
-    expect(card.getByText("2 / 5 photos · JPG or PNG, up to 5 MB each")).toBeInTheDocument();
+    expect(card.getByText(/2 \/ 5 photos · JPG or PNG, up to 5 MB each/)).toBeInTheDocument();
 
     const input = card.getByLabelText("Add photos") as HTMLInputElement;
     const gif = new File(["x"], "a.gif", { type: "image/gif" });
@@ -243,18 +247,54 @@ describe("caregiver family page", () => {
     await act(async () => fireEvent.change(input, { target: { files: [jpg] } }));
     await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledWith(2, 1, jpg, expect.any(Function)));
 
+    // Removing a photo can be undone for a few seconds; closing the message carries it out.
     fireEvent.click(card.getByRole("button", { name: "Remove Rahul photo 1" }));
+    expect(api.deleteFamilyPhoto).not.toHaveBeenCalled();
+    fireEvent.click(within((await screen.findByText(/Photo 1 of Rahul removed/)).closest("[role=status]") as HTMLElement).getByRole("button", { name: "Close message" }));
     await waitFor(() => expect(api.deleteFamilyPhoto).toHaveBeenCalledWith(2, 1, rahul.photos[0]!.id));
 
-    fireEvent.click(card.getByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Rahul" }));
     const form = within(screen.getByRole("form", { name: "Save changes" }));
     expect(form.getByLabelText("Relation")).toHaveValue("Grandson");
     fireEvent.change(form.getByLabelText(/Note/), { target: { value: "" } });
     fireEvent.click(form.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(api.updateFamilyMember).toHaveBeenCalledWith(2, 1, { name: "Rahul", relation: "Grandson", note: null }));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Rahul" }));
+    await waitFor(() => expect(screen.queryByRole("listitem", { name: "Rahul" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("listitem", { name: "Rahul" })).toBeInTheDocument();
+    expect(api.deleteFamilyMember).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Rahul" }));
+    fireEvent.click(within((await screen.findByText(/Rahul deleted/)).closest("[role=status]") as HTMLElement).getByRole("button", { name: "Close message" }));
     await waitFor(() => expect(api.deleteFamilyMember).toHaveBeenCalledWith(2, 1));
+  });
+
+  it("asks to turn on family photos when they are off, and adds photos inside the Add form", async () => {
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.setElderConsent.mockResolvedValue({ patient: { id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null }, deleted: 0 });
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    expect(await screen.findByText(/Family photos are off for Kamala/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Add photos")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Turn on family photos" }));
+    await waitFor(() => expect(api.setElderConsent).toHaveBeenCalledWith(2, "photos", true));
+  });
+
+  it("uploads the photos chosen in the Add form once the person exists", async () => {
+    api.listFamily.mockResolvedValue([]);
+    api.createFamilyMember.mockResolvedValue(meena);
+    api.uploadFamilyPhoto.mockResolvedValue(meena);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    // Nobody yet: the form is open straight away.
+    const form = within(await screen.findByRole("form", { name: "Add person" }));
+    fireEvent.change(form.getByLabelText("Name"), { target: { value: "Meena" } });
+    const photo = new File(["x"], "meena.jpg", { type: "image/jpeg" });
+    await act(async () => fireEvent.change(form.getByLabelText("Choose photos"), { target: { files: [photo] } }));
+    expect(form.getByRole("img", { name: "meena.jpg" })).toBeInTheDocument();
+    fireEvent.click(form.getByRole("button", { name: "Add person" }));
+    await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledWith(2, 2, photo, expect.any(Function)));
+    expect(await screen.findByText("Meena added with a photo.")).toBeInTheDocument();
   });
 
   it("shows the real error when an upload fails or times out, with Try again", async () => {
@@ -329,7 +369,7 @@ describe("caregiver family page", () => {
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
     const card = within(await screen.findByRole("listitem", { name: "Raju" }));
     expect(card.getByLabelText("Add photos")).toBeDisabled();
-    fireEvent.click(card.getByRole("button", { name: "Edit" }));
+    fireEvent.click(card.getByRole("button", { name: "Edit Raju" }));
     const form = within(screen.getByRole("form", { name: "Save changes" }));
     expect(form.getByLabelText("Relation")).toHaveValue("Other");
     expect(form.getByLabelText("Relation (your words)")).toHaveValue("Neighbour");

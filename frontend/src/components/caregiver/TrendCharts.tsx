@@ -32,6 +32,12 @@ export const GAME_NAMES = {
 } as const;
 
 /** Rolling mean of the last `n` values at each point (the same 5-session average alerts use). */
+/**
+ * The overall index line draws itself in once, when the chart first appears (not under reduced
+ * motion). The per-game charts stay still: drawing five at once is heavy on a slow phone.
+ */
+const DRAW_IN = typeof window !== "undefined" && typeof window.matchMedia === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export function rollingMean(values: readonly number[], n = 5): number[] {
   return values.map((_, i) => {
     const window = values.slice(Math.max(0, i + 1 - n), i + 1);
@@ -171,7 +177,7 @@ export function IndexChart({ trend }: { trend: Trend }) {
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
               <Line type="monotone" dataKey="index" stroke={SERIES} strokeWidth={2} dot={false}
-                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={false} />
+                activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2 }} isAnimationActive={DRAW_IN} animationDuration={700} animationEasing="ease-out" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

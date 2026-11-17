@@ -4,6 +4,7 @@ import { copy } from "../../copy";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
 import { QuestionRow } from "../QuestionRow";
 import type { GameDefinition, RoundProps } from "../types";
+import { useFeedback } from "../../ui/feedback";
 import { RED_FROM_LEVEL, redChance, RESPONSE_WINDOW_MS, TOO_EARLY_PAUSE_MS, waitMs } from "./logic";
 
 type Circle = "waiting" | "green" | "red" | "tooEarly";
@@ -14,8 +15,8 @@ type Circle = "waiting" | "green" | "red" | "tooEarly";
  */
 const circleStyle: Record<Circle, string> = {
   waiting: "rounded-full border-line-strong bg-sunken text-ink",
-  green: "rounded-full border-green-900 bg-green-600 text-white",
-  red: "rounded-[2.5rem] border-red-900 bg-red-700 text-white",
+  green: "rounded-full border-go-edge bg-go text-white",
+  red: "rounded-[2.5rem] border-stop-edge bg-stop text-white",
   tooEarly: "rounded-full border-accent-strong bg-accent-soft text-ink",
 };
 
@@ -27,6 +28,7 @@ const circleStyle: Record<Circle, string> = {
  */
 export function ReactionTapRound({ level, roundIndex, onComplete, rng = Math.random }: RoundProps) {
   const [circle, setCircle] = useState<Circle>("waiting");
+  const { cue } = useFeedback();
   const [trial, setTrial] = useState(0);
   const shownAt = useRef(0);
   const reported = useRef(false);
@@ -94,9 +96,10 @@ export function ReactionTapRound({ level, roundIndex, onComplete, rng = Math.ran
       <button
         type="button"
         onClick={tap}
+        onPointerDown={() => cue("tap")}
         aria-live="assertive"
         data-shape={circle === "red" ? "square" : "circle"}
-        className={`flex h-64 w-64 flex-col items-center justify-center gap-2 border-8 text-3xl font-bold ${circleStyle[circle]}`}
+        className={`flex h-64 w-64 touch-manipulation flex-col items-center justify-center gap-2 border-8 text-3xl font-bold transition-transform duration-100 ease-calm active:scale-95 motion-reduce:active:scale-100 ${circleStyle[circle]}`}
       >
         {circle === "red" && <Hand aria-hidden="true" className="size-16" strokeWidth={2.5} />}
         {label}

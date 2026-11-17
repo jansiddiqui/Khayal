@@ -82,6 +82,6 @@ describe("caregiver states", () => {
     renderWithProviders(<App />, { route: "/caregiver" });
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
     await waitFor(() => expect(api.listPatients).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText(/Nobody yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nobody here yet/)).toBeInTheDocument();
   });
 });

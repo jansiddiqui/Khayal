@@ -2,10 +2,10 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import DeviceSession, User
+from app.models import DeviceSession, GameSession, User
 from app.services.clock import as_utc
 
 # How often "last seen" is written (no write on every request).
@@ -72,3 +72,14 @@ def revoke(db: Session, patient_id: int, session_id: int, now: datetime) -> bool
     session.revoked_at = now
     db.commit()
     return True
+
+
+def last_active(db: Session, patient_id: int) -> datetime | None:
+    """When the elder last used Khayal: their newest device activity or finished game, whichever is
+    later (for "Active today" on the caregiver's list). None if never."""
+    seen = db.scalar(
+        select(func.max(DeviceSession.last_seen_at)).where(DeviceSession.patient_id == patient_id, DeviceSession.revoked_at.is_(None))
+    )
+    played = db.scalar(select(func.max(GameSession.ended_at)).where(GameSession.patient_id == patient_id))
+    times = [as_utc(t) for t in (seen, played) if t is not None]
+    return max(times) if times else None

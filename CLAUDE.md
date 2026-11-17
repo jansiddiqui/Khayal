@@ -92,7 +92,7 @@ Our users are elderly people with memory problems. Every patient screen must fol
 
 **Patient Home layout (decided):**
 
-- Top bar: the big "Home" button, and next to it a "Read aloud: On/Off" toggle (icon + words). The top bar is the same on every patient screen and does not count toward the 3-button limit.
+- Top bar: the big "Home" button, next to it a "Read aloud: On/Off" toggle (icon + words), and a "More" button ("Settings" on wider screens) that opens a settings sheet with vibration (default on) and soft sound (default off) (decided in Phase C). The top bar is the same on every patient screen and does not count toward the 3-button limit.
 - Below it: a "Next reminder" info card (information only, not a button).
 - Then exactly 3 big buttons: "Play a game", "Today's reminders", "Who is this?".
 - The weekly voice task is not on Home. It appears inside the games list as "Tell me about a picture", and only when it is due.
@@ -179,6 +179,15 @@ Each decline alert carries a plain explanation, e.g. "Memory Match average dropp
 
 ### Missed reminders
 - Raise a `warning` alert if 3 or more reminders were missed in the last 48 hours.
+
+### Overdue reminders: ask, don't urge (decided in Phase C)
+- A reminder says "It's time for this" only during its **on-time window**: 1 hour after its time, or, for medicine, the caregiver's **safe late window** if one is set (default: none, so the standard hour). Never "Now" after that window.
+- After the window, the patient is asked "This was for 9:00 AM. Is it done?" with two answers:
+  - **"Yes, it's done"**: recorded as done and **confirmed later** (`ReminderLog.late`, with `logged_at` as the time it was confirmed). Adherence counts it; the caregiver page shows it as "confirmed later".
+  - **"No / not sure"**: never says to take it. The patient sees "Please ask your family before taking it." The caregiver immediately gets a notice ("Kamala wasn't sure about the 9:00 AM reminder …"; alert type `reminder_unsure`, `warning` for medicine, `info` otherwise), without waiting for the 3-missed rule. One notice per reminder per day. A later "Yes, it's done" still counts, as confirmed later.
+- If the same medicine (same title, type medicine) has another dose later today, the earlier dose is no longer shown on the patient's screens once the later dose's time has come. The caregiver keeps its record.
+- Home's "Next reminder" shows a reminder in its on-time window, else the next upcoming one; never an overdue one as "Now".
+- Missed logging waits for 2 hours or the safe late window, whichever is longer. Patient wording never suggests a dose; this is not medical advice.
 
 ## 7. Games (frontend `src/games/`)
 

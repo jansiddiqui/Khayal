@@ -1,4 +1,7 @@
+import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useFeedback } from "../../ui/feedback";
+import { calm, DURATION, useLessMotion } from "../../ui/motion";
 import { BigButton } from "../../components/BigButton";
 import { copy } from "../../copy";
 import { HintButton } from "../HintButton";
@@ -10,7 +13,7 @@ import { CARD_ART } from "../memory/art";
 import { boardColumns, buildDeck, isBoardCorrect, memoryMatchConfig } from "./logic";
 
 /** Pause before a non-matching pair turns back over. */
-export const MISMATCH_SHOW_MS = 1200;
+export const MISMATCH_SHOW_MS = 2000;
 
 /**
  * One round = one full board. Correct when mistakes <= pairs.
@@ -27,6 +30,8 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
   const [open, setOpen] = useState<number[]>([]); // indexes currently face up (max 2)
   const [matched, setMatched] = useState<ReadonlySet<number>>(new Set());
   const [hintUsed, setHintUsed] = useState(false);
+  const { cue } = useFeedback();
+  const less = useLessMotion();
   const mistakes = useRef(0);
   const revealStart = useRef(Date.now());
   const studyMs = useRef(0);
@@ -60,10 +65,12 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
 
   function flip(index: number) {
     if (revealing || open.length >= 2 || open.includes(index) || matched.has(index)) return;
+    cue("tap");
     const next = [...open, index];
     if (next.length === 2) {
       const [a, b] = next as [number, number];
       if (deck[a]!.face === deck[b]!.face) {
+        cue("success");
         setMatched(new Set([...matched, a, b]));
         setOpen([]);
         return;
@@ -116,27 +123,37 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
               onClick={() => flip(index)}
               disabled={matched.has(index)}
               aria-label={faceUp ? label : copy.games.memoryMatch.faceDown(index + 1)}
-              style={{ containerType: "size" }}
+              style={{ containerType: "size", perspective: "600px" }}
               className={
-                "flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-2xl border-4 p-1 text-center transition-colors " +
+                "flex min-h-0 touch-manipulation flex-col items-center justify-center overflow-hidden rounded-2xl border-4 p-1 text-center " +
+                "transition-[transform,background-color,border-color] duration-150 ease-calm active:scale-[0.96] motion-reduce:active:scale-100 " +
                 (matched.has(index)
-                  ? "border-calm bg-calm-soft"
+                  ? "calm-glow border-calm bg-calm-soft"
                   : faceUp
                     ? "border-brand bg-surface"
                     : "border-brand-dark bg-brand hover:bg-brand-dark")
               }
             >
-              {faceUp ? (
-                <>
-                  {/* The picture shrinks with the card; the word stays at the 20px minimum. */}
-                  <Picture className={showWords ? "h-[58cqh] max-h-[4.5rem] w-auto" : "h-[78cqh] max-h-24 w-auto max-w-[85cqw]"} />
-                  {showWords && <span className="mt-1 text-base font-semibold leading-tight text-ink">{label}</span>}
-                </>
-              ) : (
-                <span aria-hidden="true" className="text-3xl text-white">
-                  ?
-                </span>
-              )}
+              {/* Each turn of a card is a short flip (a fade under reduced motion). */}
+              <motion.span
+                key={faceUp ? "up" : "down"}
+                initial={less ? { opacity: 0.4 } : { rotateY: 90 }}
+                animate={less ? { opacity: 1 } : { rotateY: 0 }}
+                transition={calm(DURATION.quick)}
+                className="flex h-full w-full flex-col items-center justify-center"
+              >
+                {faceUp ? (
+                  <>
+                    {/* The picture shrinks with the card; the word stays at the 20px minimum. */}
+                    <Picture className={showWords ? "h-[58cqh] max-h-[4.5rem] w-auto" : "h-[78cqh] max-h-24 w-auto max-w-[85cqw]"} />
+                    {showWords && <span className="mt-1 text-base font-semibold leading-tight text-ink">{label}</span>}
+                  </>
+                ) : (
+                  <span aria-hidden="true" className="text-3xl text-white">
+                    ?
+                  </span>
+                )}
+              </motion.span>
             </button>
           );
         })}

@@ -1,6 +1,6 @@
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { listFamily, type FamilyMember, type FamilyPhoto } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AuthedImage } from "../../components/AuthedImage";
@@ -9,6 +9,9 @@ import { Card } from "../../components/Card";
 import { Layout } from "../../components/Layout";
 import { QuestionRow } from "../../games/QuestionRow";
 import { copy } from "../../copy";
+import { useFeedback } from "../../ui/feedback";
+import { pressable } from "../../ui/motion";
+import { Busy, Skeleton } from "../../ui/Skeleton";
 
 interface Tile {
   member: FamilyMember;
@@ -21,7 +24,16 @@ export function WhoIsThis() {
   const { state } = useAuth();
   const patientId = state.status === "authenticated" ? state.user.id : 0;
   const family = useQuery({ queryKey: ["family", patientId], queryFn: () => listFamily(patientId), enabled: patientId > 0 });
-  const [open, setOpen] = useState<Tile | null>(null);
+  const { cue } = useFeedback();
+  // The open photo is in the address (?photo=…), so the phone's Back button returns to the grid.
+  const [params, setParams] = useSearchParams();
+  const tiles: Tile[] = (family.data ?? []).flatMap((member) => member.photos.map((photo) => ({ member, photo })));
+  const open = tiles.find((t) => t.photo.id === params.get("photo")) ?? null;
+  const show = (tile: Tile) => setParams({ photo: tile.photo.id });
+  const back = () => {
+    if (window.history.state?.idx > 0) window.history.back();
+    else setParams({}, { replace: true });
+  };
 
   if (open) {
     const { member, photo } = open;
@@ -42,17 +54,21 @@ export function WhoIsThis() {
           </div>
         </QuestionRow>
         <div className="mt-auto">
-          <BigButton label={w.back} icon={<ArrowLeft />} onClick={() => setOpen(null)} />
+          <BigButton label={w.back} icon={<ArrowLeft />} onClick={back} />
         </div>
       </Layout>
     );
   }
 
-  const tiles: Tile[] = (family.data ?? []).flatMap((member) => member.photos.map((photo) => ({ member, photo })));
-
   return (
     <Layout title={w.title} spokenIntro={tiles.length > 0 ? w.intro : w.empty} snug>
-      {family.isPending && <p className="text-2xl">{copy.common.loading}</p>}
+      {family.isPending && (
+        <Busy label={copy.common.loading} className="grid grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="aspect-[4/3] w-full rounded-2xl" />
+          ))}
+        </Busy>
+      )}
       {family.isError && (
         <Card>
           <p className="mb-6 text-2xl">{w.loadFailed}</p>
@@ -74,9 +90,12 @@ export function WhoIsThis() {
               <button
                 key={tile.photo.id}
                 type="button"
-                onClick={() => setOpen(tile)}
+                onClick={() => {
+                  cue("tap");
+                  show(tile);
+                }}
                 aria-label={`${tile.member.name}, ${tile.member.relation}`}
-                className="flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left hover:border-brand-dark"
+                className={`flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left shadow-lift hover:border-brand-dark ${pressable}`}
               >
                 <AuthedImage src={tile.photo.url} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>

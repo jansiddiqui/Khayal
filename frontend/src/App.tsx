@@ -2,7 +2,7 @@ import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { RequireRole, RootRedirect } from "./auth/RequireRole";
 import { DemoBanner } from "./components/DemoBanner";
-import { copy } from "./copy";
+import { RouteSkeleton } from "./ui/PageSkeleton";
 
 /**
  * Every page is its own chunk (React.lazy): a signed-out visitor downloads the app shell and
@@ -42,7 +42,7 @@ export function App() {
   return (
     <>
       <DemoBanner />
-      <Suspense fallback={<p className="p-8 text-2xl">{copy.common.loading}</p>}>
+      <Suspense fallback={<RouteSkeleton />}>
         <AppRoutes />
       </Suspense>
     </>

@@ -43,6 +43,7 @@ def list_patients(caregiver: CurrentCaregiver, db: DbSession, now: Now) -> list[
                 **patient_out(p).model_dump(),
                 cognitive_index=result.index,
                 cognitive_status=result.status,
+                last_active_at=devices.last_active(db, p.id),
             )
         )
     return out

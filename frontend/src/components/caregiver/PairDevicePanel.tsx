@@ -1,8 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
-import { Smartphone } from "lucide-react";
-import { createPairingCode } from "../../api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CircleCheck, Smartphone } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { createPairingCode, listDevices } from "../../api/client";
+import { Button } from "../../ui/Button";
+import { useToast } from "../../ui/Toast";
+import { serverDate } from "../../api/client";
 
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const timeOf = (iso: string) => serverDate(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 /**
  * "Pair a device": a one-time 6-digit code (valid 10 minutes) that the patient types on
@@ -10,6 +14,26 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { ho
  */
 export function PairDevicePanel({ patientId, patientName }: { patientId: number; patientName: string }) {
   const code = useMutation({ mutationFn: () => createPairingCode(patientId) });
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  // While a code is waiting to be typed, check every few seconds whether a device has used it.
+  const waiting = code.isSuccess && Date.parse(code.data.expires_at) > Date.now();
+  const devices = useQuery({
+    queryKey: ["devices", patientId],
+    queryFn: () => listDevices(patientId),
+    refetchInterval: waiting ? 4000 : false,
+  });
+  const before = useRef<number | null>(null);
+  const pairedNow = code.isSuccess && before.current !== null && (devices.data?.length ?? 0) > before.current;
+  useEffect(() => {
+    if (code.isSuccess && before.current === null) before.current = devices.data?.length ?? 0;
+  }, [code.isSuccess, devices.data]);
+  useEffect(() => {
+    if (pairedNow) {
+      toast.show({ message: `${patientName}'s device is paired and signed in.` });
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+    }
+  }, [pairedNow, patientName, toast, queryClient]);
 
   return (
     <section aria-labelledby="pair-heading" className="flex flex-col gap-3">
@@ -21,7 +45,12 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
         Sign in {patientName}'s own phone or tablet without a password. Open Khayal on that device, then type the
         code shown here. The device stays signed in for 90 days.
       </p>
-      {code.isSuccess && (
+      {pairedNow ? (
+        <p role="status" className="flex items-center gap-2 font-medium text-success">
+          <CircleCheck aria-hidden="true" className="size-5" />
+          Paired just now. {patientName}'s device is signed in.
+        </p>
+      ) : code.isSuccess && (
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <output
             aria-label="Pairing code"
@@ -29,7 +58,7 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
           >
             {code.data.code}
           </output>
-          <span className="text-sm text-ink-soft">Valid until {timeOf(code.data.expires_at)}, one use only.</span>
+          <span className="text-sm text-ink-soft">Valid until {timeOf(code.data.expires_at)}, one use only. Waiting for the device…</span>
         </div>
       )}
       {code.isError && (
@@ -38,14 +67,17 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
         </p>
       )}
       <div>
-        <button
-          type="button"
-          onClick={() => code.mutate()}
-          disabled={code.isPending}
-          className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
+        <Button
+          variant="primary"
+          icon={<Smartphone />}
+          loading={code.isPending}
+          onClick={() => {
+            before.current = null;
+            code.mutate();
+          }}
         >
           {code.isSuccess ? "New code" : "Show pairing code"}
-        </button>
+        </Button>
       </div>
     </section>
   );

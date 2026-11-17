@@ -78,8 +78,21 @@
   --color-danger: #a8372a;
   --color-danger-soft: #feeeeb;
 
+  /* Reaction Tap (game content): "tap" and "don't tap" signals, large bold text on them. */
+  --color-go: #16a34a;
+  --color-go-edge: #14532d;
+  --color-stop: #b91c1c;
+  --color-stop-edge: #7f1d1d;
+
   /* Focus ring: deep saffron, at least 3:1 on ivory and on teal */
   --color-focus: var(--color-saffron-600);
+
+  /* Motion (Phase C, DESIGN.md "Motion"): one calm curve; feedback 120-180ms, changes 200-300ms. */
+  --ease-calm: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Lifts and wells, tinted from Teal Ink (never black). */
+  --shadow-lift: 0 6px 16px -10px rgb(16 35 37 / 0.45);
+  --shadow-lift-hover: 0 10px 22px -12px rgb(16 35 37 / 0.5);
+  --shadow-toast: 0 18px 40px -18px rgb(16 35 37 / 0.55);
 
   --font-patient: "Atkinson Hyperlegible", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-caregiver: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;

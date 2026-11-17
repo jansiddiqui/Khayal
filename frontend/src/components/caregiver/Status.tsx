@@ -55,9 +55,14 @@ export function statusDifference(game: IndexStatus, overall: IndexStatus): strin
     : `This game is lower than the overall status (${STATUS[overall].label}), which averages all games.`;
 }
 
-/** "−1.2" with a real minus sign. */
+/**
+ * "−1.2" with a real minus sign. Near a status threshold (−0.5, −1.5, −2.5) it shows two decimals,
+ * so a value never reads as sitting on the threshold while the status says otherwise
+ * ("z = −0.52 · Watch", not "z = −0.5 · Watch").
+ */
 export function formatZ(z: number): string {
-  return z.toFixed(1).replace("-", "−");
+  const nearThreshold = [-0.5, -1.5, -2.5].some((t) => Math.abs(z - t) < 0.05 && z !== t);
+  return z.toFixed(nearThreshold ? 2 : 1).replace("-", "−");
 }
 
 /** "z = −1.2", or "z ≤ −4.0" when the server clipped it. */
