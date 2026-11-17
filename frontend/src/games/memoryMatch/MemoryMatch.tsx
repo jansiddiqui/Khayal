@@ -146,7 +146,13 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
                 {faceUp ? (
                   <>
                     {/* The picture shrinks with the card; the word stays at the 20px minimum. */}
-                    <Picture className={showWords ? "h-[58cqh] max-h-[4.5rem] w-auto" : "h-[78cqh] max-h-24 w-auto max-w-[85cqw]"} />
+                    <Picture
+                      className={
+                        showWords
+                          ? "h-[calc(100cqh-2.2rem)] max-h-[5rem] w-auto max-w-[85cqw]"
+                          : "h-[86cqh] max-h-24 w-auto max-w-[86cqw]"
+                      }
+                    />
                     {showWords && <span className="mt-1 text-base font-semibold leading-tight text-ink">{label}</span>}
                   </>
                 ) : (

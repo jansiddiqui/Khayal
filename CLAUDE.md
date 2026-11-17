@@ -105,7 +105,7 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
 - **Fonts (approved dependencies):** `@fontsource/atkinson-hyperlegible` on the patient side, `@fontsource/inter` on the caregiver side.
 - **Patient game names:** "Find the Pairs" (Memory Match), "Follow the Colours" (Sequence Recall), "Remember the Words" (Word Recall), "About Today" (Daily Orientation), "Tap When Green" (Reaction Tap). Caregiver screens keep the clinical names.
-- Demo family photos are plain coloured silhouettes, with no names or initials, so they never give away an answer.
+- Demo family photos are plain coloured silhouettes in palette colours (teal, saffron, deep brown), with no names or initials, so they never give away an answer.
 - **No emoji anywhere in the UI**, patient or caregiver. Interface icons (Home, Read aloud, reminders, games, status, alerts) come from `lucide-react` (approved dependency) in one consistent stroke style, always next to words. Memory Match cards use 10 flat SVG illustrations in one style (chai, roti, mango, rickshaw, marigold, cricket bat, diya, kite, elephant, coconut) as React components in `frontend/src/games/memory/art/`: clear shapes, few details, high contrast, recognisable at 60px. Plain text marks such as ✓ and ● stay only where they carry meaning; `copy.ts` has no decorative symbols.
 
 The caregiver UI can be a normal dense dashboard.

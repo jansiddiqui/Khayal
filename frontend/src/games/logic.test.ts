@@ -22,7 +22,8 @@ describe("memory match logic", () => {
   it("picks columns that keep the board on a phone screen", () => {
     expect(boardColumns(4)).toBe(2);
     expect(boardColumns(6)).toBe(3);
-    expect(boardColumns(14)).toBe(3);
+    expect(boardColumns(12)).toBe(3);
+    expect(boardColumns(14)).toBe(4); // 3 × 5 rows would shrink pictures below 60px
     expect(boardColumns(16)).toBe(4);
     expect(boardColumns(20)).toBe(4);
   });
