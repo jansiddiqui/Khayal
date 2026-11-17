@@ -105,18 +105,19 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
 - **Fonts (approved dependencies):** `@fontsource/atkinson-hyperlegible` on the patient side, `@fontsource/inter` on the caregiver side.
 - **Patient game names:** "Find the Pairs" (Memory Match), "Follow the Colours" (Sequence Recall), "Remember the Words" (Word Recall), "About Today" (Daily Orientation), "Tap When Green" (Reaction Tap). Caregiver screens keep the clinical names.
-- Demo family photos are plain coloured silhouettes, with no names or initials, so they never give away an answer.
+- Demo family photos are plain coloured silhouettes in palette colours (teal, saffron, deep brown), with no names or initials, so they never give away an answer.
 - **No emoji anywhere in the UI**, patient or caregiver. Interface icons (Home, Read aloud, reminders, games, status, alerts) come from `lucide-react` (approved dependency) in one consistent stroke style, always next to words. Memory Match cards use 10 flat SVG illustrations in one style (chai, roti, mango, rickshaw, marigold, cricket bat, diya, kite, elephant, coconut) as React components in `frontend/src/games/memory/art/`: clear shapes, few details, high contrast, recognisable at 60px. Plain text marks such as ✓ and ● stay only where they carry meaning; `copy.ts` has no decorative symbols.
 
 The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
 
-- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable)
+- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable), core_games (nullable = default core set, section 7), festivals (nullable = festival question off)
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
-- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7)
+- **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7), errors (nullable int, games v2 D1: wrong placements/taps, clock error bits, delayed-recall false alarms; not in the composite)
 - **PlayerLevel**: patient_id, game_type, current_level (1–10), updated_at
+- **TutorialState**: patient_id, game_type, seen_at (nullable: a caregiver asked to show it again)
 - **Reminder**: id, patient_id, title, type (`medicine` | `meal` | `appointment` | `other`), time_of_day, repeat (`once` | `daily` | `weekly_days`), on_date (once), start_date + optional end_date (daily / weekly_days), days_of_week (weekly_days), active. Dates are days on the app clock; a reminder whose day or end date has passed is listed under "Past reminders" (kept with its history).
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
@@ -199,23 +200,45 @@ Each game is a self-contained component: it receives `level`, reports each round
 4. **Daily Orientation**: day, date, season, and "Which of these is your grandson?" using family photos. No difficulty levels; results go to the trend only.
 5. **Reaction Tap**: tap when the circle turns green. The only game with timing.
 
+Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adaptive rule and composite; `errors` stored but not scored):
+
+6. **Join in order** (`colour_trails`, caregiver name "Colour Trails"; Trail Making / Color Trails idea): tap numbered marks in order; a line joins each right tap; a tap that doesn't join says "Let's look for 4". Levels 1–4: Part 1 with 5/7/9/12 numbers; 5–10: Part 2 with 6→16 numbers alternating teal circle and saffron square (shape and colour), half of the numbers also shown in the other colour to be left alone. Right = finished with at most 1 wrong tap. `reaction_ms` = median gap between joins, recorded silently (D2). `errors` = taps that didn't join.
+7. **Set the clock** (`clock_setting`, "Clock Setting"; Clock Setting / Reading idea, no free drawing): "Set the clock to 10 past 11" (words and digits); tap where the short hand goes, then the long hand; either can be moved again (tap, or the arrow keys) before Done. Levels: 1 read o'clock (3 choices) · 2 set o'clock · 3 half past · 4 quarter past/to · 5 five-minute steps · 6 "10 past 11" pull · 7 face with only 12/3/6/9 · 8 ticks only · 9 words only ("twenty to four") · 10 "what will the time be in an hour and a half?" (3 choices). Right = short hand in the right hour sector (on the hour at o'clock) and long hand within 5 minutes. `errors` bits: 1 = short hand, 2 = long hand.
+8. **Market day** (`money_handling`, "Money Handling"; IADL finances / financial-capacity idea): pay at a shop by tapping notes and coins onto the counter (tap again to take back), then Pay; later levels ask about change or a budget with 3 choices. Levels: 1 one note (₹10/20/50 in the purse) · 2 two equal notes · 3 two different notes · 4 notes + a coin · 5 three or four pieces · 6 pay for the cheaper of two items · 7 change from a round note · 8 pay for two items · 9 change in coins · 10 "You have ₹100. Which two can you buy?". Right = the exact amount (no overpaying) or the right choice. Money is simplified ₹ tokens in each note's colour family with a large value, no portraits or security features (D5); prices in `frontend/src/games/moneyHandling/prices.ts`. The running total is not shown: counting is the task.
+9. **Tap the squares** (`spatial_span`, "Spatial Span"; Corsi block-tapping idea, D3): nine identical teal squares in a 3×3 grid light up in turn (saffron with a dot); the patient taps the same squares in order. 2 → 7 squares over levels 1–10, no square twice in one order. A separate game from Follow the Colours, so neither game's levels change meaning. Same hint and gentle replay as Follow the Colours.
+10. **Where did it go?** (`object_location`, "Paired Associates (object location)"; PAL task idea, never named in the patient UI, D8): everyday objects (10 licensed photos, `docs/games/image-sources.md`) are shown one at a time in their boxes, "Next" moves on (no timer); then each object appears above the grid and the patient taps its box. Misplaced ones are shown again ("Here's where they were") for one more try: right on the second try = right with `hint_used`. Levels (objects/boxes): 2/4 · 2/6 · 3/6 · 4/6 · 4/9 · 5/9 · 6/9 · 6/9 household-only (more alike) · 7/9 · 8/9; boxes 108px. `errors` = first-try misplacements; `study_ms` = looking time; `reaction_ms` = median time to place.
+11. **Delayed word recall** (`word_recall_delayed`, "Delayed Word Recall"; CERAD delayed recall, D4): after a finished Remember the Words session, the last round's words and pick list are kept on the device. At the start of the next game the patient opens, if 3–30 minutes have passed: "Earlier we saw some words. Which of these did you see?" (same pick list, at most 12). Too soon: kept; over 30 minutes or no other game: dropped. One round per word shown (right = picked); false alarms are `errors` on the first round. No level change; scored at the level the words were shown at (the last finished Remember the Words session's starting level); its own baseline; tracked when Remember the Words is in the core set. Nothing is shown about how it went.
+12. **About Today festival question** (our own adapted item, not validated; D6): "Which festival comes next?" with 3 picture-and-word choices (the right one plus two that come later, so "next" is never in doubt). Asked as a 6th About Today round only in the 30 days before a festival the caregiver ticked (Settings → Festivals this family celebrates; none ticked = off, no default list). Dates per year from the Government of India central-government holiday lists (Delhi) in `frontend/src/games/dailyOrientation/festivals/2026.ts` and `2027.ts`; Eid dates depend on the moon. Add each new year's table before the year starts; without one the question is simply not asked. About Today sessions are complete with 5 or 6 rounds.
+
 **No hidden timers (decided):** apart from Reaction Tap, nothing on a game screen ends by itself.
 
 - **Memory Match:** the preview stays until the patient taps "I've looked — hide the cards". Difficulty = number of pairs only (there is no preview time any more).
 - **Word Recall:** each word stays until the patient taps "Next word". The star distraction ends once 5 stars are tapped. The pick list has at most 12 words: every shown word plus new ones up to 12.
 - **End of a session:** warm, varied encouragement (never a level number). The main button is "Next game" (the next game on today's list not finished today), or "Back to Home" when all are done; "Play again" is secondary.
 - **Read aloud in games:** when on, each question is spoken with its answer choices, and the kind reply after answering.
+- **First-time tutorial (games v2, research.md 3.4):** the first time a patient opens a game, a short spoken demo (spoken even when Read aloud is off, words also on screen, a hand showing one move), then one practice round at level 1 or easier, never stored. Patients who already played a game skip it. The caregiver can ask for it again per game.
+- **Between rounds:** "Round X of 5" stays on the reply card, and the praise after a right answer varies from round to round.
 - **Sequence Recall:** after a wrong tap, the game gently replays the right order ("Here's how it went") before moving on.
 - Each round records how long the patient looked before playing as `study_ms` on `GameRound` (nullable: Memory Match preview time, Word Recall total word-viewing time; empty for the other games). It is stored for the decline analysis but is not part of the composite score yet.
 
 **Today's games (decided):** the patient's games list shows exactly 3 games per day, chosen by the server (`GET /me/games/today`, logic in `backend/app/services/today_games.py`).
 
 - Slot 1 is always About Today (Daily Orientation), because daily orientation is our most important tracking signal.
-- Slots 2 and 3 are the 2 levelled games played least recently before today. Any session counts as played, including a stopped-early one. Ties are broken randomly with a seed based on the date, so the list stays the same all day.
+- Slots 2 and 3 are the 2 core-set games (see "Core set" below) played least recently before today. Any session counts as played, including a stopped-early one. Ties are broken randomly with a seed based on the date, so the list stays the same all day.
 - When the weekly voice task is due (from Milestone 8), it replaces slot 3.
 - Once a game is finished today (a completed session), its button shows "✓ Done today", but the patient can still play it again.
 - On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
 - "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
+
+**Core set (decided for games v2, `docs/games/research.md` D7; built in `backend/app/services/core_games.py`):**
+
+- Each patient has a **core set of 4 levelled games** for decline tracking, chosen to cover different domains (verbal memory, visuospatial memory, executive/speed, visuospatial/everyday function). The caregiver can change it on the patient page.
+- Slots 2–3 of Today's games rotate only through the core set (least recently played, as above). About Today stays slot 1, and the voice task still replaces slot 3 when due. "Pin games" picks from the core set.
+- Every other game is an optional **"More games"** game: playable any time and still recorded with its own warm-up and baseline, but not in the daily rotation and not part of decline alerts or the overall index unless it is in the core set. About Today always counts.
+- **Who gets which set:** new patients get the default set (`DEFAULT_CORE`): Remember the Words (verbal memory), Where did it go? (visuospatial memory), Join in order (executive/speed), Market day (everyday function); the simulator plays the same set. Patients who had already played before games v2 keep their 4 games (migration 0012), so their baselines keep counting. The caregiver changes the set under Settings → Core games (4 different levelled games, each shown with its domain); pins that leave the set return to automatic.
+- **Patient access (my proposal, within section 4):** once all of today's games are done, the end screen adds a secondary "More games" button. That screen shows at most 3 games outside the core set, least recently played first (`GET /me/games/more`), so the 3-button rule holds and every game gets its turn.
+- **Caregiver charts:** the core games and About Today come first; games outside the set appear under "More games" only once played.
+- The other games-v2 decisions (D1–D6, D8) are in `docs/games/research.md` section 6.
 
 **Voice task (decided, Milestone 8):**
 

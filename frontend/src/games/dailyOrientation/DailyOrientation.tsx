@@ -1,4 +1,5 @@
 import { CalendarDays } from "lucide-react";
+import { OrientationDemo } from "../tutorial/demos";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { useSpeakOnChange } from "../../readAloud/ReadAloudContext";
@@ -10,6 +11,8 @@ import { AnswerButton, answerState, useChoice } from "../Answer";
 import { copy } from "../../copy";
 import type { GameDefinition, RoundProps } from "../types";
 import { buildQuestion } from "./logic";
+import { dueFestival, festivalQuestion } from "./festivals";
+import { FESTIVAL_ART } from "./festivals/FestivalArt";
 
 const LAST_QUESTION = 4;
 
@@ -19,7 +22,56 @@ const LAST_QUESTION = 4;
  * The last question is "Who is this?" with a family photo once 3+ people have photos.
  * Reaction time = time to answer, from when the question (and photo) appears.
  */
-export function DailyOrientationRound({ roundIndex, onComplete, rng = Math.random }: RoundProps) {
+/** About Today's 6th question when a festival the family celebrates is within 30 days (D6). */
+export const FESTIVAL_ROUND = 5;
+
+function FestivalRound({ onComplete, rng = Math.random }: RoundProps) {
+  const { state } = useAuth();
+  const festivals = state.status === "authenticated" ? (state.user.festivals ?? []) : [];
+  const question = useMemo(() => festivalQuestion(festivals, new Date(), rng), [festivals, rng]);
+  const askedAt = useRef(Date.now());
+  const answeredIn = useRef(0);
+  const o = copy.games.orientation;
+  const { chosen, choose } = useChoice<string>(({ correct }) => {
+    if (!question) return;
+    const reply = o.replyFestival(copy.festivals[question.answer]);
+    onComplete({ correct, reaction_ms: answeredIn.current, hint_used: false }, correct ? o.yes + reply : reply);
+  });
+  const names = question?.options.map((id) => copy.festivals[id]) ?? [];
+  const spoken = `${o.askFestival} ${copy.common.spokenChoices(names)}`;
+  useSpeakOnChange(spoken);
+  if (!question) return <p className="text-2xl">{copy.common.loading}</p>;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <QuestionRow spoken={spoken}>
+        <p className="text-3xl font-semibold">{o.askFestival}</p>
+      </QuestionRow>
+      <div className="flex flex-col gap-3">
+        {question.options.map((id) => {
+          const Picture = FESTIVAL_ART[id];
+          return (
+            <AnswerButton
+              key={id}
+              label={copy.festivals[id]}
+              icon={<Picture className="size-12 shrink-0" />}
+              state={answerState(chosen, id)}
+              onClick={() => {
+                answeredIn.current = Date.now() - askedAt.current;
+                choose(id, id === question.answer);
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function DailyOrientationRound(props: RoundProps) {
+  return props.roundIndex === FESTIVAL_ROUND ? <FestivalRound {...props} /> : <OrientationQuestion {...props} />;
+}
+
+function OrientationQuestion({ roundIndex, onComplete, rng = Math.random }: RoundProps) {
   const { state } = useAuth();
   const user = state.status === "authenticated" ? state.user : null;
   const needsFamily = roundIndex === LAST_QUESTION && user !== null;
@@ -92,4 +144,7 @@ export const dailyOrientation: GameDefinition = {
   intro: copy.games.orientation.intro,
   icon: CalendarDays,
   Round: DailyOrientationRound,
+  tutorial: { steps: copy.games.orientation.tutorial, Demo: OrientationDemo },
+  // The festival question, only in the 30 days before a festival the caregiver ticked.
+  extraRound: (user, now) => dueFestival(user?.festivals, now) !== null,
 };

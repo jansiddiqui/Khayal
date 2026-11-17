@@ -30,10 +30,14 @@ export function memoryMatchConfig(level: number): MemoryMatchConfig {
   return { pairs: Math.min(CARD_FACES.length, l + 1) };
 }
 
-/** Columns that keep every card on a 375px-wide phone screen: 2 for 4 cards, then 3, then 4. */
+/**
+ * Columns that keep every card on a 375 × 812 phone screen with its picture at least 60px
+ * (CLAUDE.md section 4): 2 for 4 cards, 3 up to 12 (at most 4 rows, room for the word), then 4
+ * (picture only; the word stays the card's name for screen readers).
+ */
 export function boardColumns(cards: number): number {
   if (cards <= 4) return 2;
-  if (cards <= 15) return 3;
+  if (cards <= 12) return 3;
   return 4;
 }
 

@@ -4,6 +4,8 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderRepeat, ReminderType, Role, Severity
+from app.services import core_games
+from app.services.festivals import FestivalId
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -112,6 +114,8 @@ class UserOut(BaseModel):
     created_at: datetime
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    # Patients only: festivals the family celebrates (About Today's festival question).
+    festivals: list[str] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
     # Public demo only: when this account and its data are deleted.
@@ -166,6 +170,11 @@ class PatientOut(BaseModel):
     name: str
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    # The 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set"); always filled
+    # in by presenters.patient_out (the stored value may be None = the default set).
+    core_games: list[GameType] | None = None
+    core_is_default: bool = True
+    festivals: list[str] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
     photos_enabled: bool = False
@@ -278,8 +287,12 @@ class PatientUpdateIn(BaseModel):
     """Only the fields sent are changed."""
 
     city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
-    # Two different levelled games for slots 2-3 of "Today's games"; null = automatic.
+    # Two different core-set games for slots 2-3 of "Today's games"; null = automatic.
     pinned_games: list[GameType] | None = None
+    # Exactly 4 different levelled games; null = the default core set.
+    core_games: list[GameType] | None = None
+    # Festivals the family celebrates; empty or null turns the festival question off.
+    festivals: list[FestivalId] | None = None
     # Caregiver consent for the weekly voice task.
     voice_task_enabled: bool | None = None
 
@@ -288,12 +301,19 @@ class PatientUpdateIn(BaseModel):
         pins = self.pinned_games
         if pins is not None and (len(pins) != 2 or len(set(pins)) != 2 or not set(pins) <= set(LEVELLED_GAMES)):
             raise ValueError("pinned_games must be two different games that have levels")
+        if self.core_games is not None and not core_games.valid_core(self.core_games):
+            raise ValueError("core_games must be 4 different games that have levels")
         return self
 
 
 class LevelOut(BaseModel):
     game_type: GameType
     level: int
+    # True when the first-time tutorial and practice round should be shown before playing.
+    tutorial: bool = False
+
+
+MAX_DELAYED_ROUNDS = 12
 
 
 class RoundIn(BaseModel):
@@ -301,6 +321,8 @@ class RoundIn(BaseModel):
     reaction_ms: Annotated[int, Field(ge=0, le=600_000)] | None
     hint_used: bool = False
     study_ms: Annotated[int, Field(ge=0, le=3_600_000)] | None = None
+    # Games v2 (docs/games/research.md D1); None for games that don't count errors.
+    errors: Annotated[int, Field(ge=0, le=100)] | None = None
 
 
 def _to_utc(dt: datetime) -> datetime:
@@ -311,7 +333,8 @@ class SessionIn(BaseModel):
     game_type: GameType
     started_at: datetime
     ended_at: datetime
-    rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=BLOCK_SIZE)]
+    # Delayed word recall has one round per word shown (3-8; up to the 12-word pick list).
+    rounds: Annotated[list[RoundIn], Field(min_length=1, max_length=MAX_DELAYED_ROUNDS)]
     # A finished session has all BLOCK_SIZE rounds; a stopped-early one has fewer.
     completed: bool = True
 
@@ -322,7 +345,15 @@ class SessionIn(BaseModel):
         self.ended_at = _to_utc(self.ended_at)
         if self.ended_at < self.started_at:
             raise ValueError("ended_at must not be before started_at")
-        if self.completed != (len(self.rounds) == BLOCK_SIZE):
+        if self.game_type == GameType.word_recall_delayed:
+            if not self.completed:
+                raise ValueError("a delayed recall check is always complete")
+            return self
+        # About Today has one extra round when the festival question is asked (D6).
+        full = {BLOCK_SIZE, BLOCK_SIZE + 1} if self.game_type == GameType.daily_orientation else {BLOCK_SIZE}
+        if len(self.rounds) > max(full):
+            raise ValueError(f"a session has at most {max(full)} rounds")
+        if self.completed != (len(self.rounds) in full):
             raise ValueError(f"a completed session has exactly {BLOCK_SIZE} rounds; a stopped one has fewer")
         return self
 
@@ -357,6 +388,13 @@ class TodayGameOut(BaseModel):
     # "voice_task" is the weekly "Tell me about a picture" (slot 3 when it is due).
     game_type: GameType | Literal["voice_task"]
     done_today: bool
+
+
+class CatalogGameOut(BaseModel):
+    """A levelled game a caregiver can put in the core set, with the domain it mainly tests."""
+
+    game_type: GameType
+    domain: str
 
 
 class TodayGamesOut(BaseModel):

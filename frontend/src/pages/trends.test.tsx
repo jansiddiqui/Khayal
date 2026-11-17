@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
+import type { GameType } from "../api/client";
 import type { GameTrend, Trend, User } from "../api/client";
 import { App } from "../App";
 import { renderWithProviders } from "../test/renderWithProviders";
@@ -21,7 +22,7 @@ vi.mock("../api/client", async (importOriginal) => {
 const api = vi.mocked(apiClient);
 
 const priya: User = { id: 1, name: "Priya", email: "p@khayal.test", role: "caregiver", created_at: "", city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
-const base = { photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
+const base = { photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null };
 
 function game(
   game_type: GameTrend["game_type"],

@@ -73,6 +73,12 @@ GAME_NAMES = {
     "word_recall": "Word Recall",
     "daily_orientation": "About Today",
     "reaction_tap": "Reaction Tap",
+    "word_recall_delayed": "Delayed Word Recall",
+    "object_location": "Paired Associates (object location)",
+    "spatial_span": "Spatial Span",
+    "money_handling": "Money Handling",
+    "clock_setting": "Clock Setting",
+    "colour_trails": "Colour Trails",
 }
 
 Status = Literal["insufficient", "stable", "warning", "critical"]

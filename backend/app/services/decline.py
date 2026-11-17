@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app import config
 from app.models import Alert, AlertType, GameRound, GameSession, GameType, Severity, User
-from app.services import reminders
+from app.services import core_games, reminders
 from app.services.clock import as_utc, local
 from ml.decline import zscore
 
@@ -50,17 +50,28 @@ class Overview:
     index: float | None
     status: zscore.IndexStatus
     games: dict[GameType, zscore.DeclineResult]
+    # The core set plus About Today: only these count for the index and for alerts (D7).
+    tracked: frozenset[GameType]
+
+
+def tracked_for(db: Session, patient_id: int) -> frozenset[GameType]:
+    patient = db.get(User, patient_id)
+    return core_games.tracked_games(patient) if patient is not None else frozenset(GameType)
 
 
 def overview(db: Session, patient_id: int, until: datetime | None = None) -> Overview:
-    return overview_of(summaries_by_game(db, patient_id, until))
+    return overview_of(summaries_by_game(db, patient_id, until), tracked_for(db, patient_id))
 
 
-def overview_of(summaries: dict[GameType, list[zscore.SessionSummary]]) -> Overview:
-    """The overview for sessions already in memory (every GameType key present)."""
+def overview_of(
+    summaries: dict[GameType, list[zscore.SessionSummary]], tracked: frozenset[GameType] | None = None
+) -> Overview:
+    """The overview for sessions already in memory (every GameType key present). `tracked` (default:
+    every game) limits which games count for the overall index and for alerts."""
     games = {g: zscore.assess(s) if s else _empty(g) for g, s in summaries.items()}
-    index = zscore.overall_index(r.z for r in games.values())
-    return Overview(index=index, status=zscore.index_status(index), games=games)
+    counted = frozenset(summaries) if tracked is None else tracked
+    index = zscore.overall_index(r.z for g, r in games.items() if g in counted)
+    return Overview(index=index, status=zscore.index_status(index), games=games, tracked=counted)
 
 
 _RULES: dict[str, zscore.AlertRule] = {rule: rule for rule in get_args(zscore.AlertRule)}
@@ -86,7 +97,13 @@ def _empty(game: GameType) -> zscore.DeclineResult:
 def index_history(result: Overview) -> list[tuple[date, float]]:
     """The overall index at the end of each day that had a scored session."""
     events = sorted(
-        ((p.session.started_at, game, p.z) for game, r in result.games.items() for p in r.trend if p.z is not None),
+        (
+            (p.session.started_at, game, p.z)
+            for game, r in result.games.items()
+            if game in result.tracked
+            for p in r.trend
+            if p.z is not None
+        ),
         key=lambda e: e[0],
     )
     latest: dict[GameType, float] = {}
@@ -112,8 +129,9 @@ class AlertDecision:
 def decide_alert(result: Overview, recent: list[tuple[datetime, Severity]], now: datetime) -> AlertDecision | None:
     """Whether to raise a decline alert now, given the patient's overview and their decline
     alerts from the last 7 days (created_at, severity). Pure: no database access."""
-    declining = [r for r in result.games.values() if r.status in ("warning", "critical")]
-    z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in result.games.items()}
+    tracked = {g: r for g, r in result.games.items() if g in result.tracked}
+    declining = [r for r in tracked.values() if r.status in ("warning", "critical")]
+    z_history = {g.value: [p.z for p in r.trend if p.z is not None] for g, r in tracked.items()}
     candidate = zscore.candidate_alert(z_history, alert_config())
     severity = zscore.alert_decision(
         [candidate] if candidate is not None else [],

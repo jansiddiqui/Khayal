@@ -1,4 +1,6 @@
 import { ArrowRight, BookOpen, Check, Eye, Star } from "lucide-react";
+import { rememberRound } from "./delayed";
+import { WordRecallDemo } from "../tutorial/demos";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BigButton } from "../../components/BigButton";
@@ -81,6 +83,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
   function done() {
     if (reported.current) return;
     reported.current = true;
+    rememberRound({ shown: round.shown, options: round.options });
     onComplete({
       correct: isRecallCorrect(round.shown, picked),
       reaction_ms: Date.now() - choosingSince.current,
@@ -233,4 +236,5 @@ export const wordRecall: GameDefinition = {
   intro: copy.games.wordRecall.intro,
   icon: BookOpen,
   Round: WordRecallRound,
+  tutorial: { steps: copy.games.wordRecall.tutorial, Demo: WordRecallDemo },
 };

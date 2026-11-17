@@ -14,10 +14,28 @@ FIXED_LEVEL = 1
 
 
 def current_level(db: Session, patient_id: int, game_type: GameType) -> int:
+    if game_type == GameType.word_recall_delayed:
+        return delayed_recall_level(db, patient_id)
     if game_type in NON_ADAPTIVE_GAMES:
         return FIXED_LEVEL
     row = db.get(PlayerLevel, (patient_id, game_type))
     return row.current_level if row is not None else rule_based.START_LEVEL
+
+
+def delayed_recall_level(db: Session, patient_id: int) -> int:
+    """Delayed recall is scored at the level its words were shown at: the latest finished
+    Remember the Words session's starting level (D4)."""
+    level = db.scalar(
+        select(GameSession.level_start)
+        .where(
+            GameSession.patient_id == patient_id,
+            GameSession.game_type == GameType.word_recall,
+            GameSession.completed.is_(True),
+        )
+        .order_by(GameSession.started_at.desc(), GameSession.id.desc())
+        .limit(1)
+    )
+    return level if level is not None else rule_based.START_LEVEL
 
 
 def _mean_reaction(rounds: Sequence[rule_based.Round]) -> float | None:
@@ -63,6 +81,7 @@ def record_session(
                 reaction_ms=r.reaction_ms,
                 hint_used=r.hint_used,
                 study_ms=r.study_ms,
+                errors=r.errors,
             )
             for r in rounds
         ],

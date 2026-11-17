@@ -43,6 +43,9 @@ def test_slot_one_is_always_about_today(db: Session) -> None:
 
 def test_slots_two_and_three_are_least_recently_played(db: Session) -> None:
     patient = new_patient(db)
+    # A patient who kept the 4 games from before games v2 (migration 0012).
+    patient.core_games = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"]
+    db.commit()
     yesterday = TODAY - timedelta(days=1)
     play(db, patient, GameType.memory_match, local_time(yesterday, 9))
     play(db, patient, GameType.sequence_recall, local_time(yesterday, 10))
@@ -95,7 +98,7 @@ def test_pins_fix_slots_two_and_three(client: TestClient, register: Register) ->
     assert auto["pinned"] is False
     assert auto["games"][0] == {"game_type": "daily_orientation", "done_today": False}
 
-    pins = ["reaction_tap", "memory_match"]
+    pins = ["money_handling", "word_recall"]  # two games from the default core set
     response = client.patch(f"/api/patients/{pid}", json={"pinned_games": pins}, headers=cg)
     assert response.status_code == 200
     assert response.json()["pinned_games"] == pins

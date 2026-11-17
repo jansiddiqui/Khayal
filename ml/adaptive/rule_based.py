@@ -31,6 +31,8 @@ class Round:
     # How long the patient looked before playing (Memory Match preview, Word Recall words).
     # Stored for the decline analysis; the adaptive rule ignores it.
     study_ms: int | None = None
+    # Games v2: wrong placements / taps / clock error bits / false alarms. The adaptive rule ignores it.
+    errors: int | None = None
 
 
 def clamp_level(level: int) -> int:

@@ -45,11 +45,12 @@ def repeat_for(days: list[int]) -> ReminderRepeat:
     """Demo reminders on all 7 days repeat "every day"; the others "on some days"."""
     return ReminderRepeat.daily if sorted(set(days)) == list(range(7)) else ReminderRepeat.weekly_days
 
-# Demo family for the first patient: (name, relation, note, card colour).
+# Demo family for the first patient: (name, relation, note, card colour). Colours come from the
+# theme's palette (frontend/src/theme.css) and stay distinct in lightness as well as hue.
 DEMO_FAMILY = [
-    ("Rahul", "Grandson", "Lives in Pune, visits on Sundays.", (37, 99, 235)),
-    ("Meena", "Daughter", "Calls every evening after dinner.", (190, 24, 93)),
-    ("Anil", "Son", "Lives nearby in Andheri.", (4, 120, 87)),
+    ("Rahul", "Grandson", "Lives in Pune, visits on Sundays.", (14, 94, 99)),  # teal-700
+    ("Meena", "Daughter", "Calls every evening after dinner.", (223, 150, 55)),  # saffron-500
+    ("Anil", "Son", "Lives nearby in Andheri.", (89, 61, 27)),  # saffron-900
 ]
 
 
@@ -58,7 +59,9 @@ def placeholder_photo(colour: tuple[int, int, int]) -> bytes:
     photo never gives away the answer (CLAUDE.md section 4). Real photos come from caregivers."""
     img = Image.new("RGB", (600, 600), colour)
     draw = ImageDraw.Draw(img)
-    shape = tuple(round(c + (255 - c) * 0.55) for c in colour)  # a lighter tint of the same colour
+    # A lighter tint on a dark card, a deeper shade on a light one, so the shape always stands out.
+    light = (0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]) / 255 > 0.5
+    shape = tuple(round(c * 0.5) if light else round(c + (255 - c) * 0.55) for c in colour)
     draw.ellipse((190, 110, 410, 330), fill=shape)  # head
     draw.ellipse((90, 360, 510, 780), fill=shape)  # shoulders, running off the bottom edge
     out = io.BytesIO()

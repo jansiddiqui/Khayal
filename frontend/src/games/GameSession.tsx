@@ -1,10 +1,11 @@
-import { ArrowRight, Check, House, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, House, LayoutGrid, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   getLevel,
   getTodaysGames,
+  markTutorialSeen,
   VOICE_TASK,
   postSession,
   postSessionOnPageHide,
@@ -15,9 +16,12 @@ import {
 import { BigButton } from "../components/BigButton";
 import { Card } from "../components/Card";
 import { copy } from "../copy";
+import { useAuth } from "../auth/AuthContext";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
 import { findGame } from ".";
 import type { GameDefinition, Rng } from "./types";
+import { commitDelayed, dueDelayed, type PendingRecall } from "./wordRecall/delayed";
+import { DelayedRecall } from "./wordRecall/DelayedRecall";
 import { calm, DURATION, useLessMotion } from "../ui/motion";
 import { Spinner } from "../ui/Spinner";
 
@@ -42,6 +46,11 @@ export const ROUNDS_PER_SESSION = 5;
 
 type Phase =
   | { kind: "intro" }
+  | { kind: "delayed"; pending: PendingRecall }
+  | { kind: "delayedDone" }
+  | { kind: "tutorial" }
+  | { kind: "practice" }
+  | { kind: "practiceDone" }
   | { kind: "playing"; round: number }
   | { kind: "between"; round: number; feedback: string; correct: boolean }
   | { kind: "done"; lastFeedback?: string };
@@ -62,9 +71,20 @@ interface GameSessionProps {
  */
 export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const { speak } = useReadAloud();
+  const { state: auth } = useAuth();
+  /** Rounds in this session: 5, or 6 with About Today's festival question. */
+  const [totalRounds, setTotalRounds] = useState(ROUNDS_PER_SESSION);
+  const total = useRef(ROUNDS_PER_SESSION);
+  /** Where in the praise list this session starts, so it varies between sessions too. */
+  const praiseStart = useRef(0);
+  const tutorialShown = useRef(false);
   const queryClient = useQueryClient();
   const level = useQuery({ queryKey: ["level", game.type], queryFn: () => getLevel(game.type), staleTime: 0 });
-  const [phase, setPhase] = useState<Phase>({ kind: "intro" });
+  // A delayed word check is due (3–30 minutes after Remember the Words): it comes first (D4).
+  const [phase, setPhase] = useState<Phase>(() => {
+    const pending = game.type === "word_recall" ? null : dueDelayed();
+    return pending ? { kind: "delayed", pending } : { kind: "intro" };
+  });
   const results = useRef<RoundResult[]>([]);
   const startedAt = useRef<string>("");
   /** The ending picked for this session (varies from session to session). */
@@ -81,19 +101,33 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     onPlayingChange?.(playing);
   }, [playing, onPlayingChange]);
 
+  // First time with this game: a short spoken demo and a practice round first (research.md 3.4).
+  useEffect(() => {
+    if (level.data?.tutorial && !tutorialShown.current && phase.kind === "intro") {
+      tutorialShown.current = true;
+      setPhase({ kind: "tutorial" });
+      // Spoken even when Read aloud is off; the words are also on screen.
+      speak(game.tutorial.steps.join(" "), { force: true });
+    }
+  }, [level.data, game.tutorial.steps, speak, phase.kind]);
+
+  const seen = useMutation({ mutationFn: () => markTutorialSeen(game.type) });
+
   function sessionInput(): SessionInput {
     return {
       game_type: game.type,
       started_at: startedAt.current,
       ended_at: new Date().toISOString(),
       rounds: results.current,
-      completed: results.current.length === ROUNDS_PER_SESSION,
+      completed: results.current.length === total.current,
     };
   }
 
   const save = useMutation({
     mutationFn: () => postSession(sessionInput()),
     onSuccess: (result: SessionResult) => {
+      // A finished Remember the Words session: its last words come back later (D4).
+      if (game.type === "word_recall" && result.session.completed) commitDelayed();
       void level.refetch();
       void queryClient.invalidateQueries({ queryKey: ["todaysGames"] });
       ending.current = endMessage(result, (rng ?? Math.random)());
@@ -126,6 +160,9 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
     results.current = [];
     submitted.current = false;
     startedAt.current = new Date().toISOString();
+    total.current = ROUNDS_PER_SESSION + (game.extraRound?.(auth.status === "authenticated" ? auth.user : null, new Date()) ? 1 : 0);
+    setTotalRounds(total.current);
+    praiseStart.current = Math.floor((rng ?? Math.random)() * copy.games.praise.length);
     save.reset();
     setPhase({ kind: "playing", round: 1 });
   }
@@ -137,8 +174,9 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
 
   function onRoundComplete(round: number, result: RoundResult, feedback?: string) {
     results.current = [...results.current, result];
-    const message = feedback ?? (result.correct ? copy.games.roundWell : copy.games.roundTryAnother);
-    if (round >= ROUNDS_PER_SESSION) {
+    const praise = copy.games.praise[(praiseStart.current + round - 1) % copy.games.praise.length]!;
+    const message = feedback ?? (result.correct ? praise : copy.games.roundTryAnother);
+    if (round >= total.current) {
       lastFeedback.current = feedback;
       setPhase({ kind: "done", lastFeedback: feedback });
       submit();
@@ -187,13 +225,78 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
         </>
       );
 
+    case "delayed":
+      return <DelayedRecall pending={phase.pending} onDone={() => setPhase({ kind: "delayedDone" })} />;
+
+    case "delayedDone":
+      return (
+        <Guarded className="flex flex-col gap-6 rounded-2xl border-4 border-calm bg-calm-soft p-6 shadow-lift">
+          <p className="flex items-start gap-3 text-3xl font-semibold" role="status">
+            <Check aria-hidden="true" className="mt-1 size-9 shrink-0 text-calm" />
+            <span>{copy.games.wordRecall.delayedThanks}</span>
+          </p>
+          <BigButton label={copy.games.next} icon={<ArrowRight />} onClick={() => setPhase({ kind: "intro" })} />
+        </Guarded>
+      );
+
+    case "tutorial":
+      return (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-3xl font-bold">{copy.games.tutorialHeading}</h2>
+          <div className="mx-auto w-[min(20rem,30dvh)]">
+            <game.tutorial.Demo />
+          </div>
+          <div className="flex flex-col gap-1 text-xl">
+            {game.tutorial.steps.map((step) => (
+              <p key={step}>{step}</p>
+            ))}
+          </div>
+          <BigButton label={copy.games.tryOne} icon={<Play />} onClick={() => setPhase({ kind: "practice" })} />
+        </div>
+      );
+
+    case "practice":
+      return (
+        <Guarded key="practice" className="flex min-h-0 flex-1 flex-col">
+          <game.Round
+            level={1}
+            practice
+            roundIndex={0}
+            rng={rng}
+            onComplete={() => {
+              // Practice is never stored: it can't change the level or the trend.
+              setPhase({ kind: "practiceDone" });
+              speak(copy.games.practiceDone, { force: true });
+            }}
+          />
+        </Guarded>
+      );
+
+    case "practiceDone":
+      return (
+        <Guarded className="flex flex-col gap-6 rounded-2xl border-4 border-calm bg-calm-soft p-6 shadow-lift">
+          <p className="flex items-start gap-3 text-3xl font-semibold" role="status">
+            <Check aria-hidden="true" className="mt-1 size-9 shrink-0 text-calm" />
+            <span>{copy.games.practiceDone}</span>
+          </p>
+          <BigButton
+            label={copy.games.start}
+            icon={<Play />}
+            onClick={() => {
+              seen.mutate();
+              start();
+            }}
+          />
+        </Guarded>
+      );
+
     case "playing":
       return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, ROUNDS_PER_SESSION)}</p>
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
           <Guarded key={phase.round} className="flex min-h-0 flex-1 flex-col">
             <game.Round
-              level={level.data}
+              level={level.data.level}
               roundIndex={phase.round - 1}
               rng={rng}
               onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
@@ -204,7 +307,9 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
 
     case "between":
       return (
-        <Guarded key={`between-${phase.round}`}>
+        <Guarded key={`between-${phase.round}`} className="flex flex-col gap-3">
+          {/* The place in the session stays where it was during the round. */}
+          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
           <motion.div
             initial={less ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -284,6 +389,10 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
             <BigButton to="/patient" label={copy.games.backHome} icon={<House />} />
           )}
           <BigButton label={copy.games.playAgain} icon={<RotateCw />} variant="secondary" onClick={start} />
+          {/* Today's games are all done: other games are there for anyone who wants more. */}
+          {!nextGame && today.isSuccess && (
+            <BigButton to="/patient/games/more" label={copy.games.moreGames} icon={<LayoutGrid />} variant="secondary" />
+          )}
         </Guarded>
       );
   }

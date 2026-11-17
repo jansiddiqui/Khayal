@@ -108,6 +108,8 @@ export interface User {
   city: string | null;
   /** Patients only: games a caregiver fixed in slots 2-3 of today's games. */
   pinned_games: GameType[] | null;
+  /** Patients only: festivals the family celebrates (About Today's festival question); null = off. */
+  festivals?: string[] | null;
   /** Patients only: the caregiver's consent for the weekly voice task. */
   voice_task_enabled: boolean;
   /** When the voice task was turned on; null while it is off. */
@@ -132,6 +134,11 @@ export interface Patient {
   name: string;
   city: string | null;
   pinned_games: GameType[] | null;
+  /** The 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set"). */
+  core_games: GameType[];
+  core_is_default: boolean;
+  /** Festivals the family celebrates; null or empty = the festival question is off. */
+  festivals?: string[] | null;
   voice_task_enabled: boolean;
   voice_consent_at: string | null;
   photos_enabled: boolean;
@@ -459,7 +466,13 @@ export const admin = {
   },
 };
 
-export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap";
+export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap"
+  | "colour_trails"
+  | "clock_setting"
+  | "money_handling"
+  | "spatial_span"
+  | "object_location"
+  | "word_recall_delayed";
 
 export interface RoundResult {
   correct: boolean;
@@ -468,6 +481,11 @@ export interface RoundResult {
   hint_used: boolean;
   /** How long the patient looked before playing (Memory Match preview, Word Recall words); null otherwise. */
   study_ms?: number | null;
+  /**
+   * Games v2 (docs/games/research.md D1): wrong placements or taps, the clock's error bits
+   * (1 = hour, 2 = minute) or delayed-recall false alarms. Not part of the score.
+   */
+  errors?: number | null;
 }
 
 export interface SessionInput {
@@ -502,9 +520,25 @@ export interface SessionResult {
   level_change: LevelChange;
 }
 
-export async function getLevel(gameType: GameType): Promise<number> {
-  const { data } = await api.get<{ game_type: GameType; level: number }>(`/games/${gameType}/level`);
-  return data.level;
+export interface LevelInfo {
+  level: number;
+  /** Show the first-time tutorial and a practice round before playing. */
+  tutorial: boolean;
+}
+
+export async function getLevel(gameType: GameType): Promise<LevelInfo> {
+  const { data } = await api.get<{ game_type: GameType; level: number; tutorial?: boolean }>(`/games/${gameType}/level`);
+  return { level: data.level, tutorial: data.tutorial ?? false };
+}
+
+/** The patient finished the first-time tutorial and practice round for this game. */
+export async function markTutorialSeen(gameType: GameType): Promise<void> {
+  await api.post(`/games/${gameType}/tutorial-seen`);
+}
+
+/** Caregiver: "Show the tutorial again" the next time the patient opens this game. */
+export async function resetTutorial(patientId: number, gameType: GameType): Promise<void> {
+  await api.post(`/patients/${patientId}/tutorials/${gameType}/reset`);
 }
 
 export async function postSession(input: SessionInput): Promise<SessionResult> {
@@ -539,9 +573,30 @@ export async function getTodaysGames(): Promise<TodaysGames> {
   return data;
 }
 
+/** "More games": up to 3 levelled games outside the core set, least recently played first. */
+export async function getMoreGames(): Promise<TodaysGames["games"]> {
+  const { data } = await api.get<TodaysGames["games"]>("/me/games/more");
+  return data;
+}
+
+export interface CatalogGame {
+  game_type: GameType;
+  /** The domain it mainly tests, e.g. "Verbal memory". */
+  domain: string;
+}
+
+/** The levelled games and their domains (for the caregiver's core-set picker). */
+export async function getGameCatalog(): Promise<CatalogGame[]> {
+  const { data } = await api.get<CatalogGame[]>("/games/catalog");
+  return data;
+}
+
 export interface PatientChanges {
   city?: string | null;
   pinned_games?: GameType[] | null;
+  /** Exactly 4 different levelled games; null = the default core set. */
+  core_games?: GameType[] | null;
+  festivals?: string[] | null;
   voice_task_enabled?: boolean;
 }
 

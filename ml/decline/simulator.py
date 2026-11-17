@@ -2,8 +2,8 @@
 
 Each simulated patient has a latent cognitive ability that stays flat (`healthy`),
 declines slowly (`mci`), or declines faster with more day-to-day variance (`moderate`).
-Every day they may play the app's 3 games: About Today plus the 2 levelled games played
-least recently (the "Today's games" rule). Each round is generated from ability vs.
+Every day they may play the app's 3 games: About Today plus the 2 core-set games played
+least recently (the "Today's games" rule; CLAUDE.md section 7, "Core set"). Each round is generated from ability vs.
 difficulty, and levels move through the real adaptive engine (`ml.adaptive.rule_based`),
 so the data looks like what the app records, not made-up final scores.
 
@@ -48,8 +48,12 @@ CSV_COLUMNS = [
 ]
 
 ORIENTATION = "daily_orientation"
-LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
-HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall"})
+# Games v2, D4: asked at the start of the next game, 3-30 minutes after Remember the Words.
+DELAYED = "word_recall_delayed"
+LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span", "object_location")
+# The core set the simulated patients play (the app's default, app/services/core_games.py).
+CORE: tuple[str, ...] = ("word_recall", "object_location", "colour_trails", "money_handling")
+HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall", "spatial_span", "object_location"})
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
     "memory_match": 2600,
@@ -57,6 +61,12 @@ BASE_RT_MS = {
     "word_recall": 6500,
     "daily_orientation": 3800,
     "reaction_tap": 480,
+    DELAYED: 7000,
+    "object_location": 3000,
+    "spatial_span": 2300,
+    "money_handling": 8000,
+    "clock_setting": 9000,
+    "colour_trails": 1500,
 }
 
 
@@ -94,11 +104,23 @@ def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
+# Games v2: each game's curve is the shared one shifted a little, so a level means a comparable
+# challenge across games (docs/games/research.md section 4). Synthetic, not fitted to real data.
+DIFFICULTY_OFFSET: dict[str, float] = {
+    DELAYED: 0.08,  # recalling a few minutes later is harder than straight away (CERAD)
+    "object_location": 0.02,
+    "spatial_span": 0.02,
+    "money_handling": 0.0,
+    "clock_setting": 0.0,
+    "colour_trails": 0.0,
+}
+
+
 def difficulty(game: str, level: int) -> float:
     """0..1 difficulty of a round; About Today questions are easy for a healthy adult."""
     if game == ORIENTATION:
         return 0.30
-    return 0.35 + 0.055 * (level - 1)
+    return 0.35 + DIFFICULTY_OFFSET.get(game, 0.0) + 0.055 * (level - 1)
 
 
 def red_chance(level: int) -> float:
@@ -121,30 +143,39 @@ def play_round(game: str, level: int, ability: float, rng: np.random.Generator) 
     return RoundSummary(correct=correct, hint_used=hint, reaction_ms=rt)
 
 
+def words_at(level: int) -> int:
+    """Remember the Words shows 3 words at level 1 up to 8 at level 10 (frontend wordCount)."""
+    return 3 + (level - 1) * 5 // 9
+
+
 def simulate_patient(
     patient_id: int,
     profile: Profile,
     days: int,
     rng: np.random.Generator,
     start: datetime,
+    core: Sequence[str] = CORE,
 ) -> list[SimSession]:
-    """`days` days of play for one patient, starting at local midnight `start` (tz-aware)."""
+    """`days` days of play for one patient, starting at local midnight `start` (tz-aware).
+    Slots 2-3 rotate through `core` (4 levelled games)."""
     params = PARAMS[profile]
     ability0 = float(rng.normal(0.80, 0.04))
-    levels = {g: START_LEVEL for g in LEVELLED}
-    last_played = {g: -1 for g in LEVELLED}
+    rotation = tuple(core)
+    levels = {g: START_LEVEL for g in rotation}
+    last_played = {g: -1 for g in rotation}
     out: list[SimSession] = []
 
     for day in range(days):
         if rng.random() > params.play_probability:
             continue
         ability = ability0 - params.decline_per_day * day + float(rng.normal(0.0, params.daily_noise))
-        # Today's games: About Today + the 2 levelled games played least recently (ties random).
-        tiebreak = rng.permutation(len(LEVELLED))
-        flex = sorted(LEVELLED, key=lambda g: (last_played[g], tiebreak[LEVELLED.index(g)]))[:2]
+        # Today's games: About Today + the 2 core games played least recently (ties random).
+        tiebreak = rng.permutation(len(rotation))
+        flex = sorted(rotation, key=lambda g: (last_played[g], tiebreak[rotation.index(g)]))[:2]
         clock = start + timedelta(days=day, hours=float(rng.uniform(9, 17)))
 
-        for game in (ORIENTATION, *flex):
+        todays = (ORIENTATION, *flex)
+        for position, game in enumerate(todays):
             # Stopped early more often as ability falls.
             p_stop = float(np.clip(0.03 + 0.5 * max(0.0, 0.75 - ability), 0.02, 0.4))
             stopped = rng.random() < p_stop
@@ -163,6 +194,11 @@ def simulate_patient(
                 SimSession(patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped)
             )
             clock += timedelta(minutes=float(rng.uniform(4, 9)))
+            # The delayed check comes at the start of the next game, if there is one today.
+            if game == "word_recall" and not stopped and position < len(todays) - 1:
+                delayed = tuple(play_round(DELAYED, level, ability, rng) for _ in range(words_at(level)))
+                out.append(SimSession(patient_id, profile, day, DELAYED, clock, level, level, delayed, completed=True))
+                clock += timedelta(minutes=1)
     return out
 
 

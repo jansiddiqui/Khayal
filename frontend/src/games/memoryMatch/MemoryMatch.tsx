@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { MemoryMatchDemo } from "../tutorial/demos";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFeedback } from "../../ui/feedback";
 import { calm, DURATION, useLessMotion } from "../../ui/motion";
@@ -125,7 +126,7 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
               aria-label={faceUp ? label : copy.games.memoryMatch.faceDown(index + 1)}
               style={{ containerType: "size", perspective: "600px" }}
               className={
-                "flex min-h-0 touch-manipulation flex-col items-center justify-center overflow-hidden rounded-2xl border-4 p-1 text-center " +
+                `flex min-h-0 touch-manipulation flex-col items-center justify-center overflow-hidden rounded-2xl border-4 text-center ${showWords ? "p-1" : "p-0"} ` +
                 "transition-[transform,background-color,border-color] duration-150 ease-calm active:scale-[0.96] motion-reduce:active:scale-100 " +
                 (matched.has(index)
                   ? "calm-glow border-calm bg-calm-soft"
@@ -145,7 +146,13 @@ export function MemoryMatchRound({ level, onComplete, rng = Math.random }: Round
                 {faceUp ? (
                   <>
                     {/* The picture shrinks with the card; the word stays at the 20px minimum. */}
-                    <Picture className={showWords ? "h-[58cqh] max-h-[4.5rem] w-auto" : "h-[78cqh] max-h-24 w-auto max-w-[85cqw]"} />
+                    <Picture
+                      className={
+                        showWords
+                          ? "h-[calc(100cqh-2.2rem)] max-h-[5rem] w-auto max-w-[85cqw]"
+                          : "h-[96cqh] max-h-24 w-auto max-w-[96cqw]"
+                      }
+                    />
                     {showWords && <span className="mt-1 text-base font-semibold leading-tight text-ink">{label}</span>}
                   </>
                 ) : (
@@ -176,4 +183,5 @@ export const memoryMatch: GameDefinition = {
   intro: copy.games.memoryMatch.intro,
   icon: LayoutGrid,
   Round: MemoryMatchRound,
+  tutorial: { steps: copy.games.memoryMatch.tutorial, Demo: MemoryMatchDemo },
 };

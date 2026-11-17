@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFeedback } from "../ui/feedback";
 import { pressable } from "../ui/motion";
 
@@ -56,7 +56,18 @@ export function answerState<T>(chosen: Choice<T> | null, value: T): AnswerState 
  * A big answer button for games (a game piece: it does not count toward the 3-button rule).
  * At least 64px tall, words always shown, press feedback on touch.
  */
-export function AnswerButton({ label, state, onClick }: { label: string; state: AnswerState; onClick: () => void }) {
+export function AnswerButton({
+  label,
+  state,
+  onClick,
+  icon,
+}: {
+  label: string;
+  state: AnswerState;
+  onClick: () => void;
+  /** A picture beside the words (never instead of them). */
+  icon?: ReactNode;
+}) {
   const look =
     state === "right"
       ? "calm-glow border-calm bg-calm-soft text-ink"
@@ -74,6 +85,7 @@ export function AnswerButton({ label, state, onClick }: { label: string; state: 
       className={`flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border-4 px-4 py-2 text-xl font-semibold shadow-lift sm:w-auto sm:min-w-72 ${look} ${pressable}`}
     >
       {state === "right" && <Check aria-hidden="true" className="size-7 shrink-0 text-calm" />}
+      {icon}
       <span>{label}</span>
     </button>
   );
