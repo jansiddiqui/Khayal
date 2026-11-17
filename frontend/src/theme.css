@@ -84,6 +84,14 @@
   --color-stop: #b91c1c;
   --color-stop-edge: #7f1d1d;
 
+  /* Market day money tokens (game content, D5): the colour family of each note, never lifelike. */
+  --color-note-10: #7a4a2c;
+  --color-note-20: #d8d26a;
+  --color-note-50: #8fd2e2;
+  --color-note-100: #c4b8e6;
+  --color-note-200: #f3c34a;
+  --color-coin: #d2d6d9;
+
   /* Focus ring: deep saffron, at least 3:1 on ivory and on teal */
   --color-focus: var(--color-saffron-600);
 
