@@ -17,7 +17,7 @@ from app.schemas import (
     ShareAcceptIn,
     ShareOut,
 )
-from app.services import auth, care, consent, decline, devices, elders, family, invites, pairing
+from app.services import auth, care, consent, core_games, decline, devices, elders, family, invites, pairing, today_games
 from app.uploads import blocking, content_type, read_body
 
 router = APIRouter(tags=["patients"])
@@ -73,8 +73,16 @@ def update_patient(
     patient = _elder(db, caregiver, patient_id)
     if "city" in body.model_fields_set:
         patient.city = body.city or None
+    if "core_games" in body.model_fields_set:
+        patient.core_games = [g.value for g in body.core_games] if body.core_games else None
+        # Pins must stay inside the core set; pins that left it return to automatic.
+        if today_games.pinned_games(patient) is None:
+            patient.pinned_games = None
     if "pinned_games" in body.model_fields_set:
-        patient.pinned_games = [g.value for g in body.pinned_games] if body.pinned_games else None
+        pins = body.pinned_games
+        if pins and not set(pins) <= set(core_games.core_games(patient)):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pinned games must be in the core set.")
+        patient.pinned_games = [g.value for g in pins] if pins else None
     db.commit()
     if body.voice_task_enabled is not None:
         # Turning the voice task off is withdrawing the voice consent: recordings are deleted.

@@ -23,6 +23,7 @@ const Legal = lazy(() => import("./pages/landing/Legal"));
 
 const PatientHome = page(() => import("./pages/patient/Home"), "PatientHome");
 const Games = page(() => import("./pages/patient/Games"), "Games");
+const MoreGames = page(() => import("./pages/patient/MoreGames"), "MoreGames");
 const PlayGame = page(() => import("./pages/patient/PlayGame"), "PlayGame");
 const Reminders = page(() => import("./pages/patient/Reminders"), "Reminders");
 const WhoIsThis = page(() => import("./pages/patient/WhoIsThis"), "WhoIsThis");
@@ -66,6 +67,7 @@ function AppRoutes() {
 
       <Route path="/patient" element={patient(<PatientHome />)} />
       <Route path="/patient/games" element={patient(<Games />)} />
+      <Route path="/patient/games/more" element={patient(<MoreGames />)} />
       <Route path="/patient/games/:gameType" element={patient(<PlayGame />)} />
       <Route path="/patient/reminders" element={patient(<Reminders />)} />
       <Route path="/patient/who-is-this" element={patient(<WhoIsThis />)} />

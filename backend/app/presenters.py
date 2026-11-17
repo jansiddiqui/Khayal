@@ -2,7 +2,7 @@
 
 from app.models import User
 from app.schemas import PatientOut, UserOut
-from app.services import auth
+from app.services import auth, core_games
 
 
 def user_out(user: User) -> UserOut:
@@ -10,4 +10,10 @@ def user_out(user: User) -> UserOut:
 
 
 def patient_out(patient: User) -> PatientOut:
-    return PatientOut.model_validate(patient).model_copy(update={"has_photo": bool(patient.photo_key)})
+    return PatientOut.model_validate(patient).model_copy(
+        update={
+            "has_photo": bool(patient.photo_key),
+            "core_games": core_games.core_games(patient),
+            "core_is_default": not patient.core_games,
+        }
+    )

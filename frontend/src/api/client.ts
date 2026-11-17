@@ -132,6 +132,9 @@ export interface Patient {
   name: string;
   city: string | null;
   pinned_games: GameType[] | null;
+  /** The 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set"). */
+  core_games: GameType[];
+  core_is_default: boolean;
   voice_task_enabled: boolean;
   voice_consent_at: string | null;
   photos_enabled: boolean;
@@ -560,9 +563,29 @@ export async function getTodaysGames(): Promise<TodaysGames> {
   return data;
 }
 
+/** "More games": up to 3 levelled games outside the core set, least recently played first. */
+export async function getMoreGames(): Promise<TodaysGames["games"]> {
+  const { data } = await api.get<TodaysGames["games"]>("/me/games/more");
+  return data;
+}
+
+export interface CatalogGame {
+  game_type: GameType;
+  /** The domain it mainly tests, e.g. "Verbal memory". */
+  domain: string;
+}
+
+/** The levelled games and their domains (for the caregiver's core-set picker). */
+export async function getGameCatalog(): Promise<CatalogGame[]> {
+  const { data } = await api.get<CatalogGame[]>("/games/catalog");
+  return data;
+}
+
 export interface PatientChanges {
   city?: string | null;
   pinned_games?: GameType[] | null;
+  /** Exactly 4 different levelled games; null = the default core set. */
+  core_games?: GameType[] | null;
   voice_task_enabled?: boolean;
 }
 

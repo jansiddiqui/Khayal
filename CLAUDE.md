@@ -214,17 +214,20 @@ Each game is a self-contained component: it receives `level`, reports each round
 **Today's games (decided):** the patient's games list shows exactly 3 games per day, chosen by the server (`GET /me/games/today`, logic in `backend/app/services/today_games.py`).
 
 - Slot 1 is always About Today (Daily Orientation), because daily orientation is our most important tracking signal.
-- Slots 2 and 3 are the 2 levelled games played least recently before today. Any session counts as played, including a stopped-early one. Ties are broken randomly with a seed based on the date, so the list stays the same all day.
+- Slots 2 and 3 are the 2 core-set games (see "Core set" below) played least recently before today. Any session counts as played, including a stopped-early one. Ties are broken randomly with a seed based on the date, so the list stays the same all day.
 - When the weekly voice task is due (from Milestone 8), it replaces slot 3.
 - Once a game is finished today (a completed session), its button shows "✓ Done today", but the patient can still play it again.
 - On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
 - "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
 
-**Core set (decided for games v2, `docs/games/research.md` D7; replaces "slots 2–3 = any levelled game" once the new games are built):**
+**Core set (decided for games v2, `docs/games/research.md` D7; built in `backend/app/services/core_games.py`):**
 
 - Each patient has a **core set of 4 levelled games** for decline tracking, chosen to cover different domains (verbal memory, visuospatial memory, executive/speed, visuospatial/everyday function). The caregiver can change it on the patient page.
 - Slots 2–3 of Today's games rotate only through the core set (least recently played, as above). About Today stays slot 1, and the voice task still replaces slot 3 when due. "Pin games" picks from the core set.
-- Every other game is an optional **"More games"** game: playable any time and still recorded with its own warm-up and baseline, but not in the daily rotation and not part of decline alerts or the overall index unless it is in the core set.
+- Every other game is an optional **"More games"** game: playable any time and still recorded with its own warm-up and baseline, but not in the daily rotation and not part of decline alerts or the overall index unless it is in the core set. About Today always counts.
+- **Who gets which set:** new patients get the default set (`DEFAULT_CORE`). Patients who had already played before games v2 keep their 4 games (migration 0012), so their baselines keep counting. The caregiver changes the set under Settings → Core games (4 different levelled games, each shown with its domain); pins that leave the set return to automatic.
+- **Patient access (my proposal, within section 4):** once all of today's games are done, the end screen adds a secondary "More games" button. That screen shows at most 3 games outside the core set, least recently played first (`GET /me/games/more`), so the 3-button rule holds and every game gets its turn.
+- **Caregiver charts:** the core games and About Today come first; games outside the set appear under "More games" only once played.
 - The other games-v2 decisions (D1–D6, D8) are in `docs/games/research.md` section 6.
 
 **Voice task (decided, Milestone 8):**

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
-import type { PatientSummary, User } from "../api/client";
+import type { GameType, PatientSummary, User } from "../api/client";
 import { App } from "../App";
 import { EMPTY_SIGNALS, EMPTY_TREND } from "../test/fixtures";
 import { renderWithProviders } from "../test/renderWithProviders";
@@ -52,6 +52,7 @@ const priya: User = {
 const kamala: PatientSummary = {
   id: 2, name: "Kamala Devi", city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null,
   photos_enabled: true, has_photo: false, cognitive_index: null, cognitive_status: "insufficient",
+  core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true,
 };
 
 beforeEach(() => {

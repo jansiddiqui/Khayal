@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
+import type { GameType } from "../api/client";
 import type { FamilyMember, User } from "../api/client";
 import { App } from "../App";
 import { copy } from "../copy";
@@ -189,7 +190,7 @@ describe("patient Who is this?", () => {
 describe("caregiver family page", () => {
   beforeEach(() => {
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listFamily.mockResolvedValue([rahul]);
   });
 
@@ -272,8 +273,8 @@ describe("caregiver family page", () => {
   });
 
   it("asks to turn on family photos when they are off, and adds photos inside the Add form", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
-    api.setElderConsent.mockResolvedValue({ patient: { id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null }, deleted: 0 });
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.setElderConsent.mockResolvedValue({ patient: { id: 2, name: "Kamala Devi", photos_enabled: true, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null }, deleted: 0 });
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
     expect(await screen.findByText(/Family photos are off for Kamala/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Add photos")).toBeNull();

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ml.decline.simulator import CSV_COLUMNS, LEVELLED, main, simulate, simulate_patient, to_rows
+from ml.decline.simulator import CORE, CSV_COLUMNS, main, simulate, simulate_patient, to_rows
 from ml.decline.zscore import assess
 
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -33,7 +33,7 @@ def test_each_day_offers_about_today_plus_two_levelled_games() -> None:
         by_day[s.day].append(s.game_type)
     for games in by_day.values():
         assert games[0] == "daily_orientation"
-        assert len(games) == 3 and set(games[1:]) <= set(LEVELLED)
+        assert len(games) == 3 and set(games[1:]) <= set(CORE)
 
 
 def test_profiles_separate_on_the_real_decline_rule() -> None:
@@ -41,7 +41,7 @@ def test_profiles_separate_on_the_real_decline_rule() -> None:
     for seed in range(6):
         for profile in ("healthy", "moderate"):
             sessions = simulate_patient(seed, profile, 90, np.random.default_rng(seed), START)
-            for game in LEVELLED:
+            for game in CORE:
                 result = assess([s.summary() for s in sessions if s.game_type == game])
                 statuses[profile].append(result.status)
     flagged = {p: sum(st in ("warning", "critical") for st in s) / len(s) for p, s in statuses.items()}

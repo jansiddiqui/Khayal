@@ -2,12 +2,27 @@ from fastapi import APIRouter, status
 
 from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import GameType
-from app.schemas import LevelChange, LevelOut, SessionIn, SessionOut, SessionResultOut, TodayGameOut, TodayGamesOut
-from app.services import adaptive, decline, today_games, tutorials
+from app.schemas import (
+    CatalogGameOut,
+    LevelChange,
+    LevelOut,
+    SessionIn,
+    SessionOut,
+    SessionResultOut,
+    TodayGameOut,
+    TodayGamesOut,
+)
+from app.services import adaptive, core_games, decline, today_games, tutorials
 from app.services.clock import local
 from ml.adaptive.rule_based import Round
 
 router = APIRouter(tags=["games"])
+
+
+@router.get("/games/catalog", response_model=list[CatalogGameOut])
+def game_catalog(user: CurrentUser) -> list[CatalogGameOut]:
+    """The levelled games and their domains, for the caregiver's core-set picker."""
+    return [CatalogGameOut(game_type=g, domain=d) for g, d in core_games.DOMAINS.items()]
 
 
 @router.get("/games/{game_type}/level", response_model=LevelOut)
@@ -62,6 +77,15 @@ def list_sessions(
 ) -> list[SessionOut]:
     ensure_patient_access(db, user, patient_id)
     return [SessionOut.model_validate(s) for s in adaptive.sessions_for(db, patient_id, game_type)]
+
+
+@router.get("/me/games/more", response_model=list[TodayGameOut])
+def get_more_games(patient: CurrentPatient, db: DbSession, now: Now) -> list[TodayGameOut]:
+    """"More games": up to 3 levelled games outside the core set, least recently played first."""
+    return [
+        TodayGameOut(game_type=g.game_type, done_today=g.done_today)
+        for g in today_games.more_games(db, patient, local(now).date())
+    ]
 
 
 @router.get("/me/games/today", response_model=TodayGamesOut)

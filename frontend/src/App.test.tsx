@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, vi } from "vitest";
 import * as apiClient from "./api/client";
-import type { Patient, User } from "./api/client";
+import type { GameType, Patient, User } from "./api/client";
 import { App } from "./App";
 import { copy } from "./copy";
 import { EMPTY_SIGNALS, EMPTY_TREND } from "./test/fixtures";
@@ -22,6 +22,8 @@ vi.mock("./api/client", async (importOriginal) => {
     addElder: vi.fn(),
     checkInvite: vi.fn(),
     listSessions: vi.fn(),
+    getGameCatalog: vi.fn(),
+    resetTutorial: vi.fn(),
     getTrend: vi.fn(),
     getSignals: vi.fn(),
     updatePatient: vi.fn(),
@@ -220,8 +222,8 @@ describe("caregiver", () => {
   beforeEach(() => signInAs(priya));
 
   it("lists the people they look after and adds one with consent (no email)", async () => {
-    const rahim: Patient = { id: 3, name: "Rahim Khan", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null };
-    const kamala = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const };
+    const rahim: Patient = { id: 3, name: "Rahim Khan", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null };
+    const kamala = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const };
     api.listPatients.mockResolvedValueOnce([kamala]);
     api.listPatients.mockResolvedValue([kamala, { ...rahim, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.addElder.mockResolvedValue(rahim);
@@ -254,7 +256,7 @@ describe("caregiver", () => {
   });
 
   it("sees a patient's levels and session history", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 9,
@@ -282,7 +284,7 @@ describe("caregiver", () => {
   });
 
   it("shows stopped-early sessions and saves the patient's city", async () => {
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([
       {
         id: 10,
@@ -299,7 +301,7 @@ describe("caregiver", () => {
         completed: false,
       },
     ]);
-    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, voice_task_enabled: false, voice_consent_at: null });
+    api.updatePatient.mockResolvedValue({ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null });
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
     expect(await screen.findByRole("cell", { name: "Stopped early (3/5 rounds)" })).toBeInTheDocument();
@@ -311,13 +313,13 @@ describe("caregiver", () => {
   });
 
   it("pins and unpins today's games for a patient", async () => {
-    const base = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, voice_task_enabled: false, voice_consent_at: null };
+    const base = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null };
     api.listPatients.mockResolvedValue([{ ...base, pinned_games: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listSessions.mockResolvedValue([]);
     api.updatePatient.mockResolvedValue({ ...base, pinned_games: ["reaction_tap", "word_recall"] });
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
-    expect(await screen.findByText(/Automatic: About Today plus the two games played least recently/)).toBeInTheDocument();
+    expect(await screen.findByText(/Automatic: About Today plus the two core games played least recently/)).toBeInTheDocument();
     // While automatic, nothing looks pinned: the choices open on request.
     expect(screen.queryByLabelText("Slot 2")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Choose games to pin" }));
@@ -331,6 +333,27 @@ describe("caregiver", () => {
     await waitFor(() =>
       expect(api.updatePatient).toHaveBeenCalledWith(2, { pinned_games: ["reaction_tap", "word_recall"] }),
     );
+  });
+
+  it("changes the core games, offering only levelled games and four different ones", async () => {
+    const core = ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[];
+    const base = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: core, core_is_default: true, voice_task_enabled: false, voice_consent_at: null };
+    api.listPatients.mockResolvedValue([{ ...base, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listSessions.mockResolvedValue([]);
+    api.getGameCatalog.mockResolvedValue(core.map((g, i) => ({ game_type: g, domain: `Domain ${i}` })));
+    const reordered = [...core].reverse();
+    api.updatePatient.mockResolvedValue({ ...base, core_games: reordered, core_is_default: false });
+    renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Change core games" }));
+    const first = await screen.findByLabelText("Game 1");
+    fireEvent.change(first, { target: { value: "sequence_recall" } });
+    expect(screen.getByText("Choose 4 different games.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save core games" })).toBeDisabled();
+
+    reordered.forEach((g, i) => fireEvent.change(screen.getByLabelText(`Game ${i + 1}`), { target: { value: g } }));
+    fireEvent.click(screen.getByRole("button", { name: "Save core games" }));
+    await waitFor(() => expect(api.updatePatient).toHaveBeenCalledWith(2, { core_games: reordered }));
   });
 
   it("signs out back to the sign-in screen", async () => {

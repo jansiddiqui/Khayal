@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
-import type { Patient, SpeechSample } from "../api/client";
+import type { GameType, Patient, SpeechSample } from "../api/client";
 import { VoiceRecordings } from "../components/caregiver/VoiceRecordings";
 import { copy } from "../copy";
 import { renderWithProviders } from "../test/renderWithProviders";
@@ -181,6 +181,7 @@ describe("caregiver voice recordings", () => {
     has_photo: false,
     city: null,
     pinned_games: null,
+    core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true,
     voice_task_enabled: false,
     voice_consent_at: null,
   };

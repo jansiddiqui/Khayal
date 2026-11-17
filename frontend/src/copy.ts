@@ -78,6 +78,11 @@ export const copy = {
     /** First-time tutorial (research.md 3.4). */
     tutorialHeading: "Let's see how it works",
     tryOne: "Let's try one",
+    /** Games outside the core set, after today's games are done (CLAUDE.md section 7). */
+    moreGames: "More games",
+    moreTitle: "More games",
+    moreIntro: "A few more games, if you'd like to play.",
+    moreEmpty: "That's all the games for now. Well played today.",
     practiceDone: "That's how it works. Now let's play.",
     next: "Next one",
     saving: "Just a moment…",

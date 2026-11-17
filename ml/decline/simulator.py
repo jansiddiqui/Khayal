@@ -2,8 +2,8 @@
 
 Each simulated patient has a latent cognitive ability that stays flat (`healthy`),
 declines slowly (`mci`), or declines faster with more day-to-day variance (`moderate`).
-Every day they may play the app's 3 games: About Today plus the 2 levelled games played
-least recently (the "Today's games" rule). Each round is generated from ability vs.
+Every day they may play the app's 3 games: About Today plus the 2 core-set games played
+least recently (the "Today's games" rule; CLAUDE.md section 7, "Core set"). Each round is generated from ability vs.
 difficulty, and levels move through the real adaptive engine (`ml.adaptive.rule_based`),
 so the data looks like what the app records, not made-up final scores.
 
@@ -49,6 +49,8 @@ CSV_COLUMNS = [
 
 ORIENTATION = "daily_orientation"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
+# The core set the simulated patients play (the app's default, app/services/core_games.py).
+CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall"})
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
@@ -127,21 +129,24 @@ def simulate_patient(
     days: int,
     rng: np.random.Generator,
     start: datetime,
+    core: Sequence[str] = CORE,
 ) -> list[SimSession]:
-    """`days` days of play for one patient, starting at local midnight `start` (tz-aware)."""
+    """`days` days of play for one patient, starting at local midnight `start` (tz-aware).
+    Slots 2-3 rotate through `core` (4 levelled games)."""
     params = PARAMS[profile]
     ability0 = float(rng.normal(0.80, 0.04))
-    levels = {g: START_LEVEL for g in LEVELLED}
-    last_played = {g: -1 for g in LEVELLED}
+    rotation = tuple(core)
+    levels = {g: START_LEVEL for g in rotation}
+    last_played = {g: -1 for g in rotation}
     out: list[SimSession] = []
 
     for day in range(days):
         if rng.random() > params.play_probability:
             continue
         ability = ability0 - params.decline_per_day * day + float(rng.normal(0.0, params.daily_noise))
-        # Today's games: About Today + the 2 levelled games played least recently (ties random).
-        tiebreak = rng.permutation(len(LEVELLED))
-        flex = sorted(LEVELLED, key=lambda g: (last_played[g], tiebreak[LEVELLED.index(g)]))[:2]
+        # Today's games: About Today + the 2 core games played least recently (ties random).
+        tiebreak = rng.permutation(len(rotation))
+        flex = sorted(rotation, key=lambda g: (last_played[g], tiebreak[rotation.index(g)]))[:2]
         clock = start + timedelta(days=day, hours=float(rng.uniform(9, 17)))
 
         for game in (ORIENTATION, *flex):

@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
+import type { GameType } from "../api/client";
 import type { Alert, Reminder, TodayReminder, User } from "../api/client";
 import { App } from "../App";
 import { copy } from "../copy";
@@ -237,7 +238,7 @@ describe("caregiver reminders and alerts", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-17T10:00:00Z"));
     signInAs(priya);
-    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const }]);
     api.listReminders.mockResolvedValue([reminder]);
     api.getAdherence.mockResolvedValue({ days: 7, done_by_patient: 4, done_by_caregiver: 1, missed: 1, rate: 4 / 6 });
   });

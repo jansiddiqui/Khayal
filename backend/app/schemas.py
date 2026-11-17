@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderRepeat, ReminderType, Role, Severity
+from app.services import core_games
 from ml.adaptive.rule_based import BLOCK_SIZE
 
 # Lightweight email check (no email-validator dependency); normalised to lower case.
@@ -166,6 +167,10 @@ class PatientOut(BaseModel):
     name: str
     city: str | None = None
     pinned_games: list[GameType] | None = None
+    # The 4 levelled games tracked for decline (CLAUDE.md section 7, "Core set"); always filled
+    # in by presenters.patient_out (the stored value may be None = the default set).
+    core_games: list[GameType] | None = None
+    core_is_default: bool = True
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
     photos_enabled: bool = False
@@ -278,8 +283,10 @@ class PatientUpdateIn(BaseModel):
     """Only the fields sent are changed."""
 
     city: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
-    # Two different levelled games for slots 2-3 of "Today's games"; null = automatic.
+    # Two different core-set games for slots 2-3 of "Today's games"; null = automatic.
     pinned_games: list[GameType] | None = None
+    # Exactly 4 different levelled games; null = the default core set.
+    core_games: list[GameType] | None = None
     # Caregiver consent for the weekly voice task.
     voice_task_enabled: bool | None = None
 
@@ -288,6 +295,8 @@ class PatientUpdateIn(BaseModel):
         pins = self.pinned_games
         if pins is not None and (len(pins) != 2 or len(set(pins)) != 2 or not set(pins) <= set(LEVELLED_GAMES)):
             raise ValueError("pinned_games must be two different games that have levels")
+        if self.core_games is not None and not core_games.valid_core(self.core_games):
+            raise ValueError("core_games must be 4 different games that have levels")
         return self
 
 
@@ -361,6 +370,13 @@ class TodayGameOut(BaseModel):
     # "voice_task" is the weekly "Tell me about a picture" (slot 3 when it is due).
     game_type: GameType | Literal["voice_task"]
     done_today: bool
+
+
+class CatalogGameOut(BaseModel):
+    """A levelled game a caregiver can put in the core set, with the domain it mainly tests."""
+
+    game_type: GameType
+    domain: str
 
 
 class TodayGamesOut(BaseModel):

@@ -1,4 +1,4 @@
-import { ArrowRight, Check, House, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, House, LayoutGrid, Play, RotateCcw, RotateCw, Sparkles } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -356,6 +356,10 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
             <BigButton to="/patient" label={copy.games.backHome} icon={<House />} />
           )}
           <BigButton label={copy.games.playAgain} icon={<RotateCw />} variant="secondary" onClick={start} />
+          {/* Today's games are all done: other games are there for anyone who wants more. */}
+          {!nextGame && today.isSuccess && (
+            <BigButton to="/patient/games/more" label={copy.games.moreGames} icon={<LayoutGrid />} variant="secondary" />
+          )}
         </Guarded>
       );
   }

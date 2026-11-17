@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
+import { CoreGamesForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
@@ -11,6 +12,7 @@ import {
   listSessions,
   updatePatient,
   type GameSession,
+  type GameTrend,
   type GameType,
   type Signals,
   type Trend,
@@ -217,10 +219,10 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
 }
 
 /** Fix slots 2-3 of the patient's "Today's games", or leave them automatic (least recently played). */
-function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] | null }) {
+function PinForm({ patientId, pinned, options }: { patientId: number; pinned: GameType[] | null; options: readonly GameType[] }) {
   const queryClient = useQueryClient();
-  const [first, setFirst] = useState<GameType>(pinned?.[0] ?? LEVELLED_GAMES[0]!);
-  const [second, setSecond] = useState<GameType>(pinned?.[1] ?? LEVELLED_GAMES[1]!);
+  const [first, setFirst] = useState<GameType>(pinned?.[0] ?? options[0]!);
+  const [second, setSecond] = useState<GameType>(pinned?.[1] ?? options[1]!);
   // While automatic, the choices stay hidden, so nothing looks pinned when it isn't.
   const [choosing, setChoosing] = useState(false);
   const toast = useToast();
@@ -249,7 +251,7 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
         onChange={(e) => onChange(e.target.value as GameType)}
         className="rounded-md border border-line-strong bg-surface px-3 py-2"
       >
-        {LEVELLED_GAMES.map((g) => (
+        {options.map((g) => (
           <option key={g} value={g}>
             {GAME_NAMES[g]}
           </option>
@@ -264,7 +266,7 @@ function PinForm({ patientId, pinned }: { patientId: number; pinned: GameType[] 
       <p className="text-ink-muted">
         {pinned
           ? `Pinned: About Today, ${GAME_NAMES[pinned[0]!]}, ${GAME_NAMES[pinned[1]!]}.`
-          : "Automatic: About Today plus the two games played least recently."}
+          : "Automatic: About Today plus the two core games played least recently."}
       </p>
       {pinned || choosing ? (
         <div className="flex flex-wrap items-end gap-3">
@@ -367,10 +369,17 @@ export function PatientDetail() {
   }
 
   // Sessions arrive newest first, so the first one per game holds the current level.
-  const currentLevels = LEVELLED_GAMES.map((type) => {
-    const latest = sessions.data?.find((s) => s.game_type === type);
-    return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined };
-  });
+  // Core games first; other games only once they have been played.
+  const core = patient?.core_games ?? [];
+  const currentLevels = [...core, ...LEVELLED_GAMES.filter((g) => !core.includes(g))]
+    .map((type) => {
+      const latest = sessions.data?.find((s) => s.game_type === type);
+      return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined, core: core.includes(type) };
+    })
+    .filter((l) => l.core || l.played);
+  const tracked = (g: GameTrend) => g.game_type === "daily_orientation" || core.includes(g.game_type);
+  const trackedTrends = trend.data?.games.filter(tracked) ?? [];
+  const moreTrends = trend.data?.games.filter((g) => !tracked(g) && g.sessions > 0) ?? [];
   const rows = allRows ? sessions.data ?? [] : (sessions.data ?? []).slice(0, SESSION_ROWS);
 
   if (patients.isError) {
@@ -460,7 +469,7 @@ export function PatientDetail() {
             shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).
           </p>
           <div className="grid items-start gap-4 lg:grid-cols-2">
-            {trend.data.games.map((g) => (
+            {trackedTrends.map((g) => (
               <GameTrendChart
                 key={g.game_type}
                 trend={g}
@@ -469,6 +478,24 @@ export function PatientDetail() {
               />
             ))}
           </div>
+          {moreTrends.length > 0 && (
+            <>
+              <h3 className="mt-6 mb-1 text-base font-semibold">More games</h3>
+              <p className="mb-3 text-sm text-ink-muted">
+                Played outside the core set. Each has its own chart, but they don't count for alerts or the overall status.
+              </p>
+              <div className="grid items-start gap-4 lg:grid-cols-2">
+                {moreTrends.map((g) => (
+                  <GameTrendChart
+                    key={g.game_type}
+                    trend={g}
+                    overall={trend.data.cognitive_status}
+                    highlighted={highlighted === g.game_type}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </Section>
       )}
 
@@ -561,11 +588,18 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <Section id="settings" title="Settings" hint="Pair a device, home city, pinned games">
+        <Section id="settings" title="Settings" hint="Pair a device, home city, core games, pinned games, tutorials">
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
             <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
-            <PinForm key={`pins-${(patient.pinned_games ?? []).join()}`} patientId={patient.id} pinned={patient.pinned_games} />
+            <CoreGamesForm key={`core-${patient.core_games.join()}`} patient={patient} />
+            <PinForm
+              key={`pins-${(patient.pinned_games ?? []).join()}-${patient.core_games.join()}`}
+              patientId={patient.id}
+              pinned={patient.pinned_games}
+              options={patient.core_games}
+            />
+            <TutorialAgainForm patientId={patient.id} games={["daily_orientation", ...LEVELLED_GAMES]} />
           </div>
         </Section>
       )}
