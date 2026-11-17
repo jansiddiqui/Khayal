@@ -685,12 +685,37 @@ export async function deleteFamilyMember(patientId: number, memberId: number): P
   await api.delete(`/patients/${patientId}/family/${memberId}`);
 }
 
-/** Sends the image file itself as the request body. */
+/** Uploads give up after this long, so a request that never gets an answer cannot hang the screen. */
+export const UPLOAD_TIMEOUT_MS = 60_000;
+
+/** An upload that got no answer within UPLOAD_TIMEOUT_MS (the request was cancelled). */
+export class UploadTimeoutError extends Error {
+  constructor(readonly ms: number) {
+    super(`No answer from the server after ${Math.round(ms / 1000)} seconds.`);
+    this.name = "UploadTimeoutError";
+  }
+}
+
+/** Sends the image file itself as the request body; cancelled after UPLOAD_TIMEOUT_MS. */
 export async function uploadFamilyPhoto(patientId: number, memberId: number, file: File): Promise<FamilyMember> {
-  const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos`, file, {
-    headers: { "Content-Type": file.type },
-  });
-  return data;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, UPLOAD_TIMEOUT_MS);
+  try {
+    const { data } = await api.post<FamilyMember>(`/patients/${patientId}/family/${memberId}/photos`, file, {
+      headers: { "Content-Type": file.type },
+      signal: controller.signal,
+    });
+    return data;
+  } catch (error) {
+    if (timedOut) throw new UploadTimeoutError(UPLOAD_TIMEOUT_MS);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function deleteFamilyPhoto(patientId: number, memberId: number, photoId: string): Promise<FamilyMember> {
@@ -760,6 +785,22 @@ export async function getSignals(patientId: number): Promise<Signals> {
 /** HTTP status of a failed request, if any. */
 export function errorStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
+}
+
+/**
+ * What went wrong with a request, for people to read and report: the HTTP status and the server's
+ * message ("Error 413: Photos must be 5 MB or smaller."), a timeout, or why there was no answer.
+ */
+export function describeRequestError(error: unknown): string {
+  if (error instanceof UploadTimeoutError) return error.message;
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const message = errorDetail(error) ?? (error.response.statusText || error.message);
+      return `Error ${error.response.status}: ${message}`;
+    }
+    return `No answer from the server (${error.message}).`;
+  }
+  return error instanceof Error ? error.message : "Something went wrong.";
 }
 
 /** The server's `detail` message of a failed request, if it sent one. */

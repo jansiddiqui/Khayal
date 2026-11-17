@@ -6,7 +6,7 @@ import {
   createFamilyMember,
   deleteFamilyMember,
   deleteFamilyPhoto,
-  errorDetail,
+  describeRequestError,
   listFamily,
   listPatients,
   updateFamilyMember,
@@ -126,10 +126,19 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
     },
   });
   const remove = useMutation({ mutationFn: () => deleteFamilyMember(patientId, member.id), onSuccess: refresh });
+  // The file of the last failed upload, for "Try again".
+  const [failed, setFailed] = useState<File | null>(null);
   const upload = useMutation({
     mutationFn: (file: File) => uploadFamilyPhoto(patientId, member.id, file),
+    onMutate: () => {
+      setProblem(null);
+      setFailed(null);
+    },
     onSuccess: refresh,
-    onError: (error) => setProblem(errorDetail(error) ?? "Could not upload the photo."),
+    onError: (error, file) => {
+      setProblem(`Could not upload the photo. ${describeRequestError(error)}`);
+      setFailed(file);
+    },
   });
   const removePhoto = useMutation({ mutationFn: (photoId: string) => deleteFamilyPhoto(patientId, member.id, photoId), onSuccess: refresh });
 
@@ -139,6 +148,7 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
     if (!file) return;
     const issue = photoProblem(file);
     setProblem(issue);
+    setFailed(null);
     if (!issue) upload.mutate(file);
   }
 
@@ -202,9 +212,16 @@ function MemberCard({ patientId, member }: { patientId: number; member: FamilyMe
         </span>
       </div>
       {problem && (
-        <p role="alert" className="mt-2 text-danger">
-          {problem}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <p role="alert" className="text-danger">
+            {problem}
+          </p>
+          {failed && !upload.isPending && (
+            <button type="button" onClick={() => upload.mutate(failed)} className="rounded-md border border-line-strong px-3 py-1 hover:bg-sunken">
+              Try again
+            </button>
+          )}
+        </div>
       )}
     </li>
   );

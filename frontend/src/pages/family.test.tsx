@@ -247,6 +247,24 @@ describe("caregiver family page", () => {
     await waitFor(() => expect(api.deleteFamilyMember).toHaveBeenCalledWith(2, 1));
   });
 
+  it("shows the real error when an upload fails or times out, with Try again", async () => {
+    api.uploadFamilyPhoto
+      .mockRejectedValueOnce(new apiClient.UploadTimeoutError(60_000))
+      .mockResolvedValueOnce(rahul);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
+    const card = within(await screen.findByRole("listitem", { name: "Rahul" }));
+    const jpg = new File([new Uint8Array(25_000)], "a.jpg", { type: "image/jpeg" });
+    await act(async () => fireEvent.change(card.getByLabelText("Add photo"), { target: { files: [jpg] } }));
+
+    expect(await card.findByRole("alert")).toHaveTextContent("Could not upload the photo. No answer from the server after 60 seconds.");
+    expect(card.getByText("Add photo")).toBeInTheDocument(); // not stuck on "Uploading…"
+    fireEvent.click(card.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(api.uploadFamilyPhoto).toHaveBeenCalledTimes(2));
+    expect(api.uploadFamilyPhoto).toHaveBeenLastCalledWith(2, 1, jpg);
+    await waitFor(() => expect(card.queryByRole("alert")).not.toBeInTheDocument());
+    expect(card.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
   it("stops new uploads at 5 photos and shows custom relations when editing", async () => {
     api.listFamily.mockResolvedValue([person(9, "Raju", "Neighbour", 5)]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2/family" });
