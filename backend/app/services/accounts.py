@@ -19,6 +19,8 @@ from app import config
 from app.models import (
     AdminLog,
     Feedback,
+    MemoryEntry,
+    MoodCheckin,
     PatientEvent,
     Alert,
     CareInvite,
@@ -40,7 +42,7 @@ from app.models import (
     StoredFile,
     User,
 )
-from app.services import family, feedback, speech, storage
+from app.services import family, feedback, memories, speech, storage
 
 
 def demo_expiry(now: datetime) -> datetime | None:
@@ -61,7 +63,7 @@ def _file_keys(db: Session, user_id: int) -> list[str]:
     photo = db.scalar(select(User.photo_key).where(User.id == user_id))
     if photo:
         keys.append(photo)
-    return keys + feedback.audio_keys(db, user_id)
+    return keys + feedback.audio_keys(db, user_id) + memories.file_keys(db, user_id)
 
 
 def delete_user(db: Session, user_id: int) -> None:
@@ -84,6 +86,9 @@ def delete_user(db: Session, user_id: int) -> None:
     db.execute(delete(Consent).where(or_(Consent.user_id == user_id, Consent.patient_id == user_id)))
     db.execute(delete(DeviceSession).where(DeviceSession.patient_id == user_id))
     db.execute(delete(Feedback).where(Feedback.user_id == user_id))
+    db.execute(delete(MoodCheckin).where(MoodCheckin.patient_id == user_id))
+    db.execute(delete(MemoryEntry).where(MemoryEntry.patient_id == user_id))
+    db.execute(update(MemoryEntry).where(MemoryEntry.created_by == user_id).values(created_by=None))
     db.execute(delete(PatientEvent).where(PatientEvent.patient_id == user_id))
     db.execute(update(PatientEvent).where(PatientEvent.actor_id == user_id).values(actor_id=None))
     db.execute(update(AdminLog).where(AdminLog.admin_id == user_id).values(admin_id=None))

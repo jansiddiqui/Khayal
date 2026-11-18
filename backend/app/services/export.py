@@ -18,6 +18,8 @@ from app.models import (
     DeviceSession,
     FamilyMember,
     Feedback,
+    MemoryEntry,
+    MoodCheckin,
     GameSession,
     PatientEvent,
     PlayerLevel,
@@ -26,7 +28,7 @@ from app.models import (
     SpeechSample,
     User,
 )
-from app.services import care, consent, family, speech, storage
+from app.services import care, consent, family, memories, speech, storage
 
 
 def _plain(value: Any) -> Any:
@@ -82,6 +84,8 @@ def build(db: Session, user: User, now: datetime) -> bytes:
                 "voice_recordings": [_row(s) for s in samples],
                 "devices": [_row(d) for d in db.scalars(select(DeviceSession).where(DeviceSession.patient_id == elder.id))],
                 "feedback": [_row(f, skip=("audio_key",)) for f in db.scalars(select(Feedback).where(Feedback.user_id == elder.id))],
+                "mood": [_row(m) for m in db.scalars(select(MoodCheckin).where(MoodCheckin.patient_id == elder.id))],
+                "memory_book": [_row(m) for m in db.scalars(select(MemoryEntry).where(MemoryEntry.patient_id == elder.id))],
                 "settings_changes": [_row(e) for e in db.scalars(select(PatientEvent).where(PatientEvent.patient_id == elder.id))],
             }
             data["elders"].append(entry)
@@ -94,6 +98,10 @@ def build(db: Session, user: User, now: datetime) -> bytes:
                 blob = store.load(db, speech.audio_key(elder.id, s.audio_path))
                 if blob is not None:
                     z.writestr(f"{folder}/voice/{s.audio_path}", blob)
+            for k in memories.file_keys(db, elder.id):
+                blob = store.load(db, k)
+                if blob is not None:
+                    z.writestr(f"{folder}/memory-book/{k.rsplit('/', 1)[1]}", blob)
             if elder.photo_key:
                 blob = store.load(db, elder.photo_key)
                 if blob is not None:

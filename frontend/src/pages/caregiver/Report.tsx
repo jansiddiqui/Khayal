@@ -37,6 +37,20 @@ function Sparkline({ game }: { game: ReportGame }) {
   );
 }
 
+/** The longest run of consecutive "not so good" answers (days without an answer break it). */
+export function notSoGoodRun(days: DoctorReport["mood_days"]): number {
+  let best = 0;
+  let run = 0;
+  let prev: number | null = null;
+  for (const d of days) {
+    const t = new Date(`${d.date}T00:00:00`).getTime() / 86_400_000;
+    run = d.mood === "not_so_good" ? (prev !== null && Math.round(t - prev) === 1 && run > 0 ? run + 1 : 1) : 0;
+    prev = t;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+
 function averages(g: ReportGame): string {
   const f = (x: number | null) => (x === null ? "—" : x.toFixed(2));
   if (g.first_half === null && g.second_half === null) return "—";
@@ -143,6 +157,19 @@ export function ReportBody({ report, notes }: { report: DoctorReport; notes: str
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="r-mood" className="break-inside-avoid">
+        <h2 id="r-mood" className="mb-1 text-lg font-semibold">Mood</h2>
+        {r.mood.good + r.mood.okay + r.mood.not_so_good + r.mood.skipped === 0 ? (
+          <p>The daily mood question was not answered in this period.</p>
+        ) : (
+          <p>
+            Answers to “How are you feeling today?” (optional, once a day): {r.mood.good} good, {r.mood.okay} okay,{" "}
+            {r.mood.not_so_good} not so good, {r.mood.skipped} skipped, on {r.mood_days.length} of {r.days} days.
+            {notSoGoodRun(r.mood_days) >= 3 && <> The longest run of “not so good” days was {notSoGoodRun(r.mood_days)}.</>}
+          </p>
         )}
       </section>
 

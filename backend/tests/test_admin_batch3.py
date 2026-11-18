@@ -166,7 +166,7 @@ def test_research_export_has_consented_families_only_and_no_identifiers(
     assert any(c["kind"] == "research" and c["policy_version"] == research.RESEARCH_POLICY_VERSION for c in consents)
 
     z = zipfile.ZipFile(io.BytesIO(client.get("/api/admin/research-export", headers=admin_headers).content))
-    assert sorted(z.namelist()) == ["README.txt", "reminders.csv", "sessions.csv"]
+    assert sorted(z.namelist()) == ["README.txt", "mood.csv", "reminders.csv", "sessions.csv"]
     raw = b"".join(z.read(n) for n in z.namelist()).decode()
     for secret in ("Elder 1", "Elder 2", "Carer", "example.com", "Lucknow", "Amlodipine"):
         assert secret not in raw

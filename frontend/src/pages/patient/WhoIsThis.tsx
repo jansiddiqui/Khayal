@@ -7,6 +7,7 @@ import { AuthedImage } from "../../components/AuthedImage";
 import { BigButton } from "../../components/BigButton";
 import { Card } from "../../components/Card";
 import { Layout } from "../../components/Layout";
+import { PeopleMemoriesSwitch } from "../../components/PeopleMemoriesSwitch";
 import { QuestionRow } from "../../games/QuestionRow";
 import { copy } from "../../copy";
 import { useFeedback } from "../../ui/feedback";
@@ -62,6 +63,7 @@ export function WhoIsThis() {
 
   return (
     <Layout title={w.title} spokenIntro={tiles.length > 0 ? w.intro : w.empty} snug>
+      <PeopleMemoriesSwitch />
       {family.isPending && (
         <Busy label={copy.common.loading} className="grid grid-cols-2 gap-4">
           {[0, 1, 2, 3].map((i) => (

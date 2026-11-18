@@ -19,6 +19,8 @@ from app.models import (
     DeviceSession,
     GameSession,
     GameType,
+    Mood,
+    MoodCheckin,
     PatientEvent,
     Reminder,
     ReminderLog,
@@ -28,14 +30,14 @@ from app.models import (
     SpeechSample,
     User,
 )
-from app.services import decline, devices, reminders, today_games
+from app.services import decline, devices, mood, reminders, today_games
 from app.services.clock import as_utc, local, local_day_start
 from app.services.game_names import GAME_NAMES
 
 Tone = Literal["good", "neutral", "attention"]
 ActionKind = Literal["check_dose", "missed_dose", "alerts", "pair", "add_reminders", "inactive", "all_good"]
-EventKind = Literal["session", "reminder", "alert", "recording", "settings"]
-EVENT_KINDS: tuple[EventKind, ...] = ("session", "reminder", "alert", "recording", "settings")
+EventKind = Literal["session", "reminder", "alert", "recording", "settings", "mood"]
+EVENT_KINDS: tuple[EventKind, ...] = ("session", "reminder", "alert", "recording", "settings", "mood")
 
 INACTIVE_DAYS = 3
 TIMELINE_LIMIT = 500
@@ -305,6 +307,7 @@ class WeekStats:
     reminders_total: int
     alerts: int
     recordings: int
+    mood: mood.MoodCounts
 
 
 def week_stats(db: Session, patient_id: int, start: date, end: date) -> WeekStats:
@@ -345,6 +348,7 @@ def week_stats(db: Session, patient_id: int, start: date, end: date) -> WeekStat
                 )
             )
         ),
+        mood=mood.counts(mood.entries(db, patient_id, start, end)),
     )
 
 
@@ -401,6 +405,8 @@ def _label(d: DeviceSession) -> str:
     return "" if d.device_label in ("", "Device") else d.device_label
 
 
+MOOD_WORD = {Mood.good: "Good", Mood.okay: "Okay", Mood.not_so_good: "Not so good"}
+
 SEVERITY_TONE: dict[Severity, Tone] = {Severity.info: "neutral", Severity.warning: "attention", Severity.critical: "attention"}
 
 
@@ -450,6 +456,13 @@ def timeline(
                 out.append(TimelineEvent(as_utc(d.created_at), "settings", "Device paired", _label(d)))
             if d.revoked_at is not None and as_utc(d.revoked_at) >= since:
                 out.append(TimelineEvent(as_utc(d.revoked_at), "settings", "Device signed out", _label(d)))
+    if "mood" in wanted:
+        for m in db.scalars(select(MoodCheckin).where(MoodCheckin.patient_id == patient_id, MoodCheckin.answered_at >= since)):
+            if m.mood is None:
+                out.append(TimelineEvent(as_utc(m.answered_at), "mood", "Mood question skipped"))
+            else:
+                tone: Tone = "good" if m.mood == Mood.good else "neutral"
+                out.append(TimelineEvent(as_utc(m.answered_at), "mood", f"Feeling: {MOOD_WORD[m.mood]}", "", tone))
     out.sort(key=lambda e: e.at, reverse=True)
     return out[:TIMELINE_LIMIT]
 
@@ -490,6 +503,8 @@ class Report:
     alerts: list[Alert]
     recordings: int
     days_played: int
+    mood: mood.MoodCounts
+    mood_days: list[tuple[date, str | None]]
 
 
 def report(db: Session, patient: User, now: datetime, days: int) -> Report:
@@ -538,4 +553,6 @@ def report(db: Session, patient: User, now: datetime, days: int) -> Report:
         alerts=alerts,
         recordings=stats.recordings,
         days_played=stats.days_played,
+        mood=stats.mood,
+        mood_days=[(m.date, m.mood.value if m.mood else None) for m in mood.entries(db, patient.id, start, end)],
     )
