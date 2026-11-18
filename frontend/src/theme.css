@@ -108,7 +108,7 @@
   --shadow-toast: 0 18px 40px -18px rgb(16 35 37 / 0.55);
 
   --font-patient: "Atkinson Hyperlegible", "Noto Sans Devanagari", system-ui, "Segoe UI", Roboto, sans-serif;
-  --font-caregiver: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-caregiver: "Inter", "Noto Sans Devanagari", system-ui, "Segoe UI", Roboto, sans-serif;
   /* Urdu (the name خیال): the reader's own Nastaliq or Naskh face */
   --font-urdu: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Noto Naskh Arabic", "Segoe UI", serif;
 }

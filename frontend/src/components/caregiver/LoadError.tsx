@@ -1,4 +1,5 @@
 import { RotateCcw } from "lucide-react";
+import { t } from "../../t";
 
 /** A caregiver-side load failure: what failed, and a way to try again. */
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -11,7 +12,7 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
         className="inline-flex items-center gap-1 font-medium text-brand-dark underline underline-offset-2"
       >
         <RotateCcw aria-hidden="true" className="size-4" />
-        Try again
+        {t.common.actions.retry}
       </button>
     </p>
   );

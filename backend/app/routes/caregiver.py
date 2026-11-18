@@ -55,7 +55,7 @@ def glance_all(caregiver: CurrentCaregiver, db: DbSession, now: Now) -> list[Gla
                 medicines=DoseCountsOut(**asdict(g.medicines)),
                 alerts_open=g.alerts_open,
                 last_active_at=g.last_active_at,
-                next_action=NextActionOut(kind=g.next_action.kind, text=g.next_action.text),
+                next_action=NextActionOut(**asdict(g.next_action)),
             )
         )
     return out

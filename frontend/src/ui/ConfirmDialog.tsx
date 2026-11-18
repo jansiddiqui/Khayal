@@ -1,6 +1,7 @@
 import { TriangleAlert } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "./Button";
+import { t } from "../t";
 
 /**
  * Only for destructive actions that can't be undone. The consequence is spelled out, "Cancel" has
@@ -60,7 +61,7 @@ export function ConfirmDialog({
           <div className="text-ink-soft">{children}</div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button ref={cancelRef} variant="secondary" onClick={onCancel} disabled={busy}>
-              Cancel
+              {t.common.actions.cancel}
             </Button>
             <Button variant="danger" onClick={onConfirm} loading={busy}>
               {confirmLabel}

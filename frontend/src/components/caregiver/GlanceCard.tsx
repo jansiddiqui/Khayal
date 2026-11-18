@@ -4,6 +4,9 @@ import { Link } from "react-router";
 import type { Glance, NextActionKind } from "../../api/client";
 import { ActiveState } from "./LiveState";
 import { StatusBadge } from "./Status";
+import { serverText, t } from "../../t";
+
+const G = t.dashboard.glance;
 
 /** Where each "next action" goes. Hash targets open that section of the elder's page. */
 export function nextActionHref(patientId: number, kind: NextActionKind): string {
@@ -28,12 +31,12 @@ const URGENT: ReadonlySet<NextActionKind> = new Set(["check_dose", "missed_dose"
 
 export function medicinesText(m: Glance["medicines"]): string {
   const parts = [
-    m.taken > 0 && `${m.taken} taken`,
-    m.unsure > 0 && `${m.unsure} not sure`,
-    m.missed > 0 && `${m.missed} missed`,
-    m.to_come > 0 && `${m.to_come} to come`,
+    m.taken > 0 && G.taken(m.taken),
+    m.unsure > 0 && G.notSure(m.unsure),
+    m.missed > 0 && G.missed(m.missed),
+    m.to_come > 0 && G.toCome(m.to_come),
   ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "None today";
+  return parts.length ? parts.join(" · ") : G.noneToday;
 }
 
 function Row({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
@@ -67,14 +70,14 @@ export function GlanceCard({ glance }: { glance: Glance }) {
         <StatusBadge status={g.cognitive_status} scope="Overall" />
       </header>
       <dl className="flex flex-col gap-1.5">
-        <Row icon={<Gamepad2 />} label="Games today">
-          {g.games_total === 0 ? "No games today" : `${g.games_done} of ${g.games_total} games done today`}
+        <Row icon={<Gamepad2 />} label={G.gamesLabel}>
+          {g.games_total === 0 ? G.noGames : G.gamesDone(g.games_done, g.games_total)}
         </Row>
-        <Row icon={<Pill />} label="Medicines today">
-          <span className={doses.unsure + doses.missed > 0 ? "font-medium text-ink" : ""}>Medicines: {medicinesText(doses)}</span>
+        <Row icon={<Pill />} label={G.medicinesLabel}>
+          <span className={doses.unsure + doses.missed > 0 ? "font-medium text-ink" : ""}>{G.medicines(medicinesText(doses))}</span>
         </Row>
-        <Row icon={<Bell />} label="Alerts">
-          {g.alerts_open === 0 ? "No alerts need you" : `${g.alerts_open} ${g.alerts_open === 1 ? "alert needs" : "alerts need"} a look`}
+        <Row icon={<Bell />} label={G.alertsLabel}>
+          {g.alerts_open === 0 ? G.noAlerts : G.alertsOpen(g.alerts_open)}
         </Row>
       </dl>
       <Link
@@ -86,8 +89,8 @@ export function GlanceCard({ glance }: { glance: Glance }) {
         }`}
       >
         <span>
-          <span className="sr-only">Next: </span>
-          {g.next_action.text}
+          <span className="sr-only">{G.next}</span>
+          {serverText(g.next_action.text, g.next_action.text_i18n)}
         </span>
         <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
       </Link>

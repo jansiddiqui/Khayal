@@ -1,5 +1,6 @@
 import { CircleArrowDown, CircleCheck, CircleDashed, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { IndexStatus } from "../../api/client";
+import { t } from "../../t";
 
 /**
  * Reserved status colours, from the theme (theme.css) - always shown with an icon and a
@@ -22,13 +23,13 @@ interface StatusLook {
  * One scale for every game and for the overall index (z of the last 5 sessions against the
  * patient's own baseline): Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.
  */
-export const STATUS_SCALE_TEXT = "Stable at −0.5 or above, Watch below −0.5, Declining below −1.5.";
+export const STATUS_SCALE_TEXT = t.elderPage.status.scale;
 
 const STATUS: Record<IndexStatus, StatusLook> = {
-  stable: { label: "Stable", color: STATUS_COLORS.good, icon: CircleCheck },
-  watch: { label: "Watch", color: STATUS_COLORS.warning, icon: TriangleAlert },
-  declining: { label: "Declining", color: STATUS_COLORS.critical, icon: CircleArrowDown },
-  insufficient: { label: "Learning", color: STATUS_COLORS.none, icon: CircleDashed },
+  stable: { label: t.common.status.stable, color: STATUS_COLORS.good, icon: CircleCheck },
+  watch: { label: t.common.status.watch, color: STATUS_COLORS.warning, icon: TriangleAlert },
+  declining: { label: t.common.status.declining, color: STATUS_COLORS.critical, icon: CircleArrowDown },
+  insufficient: { label: t.common.status.insufficient, color: STATUS_COLORS.none, icon: CircleDashed },
 };
 
 const RANK: Record<IndexStatus, number> = { stable: 0, watch: 1, declining: 2, insufficient: -1 };
@@ -40,7 +41,7 @@ export function StatusBadge({ status, scope }: { status: IndexStatus; scope?: "O
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-ink-soft">
       <Icon aria-hidden="true" style={{ color }} className="size-4 shrink-0" strokeWidth={2.5} />
       <span>
-        {scope && <span className="text-ink-muted">{scope}: </span>}
+        {scope && <span className="text-ink-muted">{scope === "Overall" ? t.elderPage.status.overallLabel : t.elderPage.status.thisGameLabel} </span>}
         <span className="font-medium text-ink">{label}</span>
       </span>
     </span>
@@ -51,8 +52,8 @@ export function StatusBadge({ status, scope }: { status: IndexStatus; scope?: "O
 export function statusDifference(game: IndexStatus, overall: IndexStatus): string | null {
   if (game === overall || game === "insufficient" || overall === "insufficient") return null;
   return RANK[game] < RANK[overall]
-    ? `This game is steadier than the overall status (${STATUS[overall].label}), which averages all games.`
-    : `This game is lower than the overall status (${STATUS[overall].label}), which averages all games.`;
+    ? t.elderPage.status.steadier(STATUS[overall].label)
+    : t.elderPage.status.lower(STATUS[overall].label);
 }
 
 /**

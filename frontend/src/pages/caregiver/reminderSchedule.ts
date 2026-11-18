@@ -1,5 +1,5 @@
 import type { Reminder, ReminderInput, ReminderRepeat, ReminderType } from "../../api/client";
-import { copy } from "../../copy";
+import { t } from "../../t";
 
 /**
  * Reminder schedules on the caregiver page. Dates are days on the app's clock (IST by default,
@@ -8,8 +8,8 @@ import { copy } from "../../copy";
  */
 
 export const IST_MINUTES = 330;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monday
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = t.reminders.weekdays; // 0 = Monday
+const MONTHS = t.reminders.months;
 
 /** "Now" on the app clock: date "YYYY-MM-DD" and time "HH:MM". */
 export function appNow(offsetMinutes: number = IST_MINUTES, now: Date = new Date()): { date: string; time: string } {
@@ -27,13 +27,13 @@ export function isInThePast(onDate: string, hhmm: string, offsetMinutes: number 
 export function dayLabel(iso: string): string {
   const [y = 1970, m = 1, d = 1] = iso.split("-").map(Number);
   const weekday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; // 0 = Monday
-  return `${WEEKDAYS[weekday]} ${d} ${MONTHS[m - 1]}`;
+  return t.reminders.dayLabel(WEEKDAYS[weekday]!, d, MONTHS[m - 1]!);
 }
 
 /** "30 Nov" for "2026-11-30". */
 function shortDay(iso: string): string {
   const [, m = 1, d = 1] = iso.split("-").map(Number);
-  return `${d} ${MONTHS[m - 1]}`;
+  return t.reminders.shortDay(d, MONTHS[m - 1]!);
 }
 
 /**
@@ -41,12 +41,13 @@ function shortDay(iso: string): string {
  * "Mon, Wed, Fri · 6:00 PM · until 30 Nov" (plus "from 20 Nov" while it has not started yet).
  */
 export function scheduleSummary(r: Pick<Reminder, "repeat" | "days_of_week" | "on_date" | "start_date" | "end_date" | "time_of_day">, today: string): string {
-  const time = copy.reminders.time(r.time_of_day);
-  if (r.repeat === "once") return `Once · ${r.on_date ? dayLabel(r.on_date) : "no date"} · ${time}`;
-  const days = r.repeat === "daily" || r.days_of_week.length === 7 ? "Every day" : r.days_of_week.map((d) => WEEKDAYS[d]).join(", ");
+  const s = t.reminders.schedule;
+  const time = t.common.clock(r.time_of_day);
+  if (r.repeat === "once") return s.once(r.on_date ? dayLabel(r.on_date) : s.noDate, time);
+  const days = r.repeat === "daily" || r.days_of_week.length === 7 ? s.everyDay : s.dayList(r.days_of_week.map((d) => WEEKDAYS[d]!));
   const parts = [days, time];
-  if (r.start_date && r.start_date > today) parts.push(`from ${shortDay(r.start_date)}`);
-  if (r.end_date) parts.push(`until ${shortDay(r.end_date)}`);
+  if (r.start_date && r.start_date > today) parts.push(s.from(shortDay(r.start_date)));
+  if (r.end_date) parts.push(s.until(shortDay(r.end_date)));
   return parts.join(" · ");
 }
 
@@ -95,14 +96,15 @@ export function cleanInput(form: ReminderInput): ReminderInput {
 
 /** Why the form can't be saved yet, or null. */
 export function formProblem(form: ReminderInput, offsetMinutes: number = IST_MINUTES, now: Date = new Date()): string | null {
-  if (form.time_of_day === "") return "Choose a time.";
+  const p = t.reminders.problems;
+  if (form.time_of_day === "") return p.chooseTime;
   if (form.repeat === "once") {
-    if (!form.on_date) return "Choose a date.";
-    if (isInThePast(form.on_date, form.time_of_day, offsetMinutes, now)) return "That time has already passed. Choose a later date or time.";
+    if (!form.on_date) return p.chooseDate;
+    if (isInThePast(form.on_date, form.time_of_day, offsetMinutes, now)) return p.passed;
     return null;
   }
-  if (form.repeat === "weekly_days" && form.days_of_week.length === 0) return "Choose at least one day.";
-  if (!form.start_date) return "Choose when it starts.";
-  if (form.end_date && form.end_date < form.start_date) return "It can't end before it starts.";
+  if (form.repeat === "weekly_days" && form.days_of_week.length === 0) return p.chooseDay;
+  if (!form.start_date) return p.chooseStart;
+  if (form.end_date && form.end_date < form.start_date) return p.endBeforeStart;
   return null;
 }

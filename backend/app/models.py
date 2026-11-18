@@ -51,7 +51,8 @@ class User(Base):
     # Patients only: festivals the family celebrates (About Today's festival question). None or
     # empty = the question is off (docs/games/research.md D6).
     festivals: Mapped[list[str] | None] = mapped_column(JSON, default=None)
-    # Round 2 batch 5: the language the patient app shows ("en", "hi" or "ur"), set by a caregiver.
+    # The language this person's own screens show. Patients (Round 2 batch 5): "en", "hi" or "ur", set
+    # by a caregiver. Caregivers (batch 5b): "en" or "hi", their own choice in Account.
     language: Mapped[str] = mapped_column(String(5), default="en", server_default="en")
     # Patients only: games outside the core set the family hid ("Hide these games"); they never
     # appear in "More games" or its full list. None = nothing hidden.

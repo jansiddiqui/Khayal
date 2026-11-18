@@ -2,15 +2,16 @@ import { RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../ui/Button";
 import { serverDate } from "../../api/client";
+import { t, timeText } from "../../t";
 
 /** "just now", "3 min ago", "2 hours ago" for a past moment. */
 export function ago(ms: number, now: number = Date.now()): string {
   const s = Math.max(0, Math.round((now - ms) / 1000));
-  if (s < 45) return "just now";
+  if (s < 45) return t.elderPage.live.justNow;
   const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return t.elderPage.live.minAgo(m);
   const h = Math.round(m / 60);
-  return h === 1 ? "1 hour ago" : `${h} hours ago`;
+  return t.elderPage.live.hoursAgo(h);
 }
 
 /** Re-render every half minute, so relative times stay true. */
@@ -32,9 +33,9 @@ export function LastUpdated({ updatedAt, fetching, onRefresh }: { updatedAt: num
   if (!updatedAt) return null;
   return (
     <span className="inline-flex items-center gap-2 text-ink-muted">
-      <span aria-live="polite">{fetching ? "Updating…" : `Updated ${ago(updatedAt, now)}`}</span>
+      <span aria-live="polite">{fetching ? t.elderPage.live.updating : t.elderPage.live.updated(ago(updatedAt, now))}</span>
       <Button size="sm" variant="quiet" icon={<RotateCw />} loading={fetching} onClick={onRefresh}>
-        Refresh
+        {t.elderPage.live.refresh}
       </Button>
     </span>
   );
@@ -50,7 +51,7 @@ export function ActiveState({ lastActiveAt }: { lastActiveAt: string | null | un
     return (
       <span className="inline-flex items-center gap-1.5 text-ink-muted">
         <span aria-hidden="true" className="size-2 rounded-full border border-line-strong" />
-        Not used yet
+        {t.elderPage.live.notUsedYet}
       </span>
     );
   }
@@ -59,12 +60,12 @@ export function ActiveState({ lastActiveAt }: { lastActiveAt: string | null | un
   const sameDay = when.toDateString() === today.toDateString();
   const yesterday = new Date(now - 86_400_000).toDateString() === when.toDateString();
   const days = Math.max(1, Math.round((today.setHours(0, 0, 0, 0) - new Date(when).setHours(0, 0, 0, 0)) / 86_400_000));
-  const time = when.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  const time = timeText(when);
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <span aria-hidden="true" className={`size-2 rounded-full ${sameDay ? "bg-success" : "bg-line-strong"}`} />
       <span className={sameDay ? "text-ink" : "text-ink-soft"}>
-        {sameDay ? `Active today, ${time}` : yesterday ? "Last active yesterday" : `Last active ${days} days ago`}
+        {sameDay ? t.elderPage.live.activeToday(time) : yesterday ? t.elderPage.live.lastYesterday : t.elderPage.live.lastDaysAgo(days)}
       </span>
     </span>
   );

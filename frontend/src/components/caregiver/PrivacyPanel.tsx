@@ -20,9 +20,10 @@ import {
 } from "../../api/client";
 import { LoadError } from "./LoadError";
 import { serverDate } from "../../api/client";
+import { dateTimeText, LOCALE, t } from "../../t";
 
-const when = (iso: string) => serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const day = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const when = (iso: string) => dateTimeText(serverDate(iso));
+const day = (iso: string) => serverDate(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
 
 const button = "inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 py-1 hover:bg-sunken disabled:opacity-60";
 
@@ -42,10 +43,10 @@ export function CopyLink({ url, label }: { url: string; label: string }) {
           }}
         >
           {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t.elderPanels.privacy.copied : t.elderPanels.privacy.copy}
         </button>
       </div>
-      <p className="text-ink-muted">Send it yourself by WhatsApp or email. It works once, and is shown only now.</p>
+      <p className="text-ink-muted">{t.elderPanels.privacy.sendYourself}</p>
     </div>
   );
 }
@@ -75,22 +76,22 @@ function ElderPhoto({ patient }: { patient: Patient }) {
   return (
     <div className="flex items-center gap-4">
       <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sunken text-ink-muted">
-        {src ? <img src={src} alt={`Photo of ${patient.name}`} className="size-full object-cover" /> : <span aria-hidden="true">—</span>}
+        {src ? <img src={src} alt={t.elderPanels.privacy.photoOf(patient.name)} className="size-full object-cover" /> : <span aria-hidden="true">—</span>}
       </div>
       <div className="flex flex-wrap gap-2">
         <input ref={input} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])} />
         <button type="button" className={button} disabled={!patient.photos_enabled || upload.isPending} onClick={() => input.current?.click()}>
           <Upload className="size-4" aria-hidden="true" />
-          {patient.has_photo ? "Change photo" : "Add a photo"}
+          {patient.has_photo ? t.elderPanels.privacy.changePhoto : t.elderPanels.privacy.addPhoto}
         </button>
         {patient.has_photo && (
           <button type="button" className={button} disabled={remove.isPending} onClick={() => remove.mutate()}>
             <Trash2 className="size-4" aria-hidden="true" />
-            Remove photo
+            {t.elderPanels.privacy.removePhoto}
           </button>
         )}
-        {!patient.photos_enabled && <p className="w-full text-ink-muted">Turn on photos below to add one.</p>}
-        {upload.isError && <p role="alert" className="w-full text-danger">{errorDetail(upload.error) ?? "Could not upload the photo."}</p>}
+        {!patient.photos_enabled && <p className="w-full text-ink-muted">{t.elderPanels.privacy.turnOnPhotos}</p>}
+        {upload.isError && <p role="alert" className="w-full text-danger">{errorDetail(upload.error) ?? t.elderPanels.privacy.uploadFailed}</p>}
       </div>
     </div>
   );
@@ -116,32 +117,29 @@ function PhotosConsent({ patient }: { patient: Patient }) {
           disabled={toggle.isPending}
           onChange={(e) => (e.target.checked ? toggle.mutate(true) : setConfirmOff(true))}
         />
-        Family photos (separate consent)
+        {t.elderPanels.privacy.photos}
       </label>
       <p className="text-ink-muted">
-        Photos of family members for “Who is this?”, and a photo of {patient.name}. Only the people linked to {patient.name} can see them.
+        {t.elderPanels.privacy.photosIntro(patient.name)}
       </p>
       {confirmOff && (
-        <div role="alertdialog" aria-label="Turn off photos" className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
-          <p className="min-w-0 flex-1">Turning photos off withdraws the consent and deletes every family photo and the photo of {patient.name}. Names and relations stay. This cannot be undone.</p>
+        <div role="alertdialog" aria-label={t.elderPanels.privacy.photosOffAria} className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
+          <p className="min-w-0 flex-1">{t.elderPanels.privacy.photosOff(patient.name)}</p>
           <button type="button" onClick={() => toggle.mutate(false)} className="rounded-md bg-danger px-3 py-1 font-medium text-white">
-            Turn off and delete
+            {t.elderPanels.privacy.turnOffDelete}
           </button>
           <button type="button" onClick={() => setConfirmOff(false)} className="rounded-md border border-line-strong px-3 py-1">
-            Keep photos
+            {t.elderPanels.privacy.keepPhotos}
           </button>
         </div>
       )}
-      {toggle.isSuccess && toggle.data.deleted > 0 && <p className="text-calm">Deleted {toggle.data.deleted} photo(s).</p>}
+      {toggle.isSuccess && toggle.data.deleted > 0 && <p className="text-calm">{t.elderPanels.privacy.deletedPhotos(toggle.data.deleted)}</p>}
     </div>
   );
 }
 
 /** The research opt-in text, as recorded with the consent (backend services/research.py). */
-export const RESEARCH_TEXT =
-  "Use my family's anonymised data for research: game results and reminder ticks, under a random ID, " +
-  "with no names, photos, recordings or cities. You can withdraw at any time; exports made before you " +
-  "withdraw can't be called back.";
+export const RESEARCH_TEXT = t.elderPanels.privacy.researchText;
 
 function ResearchConsent({ patient }: { patient: Patient }) {
   const queryClient = useQueryClient();
@@ -161,10 +159,10 @@ function ResearchConsent({ patient }: { patient: Patient }) {
           disabled={!consents.isSuccess || toggle.isPending}
           onChange={(e) => toggle.mutate(e.target.checked)}
         />
-        Research (optional, separate consent)
+        {t.elderPanels.privacy.research}
       </label>
       <p className="text-ink-muted">{RESEARCH_TEXT}</p>
-      {toggle.isSuccess && <p className="text-calm">{on ? "Thank you. Research use is on." : "Research use is off. Later exports leave you out."}</p>}
+      {toggle.isSuccess && <p className="text-calm">{on ? t.elderPanels.privacy.researchOn : t.elderPanels.privacy.researchOff}</p>}
     </div>
   );
 }
@@ -178,22 +176,22 @@ function Devices({ patient }: { patient: Patient }) {
   const all = useMutation({ mutationFn: () => signOutAllDevices(patient.id), onSuccess: refresh });
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="font-semibold">Signed-in devices</h3>
-      {devices.isPending && <p className="text-ink-muted">Loading devices…</p>}
-      {devices.isError && <LoadError message="Could not load the devices." onRetry={() => void devices.refetch()} />}
-      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">No device is signed in yet. Make a 6-digit code under “Pair a device”.</p>}
+      <h3 className="font-semibold">{t.elderPanels.privacy.devices}</h3>
+      {devices.isPending && <p className="text-ink-muted">{t.elderPanels.privacy.loadingDevices}</p>}
+      {devices.isError && <LoadError message={t.elderPanels.privacy.devicesFailed} onRetry={() => void devices.refetch()} />}
+      {devices.isSuccess && devices.data.length === 0 && <p className="text-ink-muted">{t.elderPanels.privacy.noDevice}</p>}
       {devices.isSuccess && devices.data.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
           {devices.data.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
               <Smartphone className="size-4 text-ink-muted" aria-hidden="true" />
               <span className="min-w-0 flex-1">
-                <span className="font-medium">{d.device_label || "Device"}</span>
-                <span className="text-ink-muted"> · paired {day(d.created_at)} · last seen {when(d.last_seen_at)}</span>
+                <span className="font-medium">{d.device_label || t.elderPanels.privacy.device}</span>
+                <span className="text-ink-muted">{t.elderPanels.privacy.pairedSeen(day(d.created_at), when(d.last_seen_at))}</span>
               </span>
               <button type="button" className={button} disabled={revoke.isPending} onClick={() => revoke.mutate(d.id)}>
                 <LogOut className="size-4" aria-hidden="true" />
-                Revoke
+                {t.elderPanels.privacy.revoke}
               </button>
             </li>
           ))}
@@ -202,15 +200,15 @@ function Devices({ patient }: { patient: Patient }) {
       <div>
         <button type="button" className={button} disabled={all.isPending} onClick={() => all.mutate()}>
           <LogOut className="size-4" aria-hidden="true" />
-          Sign out all devices
+          {t.elderPanels.privacy.signOutAll}
         </button>
-        {all.isSuccess && <span className="ml-3 text-calm">Every device of {patient.name} is signed out.</span>}
+        {all.isSuccess && <span className="ml-3 text-calm">{t.elderPanels.privacy.allSignedOut(patient.name)}</span>}
       </div>
     </div>
   );
 }
 
-const SHARE_STATE: Record<string, string> = { open: "Waiting", used: "Joined", revoked: "Revoked", expired: "Expired" };
+const SHARE_STATE: Record<string, string> = t.elderPanels.privacy.shareStates;
 
 function Shares({ patient }: { patient: Patient }) {
   const queryClient = useQueryClient();
@@ -227,28 +225,28 @@ function Shares({ patient }: { patient: Patient }) {
   const revoke = useMutation({ mutationFn: (id: number) => revokeShare(patient.id, id), onSuccess: () => void queryClient.invalidateQueries({ queryKey: key }) });
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="font-semibold">Share with family</h3>
+      <h3 className="font-semibold">{t.elderPanels.privacy.share}</h3>
       <p className="text-ink-muted">
-        Invite another family member to look after {patient.name} with you. The link works once and for 14 days; if they have no account yet, it lets them create one.
+        {t.elderPanels.privacy.shareIntro(patient.name)}
       </p>
       <div>
         <button type="button" className={button} disabled={create.isPending} onClick={() => create.mutate()}>
           <Link2 className="size-4" aria-hidden="true" />
-          Create a share link
+          {t.elderPanels.privacy.createShare}
         </button>
       </div>
-      {made && <CopyLink url={linkUrl("share", made.token)} label={`Share link for ${patient.name}`} />}
+      {made && <CopyLink url={linkUrl("share", made.token)} label={t.elderPanels.privacy.shareLinkFor(patient.name)} />}
       {shares.isSuccess && shares.data.length > 0 && (
         <ul className="flex flex-col divide-y divide-line rounded-md border border-line">
           {shares.data.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
               <span className="min-w-0 flex-1">
-                Made {day(s.created_at)} · <span className="font-medium">{SHARE_STATE[s.state]}</span>
-                {s.state === "open" && <span className="text-ink-muted"> · until {day(s.expires_at)}</span>}
+                {t.elderPanels.privacy.made(day(s.created_at))}<span className="font-medium">{SHARE_STATE[s.state]}</span>
+                {s.state === "open" && <span className="text-ink-muted">{t.elderPanels.privacy.until(day(s.expires_at))}</span>}
               </span>
               {s.state === "open" && (
                 <button type="button" className={button} disabled={revoke.isPending} onClick={() => revoke.mutate(s.id)}>
-                  Revoke
+                  {t.elderPanels.privacy.revoke}
                 </button>
               )}
             </li>

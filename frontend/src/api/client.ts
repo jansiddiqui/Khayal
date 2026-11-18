@@ -114,7 +114,8 @@ export interface User {
   voice_task_enabled: boolean;
   /** When the voice task was turned on; null while it is off. */
   voice_consent_at: string | null;
-  /** Patients only: the app language a caregiver chose ("en", "hi", "ur"; Round 2 batch 5). */
+  /** The language this person's own screens show: for a patient the app language a caregiver chose
+   * ("en", "hi", "ur"; Round 2 batch 5), for a caregiver their own choice ("en", "hi"; batch 5b). */
   language?: string;
   /** Public demo only: when this account and its data are deleted. */
   demo_expires_at?: string | null;
@@ -246,6 +247,12 @@ export interface PairingCode {
 
 export async function createPairingCode(patientId: number): Promise<PairingCode> {
   const { data } = await api.post<PairingCode>(`/patients/${patientId}/pairing-code`);
+  return data;
+}
+
+/** A caregiver's own screen language (batch 5b; separate from each elder's language). */
+export async function setMyLanguage(language: "en" | "hi"): Promise<User> {
+  const { data } = await api.patch<User>("/auth/me", { language });
   return data;
 }
 
@@ -858,11 +865,23 @@ export async function deleteReminder(patientId: number, reminderId: number): Pro
 export type AlertType = "decline" | "missed_reminders" | "speech_risk" | "reminder_unsure";
 export type Severity = "info" | "warning" | "critical";
 
+/**
+ * Text the server writes (alerts, next actions, insights, timeline lines) also comes as message
+ * keys with values (batch 5b), so caregiver screens can show it in Hindi: render with
+ * `serverText(text, text_i18n)` from src/t.ts. Null = show the English text as it is.
+ */
+export interface ServerMsg {
+  key: string;
+  params: Record<string, string | number | string[]>;
+}
+export type ServerMsgs = ServerMsg[] | null;
+
 export interface Alert {
   id: number;
   patient_id: number;
   type: AlertType;
   message: string;
+  message_i18n?: ServerMsgs;
   severity: Severity;
   created_at: string;
   acknowledged: boolean;
@@ -1004,6 +1023,7 @@ export interface GameTrend {
   /** z before clipping to [−4, 4]. */
   z_raw: number | null;
   explanation: string;
+  explanation_i18n?: ServerMsgs;
   points: TrendPoint[];
 }
 
@@ -1107,7 +1127,7 @@ export interface Glance {
   medicines: { taken: number; missed: number; unsure: number; to_come: number };
   alerts_open: number;
   last_active_at: string | null;
-  next_action: { kind: NextActionKind; text: string };
+  next_action: { kind: NextActionKind; text: string; text_i18n?: ServerMsgs };
 }
 
 export interface Insight {
@@ -1115,6 +1135,8 @@ export interface Insight {
   tone: Tone;
   text: string;
   detail: string;
+  text_i18n?: ServerMsgs;
+  detail_i18n?: ServerMsgs;
 }
 
 export interface DoseWeek {
@@ -1151,6 +1173,8 @@ export interface TimelineEvent {
   kind: TimelineKind;
   title: string;
   detail: string;
+  title_i18n?: ServerMsgs;
+  detail_i18n?: ServerMsgs;
   tone: Tone;
   game_type: GameType | null;
 }

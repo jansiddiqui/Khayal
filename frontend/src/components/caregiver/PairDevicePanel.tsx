@@ -5,8 +5,9 @@ import { createPairingCode, listDevices } from "../../api/client";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
 import { serverDate } from "../../api/client";
+import { t, timeText } from "../../t";
 
-const timeOf = (iso: string) => serverDate(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const timeOf = (iso: string) => timeText(serverDate(iso));
 
 /**
  * "Pair a device": a one-time 6-digit code (valid 10 minutes) that the patient types on
@@ -30,7 +31,7 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
   }, [code.isSuccess, devices.data]);
   useEffect(() => {
     if (pairedNow) {
-      toast.show({ message: `${patientName}'s device is paired and signed in.` });
+      toast.show({ message: t.elderPanels.pair.paired(patientName) });
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
     }
   }, [pairedNow, patientName, toast, queryClient]);
@@ -39,31 +40,30 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
     <section aria-labelledby="pair-heading" className="flex flex-col gap-3">
       <h2 id="pair-heading" className="flex items-center gap-2 text-lg font-semibold">
         <Smartphone aria-hidden="true" className="size-5" />
-        Pair a device
+        {t.elderPanels.pair.title}
       </h2>
       <p className="text-sm text-ink-soft">
-        Sign in {patientName}'s own phone or tablet without a password. Open Khayal on that device, then type the
-        code shown here. The device stays signed in for 90 days.
+        {t.elderPanels.pair.intro(patientName)}
       </p>
       {pairedNow ? (
         <p role="status" className="flex items-center gap-2 font-medium text-success">
           <CircleCheck aria-hidden="true" className="size-5" />
-          Paired just now. {patientName}'s device is signed in.
+          {t.elderPanels.pair.pairedNow(patientName)}
         </p>
       ) : code.isSuccess && (
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <output
-            aria-label="Pairing code"
+            aria-label={t.elderPanels.pair.code}
             className="rounded-md border border-line bg-sunken px-3 py-1 font-mono text-3xl tracking-[0.3em] tabular-nums"
           >
             {code.data.code}
           </output>
-          <span className="text-sm text-ink-soft">Valid until {timeOf(code.data.expires_at)}, one use only. Waiting for the device…</span>
+          <span className="text-sm text-ink-soft">{t.elderPanels.pair.validUntil(timeOf(code.data.expires_at))}</span>
         </div>
       )}
       {code.isError && (
         <p role="alert" className="text-danger">
-          Could not create a code. Please try again.
+          {t.elderPanels.pair.failed}
         </p>
       )}
       <div>
@@ -76,7 +76,7 @@ export function PairDevicePanel({ patientId, patientName }: { patientId: number;
             code.mutate();
           }}
         >
-          {code.isSuccess ? "New code" : "Show pairing code"}
+          {code.isSuccess ? t.elderPanels.pair.newCode : t.elderPanels.pair.showCode}
         </Button>
       </div>
     </section>

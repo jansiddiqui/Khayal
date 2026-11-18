@@ -1,10 +1,11 @@
 import { motion } from "motion/react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Button } from "../ui/Button";
 import { FeedbackButton } from "./caregiver/FeedbackDialog";
 import { calm, DURATION, useLessMotion } from "../ui/motion";
+import { applyCaregiverDocument, t } from "../t";
 
 const navLink = ({ isActive }: { isActive: boolean }) =>
   `relative rounded-md px-2 py-1 transition-colors duration-150 ease-calm hover:bg-brand-soft hover:text-ink ${
@@ -19,6 +20,8 @@ export function CaregiverLayout({ title, meta, children }: { title: string; meta
   const { state, logout } = useAuth();
   const less = useLessMotion();
   const { pathname } = useLocation();
+  // Caregiver screens use the caregiver's own language, never the elder's (Round 2 batch 5b).
+  useEffect(applyCaregiverDocument, []);
 
   return (
     <div className="caregiver min-h-screen bg-desk text-sm text-ink">
@@ -26,29 +29,29 @@ export function CaregiverLayout({ title, meta, children }: { title: string; meta
         href="#content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:shadow-toast"
       >
-        Skip to content
+        {t.common.layout.skip}
       </a>
       <header className="border-b border-line bg-surface">
-        <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+        <nav aria-label={t.common.layout.mainNav} className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
           <Link to="/caregiver" className="mr-2 whitespace-nowrap text-lg font-bold text-brand-dark">
-            Khayal · Caregiver
+            {t.common.layout.brand}
           </Link>
           <NavLink to="/caregiver" end className={navLink}>
-            Dashboard
+            {t.common.layout.dashboard}
           </NavLink>
           <NavLink to="/caregiver/account" className={navLink}>
-            Account
+            {t.common.layout.account}
           </NavLink>
           {state.status === "authenticated" && state.user.is_admin && (
             <NavLink to="/admin" className={navLink}>
-              Admin
+              {t.common.layout.admin}
             </NavLink>
           )}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
             <FeedbackButton />
             {state.status === "authenticated" && <span className="whitespace-nowrap text-ink-soft">{state.user.name}</span>}
             <Button size="sm" onClick={logout}>
-              Sign out
+              {t.common.layout.signOut}
             </Button>
           </div>
         </nav>

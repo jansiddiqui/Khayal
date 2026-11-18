@@ -1,0 +1,432 @@
+// Caregiver words: the panels on the elder page (Round 2 batch 5b): insights, the weekly card, the
+// timeline, the trend charts, voice recordings, pairing a device, privacy, the elder's app language
+// and the games settings. English is the source; Hindi has the same shape.
+// Hindi style and glossary: ./common.ts.
+import type { GameType } from "../../../api/client";
+
+type LangName = "English" | "Hindi" | "Urdu";
+
+/** The domain each levelled game mainly tests (the same English as backend services/core_games.py). */
+const domains: Partial<Record<GameType, string>> = {
+  word_recall: "Verbal memory",
+  memory_match: "Visuospatial memory",
+  sequence_recall: "Working memory: order",
+  reaction_tap: "Speed and attention",
+  object_location: "Visuospatial memory: where things are",
+  spatial_span: "Visuospatial working memory",
+  money_handling: "Everyday function: money",
+  clock_setting: "Visuospatial and time",
+  colour_trails: "Attention and task switching",
+};
+
+export const en = {
+  insights: {
+    toneGood: "Good",
+    toneNeutral: "Note",
+    toneAttention: "Needs a look",
+    empty: "Nothing to say yet. Insights appear once there is a week of use.",
+    numbers: "Numbers",
+    hide: "Hide",
+  },
+  weekly: {
+    daysWithGame: "Days with a game",
+    gamesFinished: "Games finished",
+    roundsRight: "Rounds right (finished games)",
+    dosesTaken: "Medicine doses taken",
+    dosesMissed: "Doses missed or not sure",
+    remindersDone: "Reminders done",
+    alerts: "Alerts",
+    recordings: "Voice recordings",
+    daysGood: "Days feeling good",
+    daysNotSoGood: "Days feeling not so good",
+    same: "same as the week before",
+    /** "12 points higher than the week before" (a share, in percentage points). */
+    pointsChange: (n: number, up: boolean) => `${n} ${n === 1 ? "point" : "points"} ${up ? "higher" : "lower"} than the week before`,
+    /** "3 more than the week before". */
+    countChange: (n: number, up: boolean) => `${n} ${up ? "more" : "fewer"} than the week before`,
+    intro: (thisWeek: string, weekBefore: string) =>
+      `${thisWeek}, compared with ${weekBefore}. Rounds right also depends on the level, so a lower share can simply mean harder games.`,
+  },
+  timeline: {
+    games: "Games",
+    reminders: "Reminders",
+    alerts: "Alerts",
+    recordings: "Recordings",
+    mood: "Mood",
+    settings: "Settings changes",
+    show: "Show",
+    period: "Period",
+    lastDays: (days: number) => `Last ${days} days`,
+    chooseKind: "Choose at least one kind of event to show.",
+    loading: "Loading the timeline",
+    loadFailed: "Could not load the timeline.",
+    empty: (days: number) => `Nothing in the last ${days} days for these filters.`,
+    label: "Timeline",
+  },
+  charts: {
+    session: (n: number) => `Session ${n}`,
+    trend: (game: string) => `${game} trend`,
+    chart: (game: string) => `${game} chart`,
+    notEnough: "Not enough completed sessions to draw a trend.",
+    baseline: (mean: string) => `baseline ${mean}`,
+    average: "5-session average",
+    thisSession: "This session",
+    indexAria: "Overall cognitive index trend",
+    indexTitle: "Overall cognitive index",
+    indexIntro: (scale: string) => `Mean of the latest z-score across games with a baseline. One scale for each game and overall: ${scale}`,
+    indexNotYet: "The index appears once a game has 15 completed sessions.",
+    index: "Index",
+  },
+  voice: {
+    enabled: "Voice task enabled (separate consent)",
+    turnOffAria: "Turn off the voice task",
+    turnOffNone: (name: string) => `Turning this off withdraws the consent for ${name}. There are no recordings to delete.`,
+    turnOffSome: (name: string, count: number) =>
+      `Turning this off withdraws the consent and deletes ${count === 1 ? "the 1 recording" : `all ${count} recordings`} for ${name}. This cannot be undone.`,
+    turnOffDelete: "Turn off and delete",
+    keepOn: "Keep it on",
+    onSince: (when: string, name: string) =>
+      `Turned on ${when}. Once a week, ${name} is asked to describe a picture out loud; it replaces the third game that day.`,
+    off: (name: string) => `Off. When turned on, ${name} is asked once a week to describe a picture out loud, and the recording is kept here.`,
+    toggleFailed: "Could not change the voice task setting.",
+    loading: "Loading recordings…",
+    loadFailed: "Could not load the recordings.",
+    none: "No recordings yet.",
+    list: "Recordings",
+    length: (duration: string) => `Length ${duration}`,
+    analysisSoon: "Analysis coming soon",
+    recordingFrom: (when: string) => `Recording from ${when}`,
+    playFailed: "Could not load the recording.",
+    loadingShort: "Loading…",
+    play: "Play",
+  },
+  pair: {
+    paired: (name: string) => `${name}'s device is paired and signed in.`,
+    title: "Pair a device",
+    intro: (name: string) =>
+      `Sign in ${name}'s own phone or tablet without a password. Open Khayal on that device, then type the code shown here. The device stays signed in for 90 days.`,
+    pairedNow: (name: string) => `Paired just now. ${name}'s device is signed in.`,
+    code: "Pairing code",
+    validUntil: (time: string) => `Valid until ${time}, one use only. Waiting for the device…`,
+    failed: "Could not create a code. Please try again.",
+    newCode: "New code",
+    showCode: "Show pairing code",
+  },
+  privacy: {
+    copied: "Copied",
+    copy: "Copy",
+    sendYourself: "Send it yourself by WhatsApp or email. It works once, and is shown only now.",
+    photoOf: (name: string) => `Photo of ${name}`,
+    changePhoto: "Change photo",
+    addPhoto: "Add a photo",
+    removePhoto: "Remove photo",
+    turnOnPhotos: "Turn on photos below to add one.",
+    uploadFailed: "Could not upload the photo.",
+    photos: "Family photos (separate consent)",
+    photosIntro: (name: string) =>
+      `Photos of family members for “Who is this?”, and a photo of ${name}. Only the people linked to ${name} can see them.`,
+    photosOffAria: "Turn off photos",
+    photosOff: (name: string) =>
+      `Turning photos off withdraws the consent and deletes every family photo and the photo of ${name}. Names and relations stay. This cannot be undone.`,
+    turnOffDelete: "Turn off and delete",
+    keepPhotos: "Keep photos",
+    deletedPhotos: (n: number) => `Deleted ${n} photo(s).`,
+    research: "Research (optional, separate consent)",
+    researchText:
+      "Use my family's anonymised data for research: game results and reminder ticks, under a random ID, " +
+      "with no names, photos, recordings or cities. You can withdraw at any time; exports made before you " +
+      "withdraw can't be called back.",
+    researchOn: "Thank you. Research use is on.",
+    researchOff: "Research use is off. Later exports leave you out.",
+    devices: "Signed-in devices",
+    loadingDevices: "Loading devices…",
+    devicesFailed: "Could not load the devices.",
+    noDevice: "No device is signed in yet. Make a 6-digit code under “Pair a device”.",
+    device: "Device",
+    pairedSeen: (paired: string, seen: string) => ` · paired ${paired} · last seen ${seen}`,
+    revoke: "Revoke",
+    signOutAll: "Sign out all devices",
+    allSignedOut: (name: string) => `Every device of ${name} is signed out.`,
+    shareStates: { open: "Waiting", used: "Joined", revoked: "Revoked", expired: "Expired" } as Record<string, string>,
+    share: "Share with family",
+    shareIntro: (name: string) =>
+      `Invite another family member to look after ${name} with you. The link works once and for 14 days; if they have no account yet, it lets them create one.`,
+    createShare: "Create a share link",
+    shareLinkFor: (name: string) => `Share link for ${name}`,
+    made: (day: string) => `Made ${day} · `,
+    until: (day: string) => ` · until ${day}`,
+  },
+  language: {
+    names: { en: "English", hi: "Hindi", ur: "Urdu" } as Record<string, LangName>,
+    options: { en: "English", hi: "हिन्दी (Hindi)", ur: "اردو (Urdu)" },
+    title: (name: string) => `Language of ${name}'s app`,
+    label: "Language",
+    save: "Save",
+    intro:
+      "Screens, read aloud and the games' words. Their phone switches the next time the app comes to the front. Hindi and Urdu are drafts still being checked by a native speaker.",
+    saveFailed: "Could not save the language. Try again.",
+    notChecked: (name: string) => `${name}'s phone checks its read-aloud voices the next time the app opens.`,
+    noVoice: (name: string, lang: LangName, install: string, add: string) =>
+      `${name}'s phone has no ${lang} voice, so Read aloud stays silent. To add one: on Android, ` +
+      `Settings → Text-to-speech → Google → install ${install}; on Windows, ` +
+      `Settings → Time & language → Speech → add ${add}.`,
+    urduOrHindi: "Urdu or Hindi",
+    urduWithHindi: (name: string, voice: string) =>
+      `${name}'s phone has no Urdu voice, so Urdu is read aloud with a Hindi voice${voice}: the same spoken words. The screen stays in Urdu.`,
+    uses: (lang: LangName, name: string, voice: string) => `Read aloud uses a ${lang} voice on ${name}'s phone${voice}.`,
+  },
+  games: {
+    domains,
+    coreSaved: "Core games saved.",
+    coreDefault: "Core games are back to the default set.",
+    sameDomain: "Two of these test the same thing.",
+    coreTitle: "Core games",
+    coreIntro:
+      `These 4 games take turns in today's games and count for decline alerts and the overall status. Other games stay ` +
+      `available under "More games" and get their own chart, but never raise alerts. Changing a game starts its ` +
+      `baseline from the beginning (about 15 sessions).`,
+    defaultSet: "The default set.",
+    chosenByCaregiver: "Chosen by a caregiver.",
+    changeCore: "Change core games",
+    gameN: (n: number) => `Game ${n}`,
+    chooseDifferent: "Choose 4 different games.",
+    mixAllowed: "That's allowed; a mix of domains tracks more of the mind.",
+    saveCore: "Save core games",
+    useDefault: "Use the default set",
+    cancel: "Cancel",
+    coreFailed: "Could not save the core games.",
+    tutorialToast: (game: string) => `The ${game} tutorial will show the next time it's opened.`,
+    tutorialTitle: "Game tutorials",
+    tutorialIntro: "Each game shows a short spoken demo and a practice round the first time it's opened.",
+    game: "Game",
+    tutorialAgain: "Show the tutorial again",
+    tutorialFailed: "Could not save that just now.",
+    festivalsSaved: "Festivals saved.",
+    festivalsOff: "The festival question is off.",
+    festivalsTitle: "Festivals this family celebrates",
+    festivalsIntro:
+      `In the 30 days before a festival you tick, About Today asks "Which festival comes next?". It is off until you ` +
+      `tick at least one. This question is our own and is not a validated test item.`,
+    saveFestivals: "Save festivals",
+    festivalsFailed: "Could not save the festivals.",
+    hiddenToast: (n: number) => (n ? `${n} ${n === 1 ? "game is" : "games are"} hidden from More games.` : "No games are hidden."),
+    hiddenTitle: "Hide these games",
+    hiddenIntro:
+      "Games outside the core set come round in “More games”, 3 a day, each at least once every 3 days. Tick a game to " +
+      "hide it there and in “See other games”. Core games can't be hidden: change the core set first.",
+    saveHidden: "Save hidden games",
+    hiddenFailed: "Could not save the hidden games.",
+  },
+};
+
+export const hi: typeof en = {
+  insights: {
+    toneGood: "अच्छा",
+    toneNeutral: "जानकारी",
+    toneAttention: "एक नज़र देखें",
+    empty: "अभी बताने को कुछ नहीं है। एक हफ़्ते के इस्तेमाल के बाद यहाँ बातें दिखेंगी।",
+    numbers: "आँकड़े",
+    hide: "छिपाएँ",
+  },
+  weekly: {
+    daysWithGame: "जिन दिनों खेल खेला",
+    gamesFinished: "पूरे किए खेल",
+    roundsRight: "सही राउंड (पूरे किए खेलों में)",
+    dosesTaken: "दवाई की ली गई खुराक",
+    dosesMissed: "छूटी या पक्की नहीं खुराक",
+    remindersDone: "पूरे हुए रिमाइंडर",
+    alerts: "अलर्ट",
+    recordings: "आवाज़ की रिकॉर्डिंग",
+    daysGood: "मन अच्छा रहा (दिन)",
+    daysNotSoGood: "मन ज़्यादा अच्छा नहीं रहा (दिन)",
+    same: "पिछले हफ़्ते जितना",
+    pointsChange: (n: number, up: boolean) => `पिछले हफ़्ते से ${n} पॉइंट ${up ? "ज़्यादा" : "कम"}`,
+    countChange: (n: number, up: boolean) => `पिछले हफ़्ते से ${n} ${up ? "ज़्यादा" : "कम"}`,
+    intro: (thisWeek: string, weekBefore: string) =>
+      `${thisWeek}, ${weekBefore} के मुक़ाबले। सही राउंड लेवल पर भी निर्भर करते हैं, इसलिए कम हिस्से का मतलब बस कठिन खेल भी हो सकता है।`,
+  },
+  timeline: {
+    games: "खेल",
+    reminders: "रिमाइंडर",
+    alerts: "अलर्ट",
+    recordings: "रिकॉर्डिंग",
+    mood: "मन",
+    settings: "सेटिंग्स में बदलाव",
+    show: "दिखाएँ",
+    period: "समय",
+    lastDays: (days: number) => `पिछले ${days} दिन`,
+    chooseKind: "दिखाने के लिए कम से कम एक तरह की घटना चुनें।",
+    loading: "घटनाक्रम लोड हो रहा है",
+    loadFailed: "घटनाक्रम खुल नहीं पाया।",
+    empty: (days: number) => `इन फ़िल्टर के साथ पिछले ${days} दिनों में कुछ नहीं हुआ।`,
+    label: "घटनाक्रम",
+  },
+  charts: {
+    session: (n: number) => `सेशन ${n}`,
+    trend: (game: string) => `${game} का रुझान`,
+    chart: (game: string) => `${game} का चार्ट`,
+    notEnough: "रुझान दिखाने के लिए अभी पूरे किए सेशन काफ़ी नहीं हैं।",
+    baseline: (mean: string) => `सामान्य स्तर ${mean}`,
+    average: "5 सेशन का औसत",
+    thisSession: "यह सेशन",
+    indexAria: "कुल संज्ञानात्मक सूचकांक का रुझान",
+    indexTitle: "कुल संज्ञानात्मक सूचकांक",
+    indexIntro: (scale: string) =>
+      `जिन खेलों का सामान्य स्तर बन चुका है, उनके सबसे नए z-स्कोर का औसत। हर खेल और कुल के लिए एक ही पैमाना: ${scale}`,
+    indexNotYet: "किसी खेल के 15 सेशन पूरे होने पर सूचकांक दिखेगा।",
+    index: "सूचकांक",
+  },
+  voice: {
+    enabled: "आवाज़ वाला काम चालू (अलग सहमति)",
+    turnOffAria: "आवाज़ वाला काम बंद करें",
+    turnOffNone: (name: string) => `इसे बंद करने से ${name} की सहमति वापस हो जाएगी। हटाने के लिए कोई रिकॉर्डिंग नहीं है।`,
+    turnOffSome: (name: string, count: number) =>
+      `इसे बंद करने से सहमति वापस हो जाएगी और ${name} की ${count === 1 ? "1 रिकॉर्डिंग" : `सारी ${count} रिकॉर्डिंग`} हट जाएँगी। यह वापस नहीं हो सकता।`,
+    turnOffDelete: "बंद करें और हटाएँ",
+    keepOn: "चालू रहने दें",
+    onSince: (when: string, name: string) =>
+      `${when} को चालू किया। हफ़्ते में एक बार ${name} से एक तस्वीर के बारे में बोलकर बताने को कहा जाता है; उस दिन यह तीसरे खेल की जगह आता है।`,
+    off: (name: string) => `बंद है। चालू करने पर ${name} से हफ़्ते में एक बार एक तस्वीर के बारे में बोलकर बताने को कहा जाएगा, और रिकॉर्डिंग यहाँ रहेगी।`,
+    toggleFailed: "आवाज़ वाले काम की सेटिंग नहीं बदल पाई।",
+    loading: "रिकॉर्डिंग लोड हो रही हैं…",
+    loadFailed: "रिकॉर्डिंग खुल नहीं पाईं।",
+    none: "अभी कोई रिकॉर्डिंग नहीं है।",
+    list: "रिकॉर्डिंग",
+    length: (duration: string) => `लंबाई ${duration}`,
+    analysisSoon: "जाँच जल्द आएगी",
+    recordingFrom: (when: string) => `${when} की रिकॉर्डिंग`,
+    playFailed: "रिकॉर्डिंग खुल नहीं पाई।",
+    loadingShort: "लोड हो रहा है…",
+    play: "सुनें",
+  },
+  pair: {
+    paired: (name: string) => `${name} का फ़ोन जुड़ गया है और साइन इन है।`,
+    title: "फ़ोन जोड़ें",
+    intro: (name: string) =>
+      `बिना पासवर्ड के ${name} का अपना फ़ोन या टैबलेट साइन इन करें। उस फ़ोन पर ख़याल खोलें, फिर यहाँ दिखा कोड डालें। फ़ोन 90 दिन तक साइन इन रहेगा।`,
+    pairedNow: (name: string) => `अभी जुड़ गया। ${name} का फ़ोन साइन इन है।`,
+    code: "जोड़ने का कोड",
+    validUntil: (time: string) => `${time} तक चलेगा, सिर्फ़ एक बार। फ़ोन का इंतज़ार है…`,
+    failed: "कोड नहीं बन पाया। फिर से कोशिश करें।",
+    newCode: "नया कोड",
+    showCode: "जोड़ने का कोड दिखाएँ",
+  },
+  privacy: {
+    copied: "कॉपी हो गया",
+    copy: "कॉपी करें",
+    sendYourself: "इसे ख़ुद WhatsApp या ईमेल से भेजें। यह एक ही बार चलता है, और सिर्फ़ अभी दिख रहा है।",
+    photoOf: (name: string) => `${name} की फ़ोटो`,
+    changePhoto: "फ़ोटो बदलें",
+    addPhoto: "फ़ोटो जोड़ें",
+    removePhoto: "फ़ोटो हटाएँ",
+    turnOnPhotos: "फ़ोटो जोड़ने के लिए नीचे फ़ोटो चालू करें।",
+    uploadFailed: "फ़ोटो अपलोड नहीं हो पाई।",
+    photos: "परिवार की फ़ोटो (अलग सहमति)",
+    photosIntro: (name: string) =>
+      `“ये कौन हैं?” के लिए परिवार वालों की फ़ोटो, और ${name} की एक फ़ोटो। इन्हें सिर्फ़ ${name} से जुड़े लोग देख सकते हैं।`,
+    photosOffAria: "फ़ोटो बंद करें",
+    photosOff: (name: string) =>
+      `फ़ोटो बंद करने से सहमति वापस हो जाएगी और परिवार की हर फ़ोटो और ${name} की फ़ोटो हट जाएगी। नाम और रिश्ते रहेंगे। यह वापस नहीं हो सकता।`,
+    turnOffDelete: "बंद करें और हटाएँ",
+    keepPhotos: "फ़ोटो रहने दें",
+    deletedPhotos: (n: number) => `${n} फ़ोटो हटाई गईं।`,
+    research: "रिसर्च (अपनी मर्ज़ी से, अलग सहमति)",
+    researchText:
+      "मेरे परिवार का बिना पहचान वाला डेटा रिसर्च में इस्तेमाल करें: खेलों के नतीजे और रिमाइंडर के टिक, एक अनजान ID के साथ, " +
+      "बिना नाम, फ़ोटो, रिकॉर्डिंग या शहर के। आप कभी भी सहमति वापस ले सकते हैं; वापस लेने से पहले निकाले गए " +
+      "डेटा को वापस नहीं बुलाया जा सकता।",
+    researchOn: "शुक्रिया। रिसर्च में इस्तेमाल चालू है।",
+    researchOff: "रिसर्च में इस्तेमाल बंद है। आगे के डेटा में आप शामिल नहीं होंगे।",
+    devices: "साइन इन किए फ़ोन",
+    loadingDevices: "फ़ोन लोड हो रहे हैं…",
+    devicesFailed: "फ़ोन की सूची खुल नहीं पाई।",
+    noDevice: "अभी कोई फ़ोन साइन इन नहीं है। “फ़ोन जोड़ें” में 6 अंकों का कोड बनाएँ।",
+    device: "फ़ोन",
+    pairedSeen: (paired: string, seen: string) => ` · जोड़ा ${paired} · आख़िरी बार ${seen}`,
+    revoke: "हटाएँ",
+    signOutAll: "सारे फ़ोन साइन आउट करें",
+    allSignedOut: (name: string) => `${name} के सारे फ़ोन साइन आउट हो गए।`,
+    shareStates: { open: "इंतज़ार में", used: "जुड़ गए", revoked: "हटाया गया", expired: "समय ख़त्म" },
+    share: "परिवार के साथ साझा करें",
+    shareIntro: (name: string) =>
+      `परिवार के किसी और सदस्य को अपने साथ ${name} का ख़याल रखने के लिए बुलाएँ। लिंक एक बार और 14 दिन तक चलता है; अगर उनका खाता नहीं है, तो इससे वे खाता बना सकते हैं।`,
+    createShare: "साझा करने का लिंक बनाएँ",
+    shareLinkFor: (name: string) => `${name} के लिए साझा करने का लिंक`,
+    made: (day: string) => `${day} को बना · `,
+    until: (day: string) => ` · ${day} तक`,
+  },
+  language: {
+    names: { en: "English", hi: "Hindi", ur: "Urdu" },
+    options: { en: "English", hi: "हिन्दी (Hindi)", ur: "اردو (Urdu)" },
+    title: (name: string) => `${name} के ऐप की भाषा`,
+    label: "भाषा",
+    save: "सेव करें",
+    intro:
+      "स्क्रीन, पढ़कर सुनाना और खेलों के शब्द। ऐप अगली बार सामने आने पर उनका फ़ोन बदल जाएगा। हिन्दी और उर्दू अभी ड्राफ़्ट हैं, जिन्हें कोई मूल भाषी जाँच रहा है।",
+    saveFailed: "भाषा सेव नहीं हुई। फिर से कोशिश करें।",
+    notChecked: (name: string) => `ऐप अगली बार खुलने पर ${name} का फ़ोन पढ़कर सुनाने वाली आवाज़ें जाँचेगा।`,
+    noVoice: (name: string, lang: LangName, install: string, add: string) =>
+      `${name} के फ़ोन में ${HI_LANG[lang]} आवाज़ नहीं है, इसलिए पढ़कर सुनाना चुप रहता है। आवाज़ जोड़ने के लिए: Android पर ` +
+      `Settings → Text-to-speech → Google → ${install} इंस्टॉल करें; Windows पर ` +
+      `Settings → Time & language → Speech → ${add} जोड़ें।`,
+    urduOrHindi: "Urdu या Hindi",
+    urduWithHindi: (name: string, voice: string) =>
+      `${name} के फ़ोन में उर्दू आवाज़ नहीं है, इसलिए उर्दू हिन्दी आवाज़${voice} में पढ़ी जाती है: बोले गए शब्द वही रहते हैं। स्क्रीन उर्दू में ही रहती है।`,
+    uses: (lang: LangName, name: string, voice: string) => `${name} के फ़ोन पर पढ़कर सुनाने के लिए ${HI_LANG[lang]} आवाज़${voice} है।`,
+  },
+  games: {
+    domains: {
+      word_recall: "शब्दों की याददाश्त",
+      memory_match: "देखी चीज़ों की याददाश्त",
+      sequence_recall: "क्रम याद रखना",
+      reaction_tap: "फुर्ती और ध्यान",
+      object_location: "चीज़ें कहाँ रखी हैं, यह याद रखना",
+      spatial_span: "जगहों का क्रम याद रखना",
+      money_handling: "रोज़ के काम: पैसे",
+      clock_setting: "जगह की समझ और समय",
+      colour_trails: "ध्यान और एक काम से दूसरे पर जाना",
+    },
+    coreSaved: "मुख्य खेल सेव हो गए।",
+    coreDefault: "मुख्य खेल फिर से पहले वाले सेट पर हैं।",
+    sameDomain: "इनमें से दो एक ही चीज़ जाँचते हैं।",
+    coreTitle: "मुख्य खेल",
+    coreIntro:
+      `ये 4 खेल बारी-बारी से आज के खेलों में आते हैं और गिरावट के अलर्ट और कुल स्थिति में गिने जाते हैं। बाक़ी खेल ` +
+      `"और खेल" में मिलते रहते हैं और उनका अपना चार्ट बनता है, पर उनसे कभी अलर्ट नहीं आता। कोई खेल बदलने पर उसका ` +
+      `सामान्य स्तर शुरू से बनता है (लगभग 15 सेशन)।`,
+    defaultSet: "पहले से तय सेट।",
+    chosenByCaregiver: "परिवार ने चुना।",
+    changeCore: "मुख्य खेल बदलें",
+    gameN: (n: number) => `खेल ${n}`,
+    chooseDifferent: "4 अलग-अलग खेल चुनें।",
+    mixAllowed: "ऐसा चल सकता है; अलग-अलग तरह के खेल दिमाग़ के ज़्यादा हिस्से देखते हैं।",
+    saveCore: "मुख्य खेल सेव करें",
+    useDefault: "पहले से तय सेट लें",
+    cancel: "रद्द करें",
+    coreFailed: "मुख्य खेल सेव नहीं हुए।",
+    tutorialToast: (game: string) => `${game} का तरीका अगली बार खेल खुलने पर फिर दिखेगा।`,
+    tutorialTitle: "खेलों का तरीका",
+    tutorialIntro: "हर खेल पहली बार खुलने पर बोलकर छोटा सा तरीका दिखाता है और एक अभ्यास राउंड कराता है।",
+    game: "खेल",
+    tutorialAgain: "तरीका फिर से दिखाएँ",
+    tutorialFailed: "अभी यह सेव नहीं हुआ।",
+    festivalsSaved: "त्योहार सेव हो गए।",
+    festivalsOff: "त्योहार वाला सवाल बंद है।",
+    festivalsTitle: "यह परिवार कौन-से त्योहार मनाता है",
+    festivalsIntro:
+      `आपके टिक किए त्योहार से पहले के 30 दिनों में "आज के बारे में" पूछता है "अगला त्योहार कौन-सा है?"। जब तक आप कम से कम ` +
+      `एक टिक न करें, यह बंद रहता है। यह सवाल हमारा अपना है, कोई जाँचा-परखा टेस्ट नहीं।`,
+    saveFestivals: "त्योहार सेव करें",
+    festivalsFailed: "त्योहार सेव नहीं हुए।",
+    hiddenToast: (n: number) => (n ? `${n} खेल "और खेल" से छिपे हैं।` : "कोई खेल छिपा नहीं है।"),
+    hiddenTitle: "ये खेल छिपाएँ",
+    hiddenIntro:
+      "मुख्य खेलों के अलावा बाक़ी खेल “और खेल” में बारी-बारी से आते हैं, रोज़ 3, हर खेल हर 3 दिन में कम से कम एक बार। किसी खेल को " +
+      "वहाँ और “दूसरे खेल देखें” में छिपाने के लिए टिक करें। मुख्य खेल यहाँ नहीं छिपते: पहले मुख्य खेल बदलें।",
+    saveHidden: "छिपे खेल सेव करें",
+    hiddenFailed: "छिपे खेल सेव नहीं हुए।",
+  },
+};
+
+/** Language names inside Hindi sentences ("हिन्दी आवाज़"). */
+const HI_LANG: Record<LangName, string> = { English: "अंग्रेज़ी", Hindi: "हिन्दी", Urdu: "उर्दू" };

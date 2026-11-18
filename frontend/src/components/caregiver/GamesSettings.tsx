@@ -6,6 +6,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { useToast } from "../../ui/Toast";
 import { GAME_NAMES } from "./TrendCharts";
 import { copy } from "../../copy";
+import { t } from "../../t";
 import { FESTIVAL_IDS, type FestivalId } from "../../games/dailyOrientation/festivals";
 
 const CORE_SIZE = 4;
@@ -31,6 +32,11 @@ export function gameLabel(game: GameType, domain?: string): string {
   return domain ? `${base} (${domain})` : base;
 }
 
+/** A game's domain in the caregiver's language; the server's English when there is no translation. */
+function domainName(game: GameType, serverDomain: string): string {
+  return serverDomain ? (t.elderPanels.games.domains[game] ?? serverDomain) : "";
+}
+
 /**
  * The patient's core set (CLAUDE.md section 7, research.md D7): 4 levelled games that rotate
  * through Today's games and count for decline alerts and the overall status. Other games are
@@ -49,14 +55,14 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
       setChosen(updated.core_games);
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
       void queryClient.invalidateQueries({ queryKey: ["trend", patient.id] });
-      toast.show({ message: updated.core_is_default ? "Core games are back to the default set." : "Core games saved." });
+      toast.show({ message: updated.core_is_default ? t.elderPanels.games.coreDefault : t.elderPanels.games.coreSaved });
     },
   });
 
-  const domainOf = (g: GameType) => catalog.data?.find((c) => c.game_type === g)?.domain ?? "";
+  const domainOf = (g: GameType) => domainName(g, catalog.data?.find((c) => c.game_type === g)?.domain ?? "");
   const duplicates = chosen.length === CORE_SIZE && new Set(chosen).size < CORE_SIZE;
   const sameDomain =
-    !duplicates && catalog.isSuccess && new Set(chosen.map(domainOf)).size < chosen.length ? "Two of these test the same thing." : null;
+    !duplicates && catalog.isSuccess && new Set(chosen.map(domainOf)).size < chosen.length ? t.elderPanels.games.sameDomain : null;
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -66,12 +72,10 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3" aria-labelledby="core-games-heading">
       <h2 id="core-games-heading" className="text-lg font-semibold">
-        Core games
+        {t.elderPanels.games.coreTitle}
       </h2>
       <p className="max-w-prose text-ink-muted">
-        These 4 games take turns in today's games and count for decline alerts and the overall status. Other games stay
-        available under "More games" and get their own chart, but never raise alerts. Changing a game starts its
-        baseline from the beginning (about 15 sessions).
+        {t.elderPanels.games.coreIntro}
       </p>
       {!editing ? (
         <>
@@ -83,9 +87,9 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
               </li>
             ))}
           </ul>
-          <p className="text-ink-muted">{patient.core_is_default ? "The default set." : "Chosen by a caregiver."}</p>
+          <p className="text-ink-muted">{patient.core_is_default ? t.elderPanels.games.defaultSet : t.elderPanels.games.chosenByCaregiver}</p>
           <Button className="self-start" onClick={() => setEditing(true)}>
-            Change core games
+            {t.elderPanels.games.changeCore}
           </Button>
         </>
       ) : catalog.isPending ? (
@@ -96,7 +100,7 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
             {chosen.map((value, i) => (
               <div key={i} className="flex flex-col gap-1">
                 <label htmlFor={`core-${i}`} className="text-ink-soft">
-                  Game {i + 1}
+                  {t.elderPanels.games.gameN(i + 1)}
                 </label>
                 <select
                   id={`core-${i}`}
@@ -106,22 +110,22 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
                 >
                   {(catalog.data ?? []).map((c) => (
                     <option key={c.game_type} value={c.game_type}>
-                      {gameLabel(c.game_type, c.domain)}
+                      {gameLabel(c.game_type, domainName(c.game_type, c.domain))}
                     </option>
                   ))}
                 </select>
               </div>
             ))}
           </div>
-          {duplicates && <p className="text-accent-strong">Choose 4 different games.</p>}
-          {sameDomain && <p className="text-ink-muted">{sameDomain} That's allowed; a mix of domains tracks more of the mind.</p>}
+          {duplicates && <p className="text-accent-strong">{t.elderPanels.games.chooseDifferent}</p>}
+          {sameDomain && <p className="text-ink-muted">{sameDomain} {t.elderPanels.games.mixAllowed}</p>}
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="primary" loading={save.isPending && save.variables !== null} disabled={duplicates}>
-              Save core games
+              {t.elderPanels.games.saveCore}
             </Button>
             {!patient.core_is_default && (
               <Button onClick={() => save.mutate(null)} loading={save.isPending && save.variables === null}>
-                Use the default set
+                {t.elderPanels.games.useDefault}
               </Button>
             )}
             <Button
@@ -131,14 +135,14 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
                 setEditing(false);
               }}
             >
-              Cancel
+              {t.elderPanels.games.cancel}
             </Button>
           </div>
         </>
       )}
       {save.isError && (
         <p role="alert" className="text-danger">
-          Could not save the core games.
+          {t.elderPanels.games.coreFailed}
         </p>
       )}
     </form>
@@ -151,7 +155,7 @@ export function TutorialAgainForm({ patientId, games }: { patientId: number; gam
   const [game, setGame] = useState<GameType>(games[0]!);
   const reset = useMutation({
     mutationFn: () => resetTutorial(patientId, game),
-    onSuccess: () => toast.show({ message: `The ${GAME_NAMES[game]} tutorial will show the next time it's opened.` }),
+    onSuccess: () => toast.show({ message: t.elderPanels.games.tutorialToast(GAME_NAMES[game]) }),
   });
   return (
     <form
@@ -161,12 +165,12 @@ export function TutorialAgainForm({ patientId, games }: { patientId: number; gam
         reset.mutate();
       }}
     >
-      <h2 className="text-lg font-semibold">Game tutorials</h2>
-      <p className="text-ink-muted">Each game shows a short spoken demo and a practice round the first time it's opened.</p>
+      <h2 className="text-lg font-semibold">{t.elderPanels.games.tutorialTitle}</h2>
+      <p className="text-ink-muted">{t.elderPanels.games.tutorialIntro}</p>
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label htmlFor="tutorial-game" className="text-ink-soft">
-            Game
+            {t.elderPanels.games.game}
           </label>
           <select
             id="tutorial-game"
@@ -182,12 +186,12 @@ export function TutorialAgainForm({ patientId, games }: { patientId: number; gam
           </select>
         </div>
         <Button type="submit" loading={reset.isPending}>
-          Show the tutorial again
+          {t.elderPanels.games.tutorialAgain}
         </Button>
       </div>
       {reset.isError && (
         <p role="alert" className="text-danger">
-          Could not save that just now.
+          {t.elderPanels.games.tutorialFailed}
         </p>
       )}
     </form>
@@ -207,7 +211,7 @@ export function FestivalsForm({ patient }: { patient: Patient }) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
       toast.show({
-        message: updated.festivals?.length ? "Festivals saved." : "The festival question is off.",
+        message: updated.festivals?.length ? t.elderPanels.games.festivalsSaved : t.elderPanels.games.festivalsOff,
       });
     },
   });
@@ -221,10 +225,9 @@ export function FestivalsForm({ patient }: { patient: Patient }) {
       }}
     >
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-lg font-semibold">Festivals this family celebrates</legend>
+        <legend className="text-lg font-semibold">{t.elderPanels.games.festivalsTitle}</legend>
         <p className="max-w-prose text-ink-muted">
-          In the 30 days before a festival you tick, About Today asks "Which festival comes next?". It is off until you
-          tick at least one. This question is our own and is not a validated test item.
+          {t.elderPanels.games.festivalsIntro}
         </p>
         <div className="grid gap-x-6 gap-y-1 sm:grid-cols-3">
           {FESTIVAL_IDS.map((id: FestivalId) => (
@@ -245,11 +248,11 @@ export function FestivalsForm({ patient }: { patient: Patient }) {
         </div>
       </fieldset>
       <Button type="submit" className="self-start" loading={save.isPending} disabled={!changed}>
-        Save festivals
+        {t.elderPanels.games.saveFestivals}
       </Button>
       {save.isError && (
         <p role="alert" className="text-danger">
-          Could not save the festivals.
+          {t.elderPanels.games.festivalsFailed}
         </p>
       )}
     </form>
@@ -277,7 +280,7 @@ export function HiddenGamesForm({ patient }: { patient: Patient }) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
       const n = updated.hidden_games?.length ?? 0;
-      toast.show({ message: n ? `${n} ${n === 1 ? "game is" : "games are"} hidden from More games.` : "No games are hidden." });
+      toast.show({ message: t.elderPanels.games.hiddenToast(n) });
     },
   });
   const changed = [...hidden].sort().join() !== [...(patient.hidden_games ?? [])].sort().join();
@@ -290,10 +293,9 @@ export function HiddenGamesForm({ patient }: { patient: Patient }) {
       }}
     >
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-lg font-semibold">Hide these games</legend>
+        <legend className="text-lg font-semibold">{t.elderPanels.games.hiddenTitle}</legend>
         <p className="max-w-prose text-ink-muted">
-          Games outside the core set come round in “More games”, 3 a day, each at least once every 3 days. Tick a game to
-          hide it there and in “See other games”. Core games can't be hidden: change the core set first.
+          {t.elderPanels.games.hiddenIntro}
         </p>
         <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           {options.map((g) => (
@@ -314,11 +316,11 @@ export function HiddenGamesForm({ patient }: { patient: Patient }) {
         </div>
       </fieldset>
       <Button type="submit" className="self-start" loading={save.isPending} disabled={!changed}>
-        Save hidden games
+        {t.elderPanels.games.saveHidden}
       </Button>
       {save.isError && (
         <p role="alert" className="text-danger">
-          Could not save the hidden games.
+          {t.elderPanels.games.hiddenFailed}
         </p>
       )}
     </form>

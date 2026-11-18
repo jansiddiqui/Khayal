@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.models import AlertType, GameType, InviteRole, LEVELLED_GAMES, MarkedBy, ReminderRepeat, ReminderType, Role, Severity
-from app.services import core_games
+from app.services import core_games, messages
 from app.services.festivals import FestivalId
 from ml.adaptive.rule_based import BLOCK_SIZE
 
@@ -83,6 +83,12 @@ class InviteCheckOut(BaseModel):
     # Share links: the elder's first name, so the person knows whom they are joining.
     elder_name: str | None = None
     expires_at: datetime
+
+
+class MyLanguageIn(BaseModel):
+    """A caregiver's own screen language (Round 2 batch 5b), separate from each elder's language."""
+
+    language: Literal["en", "hi"]
 
 
 class ChangePasswordIn(BaseModel):
@@ -512,6 +518,16 @@ class AlertsAckOut(BaseModel):
     acknowledged: int
 
 
+class MsgOut(BaseModel):
+    """Server text as a message key with values (batch 5b; app/services/messages.py)."""
+
+    key: str
+    params: dict[str, str | int | list[str]]
+
+
+Msgs = list[MsgOut] | None
+
+
 class AlertOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -519,9 +535,18 @@ class AlertOut(BaseModel):
     patient_id: int
     type: AlertType
     message: str
+    # The stored English read back as messages, for caregiver screens in Hindi (None = unknown text).
+    message_i18n: Msgs = None
     severity: Severity
     created_at: datetime
     acknowledged: bool
+
+    @model_validator(mode="after")
+    def _messages(self) -> "AlertOut":
+        if self.message_i18n is None:
+            found = messages.parse_alert(self.message)
+            self.message_i18n = [MsgOut(key=m.key, params=m.params) for m in found] if found else None
+        return self
 
 
 class AdherenceOut(BaseModel):
@@ -591,7 +616,15 @@ class GameTrendOut(BaseModel):
     sessions_needed: int
     z_raw: float | None
     explanation: str
+    explanation_i18n: Msgs = None
     points: list[TrendPointOut]
+
+    @model_validator(mode="after")
+    def _messages(self) -> "GameTrendOut":
+        if self.explanation_i18n is None:
+            found = messages.parse_explanation(self.explanation)
+            self.explanation_i18n = [MsgOut(key=m.key, params=m.params) for m in found] if found else None
+        return self
 
 
 class IndexPointOut(BaseModel):
@@ -639,6 +672,7 @@ class DoseCountsOut(BaseModel):
 class NextActionOut(BaseModel):
     kind: Literal["check_dose", "missed_dose", "alerts", "pair", "add_reminders", "inactive", "all_good"]
     text: str
+    text_i18n: Msgs = None
 
 
 class GlanceOut(BaseModel):
@@ -658,6 +692,8 @@ class InsightOut(BaseModel):
     tone: Literal["good", "neutral", "attention"]
     text: str
     detail: str
+    text_i18n: Msgs = None
+    detail_i18n: Msgs = None
 
 
 class DoseWeekOut(BaseModel):
@@ -701,6 +737,8 @@ class TimelineEventOut(BaseModel):
     detail: str
     tone: Literal["good", "neutral", "attention"]
     game_type: GameType | None
+    title_i18n: Msgs = None
+    detail_i18n: Msgs = None
 
 
 class ReportPointOut(BaseModel):

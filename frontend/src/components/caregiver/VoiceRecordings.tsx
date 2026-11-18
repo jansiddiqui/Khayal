@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { LoadError } from "./LoadError";
 import { fetchAudioBlob, listRecordings, setElderConsent, type Patient, type SpeechSample } from "../../api/client";
 import { serverDate } from "../../api/client";
+import { dateTimeText, t } from "../../t";
 
 const when = (iso: string) =>
-  serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  dateTimeText(serverDate(iso), true);
 
 export function formatDuration(ms: number): string {
   const total = Math.round(ms / 1000);
@@ -43,42 +44,40 @@ export function VoiceRecordings({ patient }: { patient: Patient }) {
             disabled={toggle.isPending}
             onChange={(e) => (e.target.checked ? toggle.mutate(true) : setConfirmOff(true))}
           />
-          Voice task enabled (separate consent)
+          {t.elderPanels.voice.enabled}
         </label>
         {confirmOff && (
-          <div role="alertdialog" aria-label="Turn off the voice task" className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
+          <div role="alertdialog" aria-label={t.elderPanels.voice.turnOffAria} className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
             <p className="min-w-0 flex-1">
-              {count === 0
-                ? `Turning this off withdraws the consent for ${patient.name}. There are no recordings to delete.`
-                : `Turning this off withdraws the consent and deletes ${count === 1 ? "the 1 recording" : `all ${count} recordings`} for ${patient.name}. This cannot be undone.`}
+              {count === 0 ? t.elderPanels.voice.turnOffNone(patient.name) : t.elderPanels.voice.turnOffSome(patient.name, count)}
             </p>
             <button type="button" onClick={() => toggle.mutate(false)} className="rounded-md bg-danger px-3 py-1 font-medium text-white">
-              Turn off and delete
+              {t.elderPanels.voice.turnOffDelete}
             </button>
             <button type="button" onClick={() => setConfirmOff(false)} className="rounded-md border border-line-strong px-3 py-1">
-              Keep it on
+              {t.elderPanels.voice.keepOn}
             </button>
           </div>
         )}
         <p className="text-ink-muted">
           {patient.voice_task_enabled && patient.voice_consent_at
-            ? `Turned on ${when(patient.voice_consent_at)}. Once a week, ${patient.name} is asked to describe a picture out loud; it replaces the third game that day.`
-            : `Off. When turned on, ${patient.name} is asked once a week to describe a picture out loud, and the recording is kept here.`}
+            ? t.elderPanels.voice.onSince(when(patient.voice_consent_at), patient.name)
+            : t.elderPanels.voice.off(patient.name)}
         </p>
         {toggle.isError && (
           <p role="alert" className="text-danger">
-            Could not change the voice task setting.
+            {t.elderPanels.voice.toggleFailed}
           </p>
         )}
       </div>
 
-      {recordings.isPending && <p className="text-ink-muted">Loading recordings…</p>}
-      {recordings.isError && <LoadError message="Could not load the recordings." onRetry={() => void recordings.refetch()} />}
+      {recordings.isPending && <p className="text-ink-muted">{t.elderPanels.voice.loading}</p>}
+      {recordings.isError && <LoadError message={t.elderPanels.voice.loadFailed} onRetry={() => void recordings.refetch()} />}
       {recordings.isSuccess &&
         (recordings.data.length === 0 ? (
-          <p className="text-ink-muted">No recordings yet.</p>
+          <p className="text-ink-muted">{t.elderPanels.voice.none}</p>
         ) : (
-          <ul className="flex flex-col" aria-label="Recordings">
+          <ul className="flex flex-col" aria-label={t.elderPanels.voice.list}>
             {recordings.data.map((r) => (
               <li
                 key={r.id}
@@ -86,10 +85,10 @@ export function VoiceRecordings({ patient }: { patient: Patient }) {
               >
                 <span className="flex flex-col">
                   <span className="whitespace-nowrap font-medium">{when(r.recorded_at)}</span>
-                  <span className="text-ink-muted tabular-nums">Length {formatDuration(r.duration_ms)}</span>
+                  <span className="text-ink-muted tabular-nums">{t.elderPanels.voice.length(formatDuration(r.duration_ms))}</span>
                 </span>
                 <Playback recording={r} />
-                <span className="text-ink-muted">Analysis coming soon</span>
+                <span className="text-ink-muted">{t.elderPanels.voice.analysisSoon}</span>
               </li>
             ))}
           </ul>
@@ -117,9 +116,9 @@ function Playback({ recording }: { recording: SpeechSample }) {
   }, [blob.data]);
 
   if (objectUrl) {
-    return <audio controls autoPlay src={objectUrl} className="h-10 w-full max-w-xs" aria-label={`Recording from ${when(recording.recorded_at)}`} />;
+    return <audio controls autoPlay src={objectUrl} className="h-10 w-full max-w-xs" aria-label={t.elderPanels.voice.recordingFrom(when(recording.recorded_at))} />;
   }
-  if (blob.isError) return <span className="text-danger">Could not load the recording.</span>;
+  if (blob.isError) return <span className="text-danger">{t.elderPanels.voice.playFailed}</span>;
   return (
     <button
       type="button"
@@ -128,7 +127,7 @@ function Playback({ recording }: { recording: SpeechSample }) {
       className="inline-flex items-center gap-2 rounded-md border border-line-strong px-3 py-1.5 hover:bg-sunken disabled:text-ink-muted"
     >
       <Play aria-hidden="true" className="size-4" />
-      {wanted ? "Loading…" : "Play"}
+      {wanted ? t.elderPanels.voice.loadingShort : t.elderPanels.voice.play}
     </button>
   );
 }

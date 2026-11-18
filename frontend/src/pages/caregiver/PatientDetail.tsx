@@ -25,6 +25,7 @@ import {
   type GameType,
   type Signals,
   type Trend,
+  type ServerMsg,
 } from "../../api/client";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { LoadError } from "../../components/caregiver/LoadError";
@@ -33,7 +34,9 @@ import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
 import { PrivacyPanel } from "../../components/caregiver/PrivacyPanel";
 import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
 import { StatusBadge } from "../../components/caregiver/Status";
-import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
+import { GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
+import { cgEn } from "../../i18n/caregiver/en";
+import { CG_LANGUAGE, dateTimeText, gameName, LOCALE, renderMsg, serverText, t } from "../../t";
 import { Button } from "../../ui/Button";
 import { CountUp } from "../../ui/CountUp";
 import { Skeleton } from "../../ui/Skeleton";
@@ -54,7 +57,7 @@ function levelCell(s: GameSession): string {
 }
 
 function statusCell(s: GameSession): string {
-  return s.completed ? "Completed" : `Stopped early (${s.rounds_played}/${ROUNDS_PER_SESSION} rounds)`;
+  return s.completed ? t.elderPage.table.completed : t.elderPage.table.stoppedEarly(s.rounds_played, ROUNDS_PER_SESSION);
 }
 
 function CityForm({ patientId, city }: { patientId: number; city: string | null }) {
@@ -74,14 +77,14 @@ function CityForm({ patientId, city }: { patientId: number; city: string | null 
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
         <label htmlFor="patient-city" className="text-ink-soft">
-          Home city (used in Daily Orientation)
+          {t.elderPage.city.label}
         </label>
         <input
           id="patient-city"
           value={value}
           maxLength={80}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="e.g. Pune"
+          placeholder={t.elderPage.city.placeholder}
           className="rounded-md border border-line-strong px-3 py-2"
         />
       </div>
@@ -90,16 +93,16 @@ function CityForm({ patientId, city }: { patientId: number; city: string | null 
         disabled={save.isPending}
         className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-muted"
       >
-        {save.isPending ? "Saving…" : "Save city"}
+        {save.isPending ? t.common.actions.saving : t.elderPage.city.save}
       </button>
-      {save.isSuccess && <span className="text-calm">Saved.</span>}
+      {save.isSuccess && <span className="text-calm">{t.common.actions.saved}</span>}
       {save.isError && (
         <span role="alert" className="text-danger">
-          Could not save the city.
+          {t.elderPage.city.failed}
         </span>
       )}
       {!city && !save.isSuccess && (
-        <p className="w-full text-ink-muted">No city set: Daily Orientation asks for the year instead.</p>
+        <p className="w-full text-ink-muted">{t.elderPage.city.none}</p>
       )}
     </form>
   );
@@ -113,34 +116,57 @@ const SEVERITY_STYLE = {
 
 const ALERTS_SHOWN = 3;
 
-const STATUS_WORD: Record<IndexStatus, string> = { stable: "Stable", watch: "Watch", declining: "Declining", insufficient: "Learning" };
+const STATUS_WORD: Record<IndexStatus, string> = t.common.status;
 
 function gamesHint(attention: number): string {
-  if (attention === 0) return "No game needs attention; Declining games open by themselves.";
-  return `${attention} ${attention === 1 ? "game needs" : "games need"} attention; Declining charts are open.`;
+  if (attention === 0) return t.elderPage.page.gamesHintNone;
+  return t.elderPage.page.gamesHint(attention);
 }
 /** How long a chart stays highlighted after an alert links to it. */
 export const HIGHLIGHT_MS = 2000;
 
 const alertTime = (iso: string) =>
-  serverDate(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  dateTimeText(serverDate(iso));
 
-const ALERT_TYPE_LABEL = {
-  decline: "Decline",
-  missed_reminders: "Missed reminders",
-  speech_risk: "Speech",
-  reminder_unsure: "Not sure about a reminder",
-} as const;
+const ALERT_TYPE_LABEL = t.elderPage.alerts.types;
 
 /** A decline alert explains each declining game in its own sentence ending "(z = …)."; show one per line. */
 export function alertLines(message: string): string[] {
   return message.split(/(?<=\)\.)\s+/).filter(Boolean);
 }
 
-/** The game an alert line is about ("Word Recall average dropped …"), if any. */
+/** The game an English alert line is about ("Word Recall average dropped …"), if any. */
 export function gameOfLine(line: string): GameType | null {
-  const hit = (Object.entries(GAME_NAMES) as [GameType, string][]).find(([, name]) => line.startsWith(`${name} `));
+  const hit = (Object.entries(cgEn.common.games) as [GameType, string][]).find(([, name]) => line.startsWith(`${name} `));
   return hit ? hit[0] : null;
+}
+
+/** The game a server message is about: a decline explanation's `game` value. */
+function gameOfMsg(msg: ServerMsg): GameType | null {
+  const game = msg.params.game;
+  return msg.key.startsWith("decline.") && typeof game === "string" && game in cgEn.common.games ? (game as GameType) : null;
+}
+
+export interface AlertPart {
+  text: string;
+  game: GameType | null;
+}
+
+/**
+ * An alert's lines in the caregiver's language, each with the game it is about. With message keys
+ * (batch 5b) each message is one line and names its game; without them (older alerts) the English
+ * text is split into sentences and the game is found by its English name.
+ */
+export function alertParts(alert: Alert): AlertPart[] {
+  const msgs = alert.message_i18n;
+  const english = alertLines(alert.message);
+  if (msgs && msgs.length > 0) {
+    const translated = CG_LANGUAGE === "en" ? null : msgs.map(renderMsg);
+    const lines =
+      translated && translated.every((x): x is string => x !== null) ? translated : english.length === msgs.length ? english : null;
+    if (lines) return lines.map((text, i) => ({ text, game: gameOfMsg(msgs[i]!) ?? gameOfLine(english[i] ?? "") }));
+  }
+  return english.map((text) => ({ text, game: gameOfLine(text) }));
 }
 
 export interface AlertGroup {
@@ -161,7 +187,7 @@ const SEVERITY_RANK = { info: 0, warning: 1, critical: 2 } as const;
 export function groupAlerts(alerts: readonly Alert[]): AlertGroup[] {
   const keyOf = (a: Alert) => {
     if (a.type === "decline") {
-      const games = alertLines(a.message).map(gameOfLine).filter(Boolean).sort();
+      const games = alertParts(a).map((p) => p.game).filter(Boolean).sort();
       return `decline|${games.join(",") || a.message}`;
     }
     return a.type === "reminder_unsure" ? `unsure|${a.message}` : a.type;
@@ -175,7 +201,7 @@ export function groupAlerts(alerts: readonly Alert[]): AlertGroup[] {
   }));
 }
 
-const shortDay = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+const shortDay = (iso: string) => serverDate(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
 
 function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame: (game: GameType) => void }) {
   const queryClient = useQueryClient();
@@ -185,7 +211,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
     mutationFn: (ids: number[] | null) => acknowledgeAlerts(patientId, ids ?? undefined),
     onSuccess: (count) => {
       void queryClient.invalidateQueries({ queryKey: ["alerts", patientId] });
-      toast.show({ message: count === 1 ? "1 alert acknowledged." : `${count} alerts acknowledged.` });
+      toast.show({ message: t.elderPage.alerts.acked(count) });
     },
   });
   const [showAll, setShowAll] = useState(false);
@@ -198,31 +224,28 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
     <section id="alerts" className="mb-6 scroll-mt-20 rounded-lg border border-line bg-surface p-4" aria-labelledby="alerts-heading">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 id="alerts-heading" className="text-lg font-semibold">
-          Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
+          {open.length > 0 ? t.elderPage.alerts.titleNew(open.length) : t.elderPage.alerts.title}
         </h2>
         {open.length > 1 && (
           <Button size="sm" onClick={() => ack.mutate(null)} loading={ack.isPending && ack.variables === null} disabled={ack.isPending}>
-            Acknowledge all
+            {t.elderPage.alerts.ackAll}
           </Button>
         )}
       </div>
       {alerts.isPending && (
-        <div role="status" aria-busy="true" aria-label="Loading alerts" className="flex flex-col gap-2">
+        <div role="status" aria-busy="true" aria-label={t.elderPage.alerts.loading} className="flex flex-col gap-2">
           <Skeleton className="h-12 w-full" />
         </div>
       )}
-      {alerts.isError && <LoadError message="Could not load alerts." onRetry={() => void alerts.refetch()} />}
+      {alerts.isError && <LoadError message={t.elderPage.alerts.loadFailed} onRetry={() => void alerts.refetch()} />}
       {alerts.isSuccess && open.length === 0 && (
-        <p className="text-ink-muted">
-          No new alerts. A decline alert is sent only when a game stays below −1.5 for 3 sessions in a row, so a game can show
-          “Declining” for a session or two before an alert comes.
-        </p>
+        <p className="text-ink-muted">{t.elderPage.alerts.none}</p>
       )}
       <ul className="flex flex-col gap-2">
         {shown.map((g) => {
           const newest = g.alerts[0]!;
           const look = SEVERITY_STYLE[g.severity];
-          const lines = alertLines(newest.message);
+          const lines = alertParts(newest);
           const ids = g.alerts.map((a) => a.id);
           const repeated = g.alerts.length > 1;
           const oldest = g.alerts[g.alerts.length - 1]!;
@@ -231,19 +254,18 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
               <look.icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${look.iconClass}`} />
               <div className="min-w-[14rem] flex-1">
                 <p className="mb-1">
-                  <span className="font-semibold capitalize">{g.severity}</span>
+                  <span className="font-semibold capitalize">{t.elderPage.alerts.severity[g.severity]}</span>
                   <span className="text-ink-muted">
                     {" "}
                     · {ALERT_TYPE_LABEL[newest.type]} ·{" "}
                     {repeated
-                      ? `${g.alerts.length} alerts, ${shortDay(oldest.created_at)} – ${shortDay(newest.created_at)}`
+                      ? t.elderPage.alerts.repeated(g.alerts.length, shortDay(oldest.created_at), shortDay(newest.created_at))
                       : alertTime(newest.created_at)}
                   </span>
                 </p>
-                {repeated && <p className="mb-1 text-ink-soft">Latest:</p>}
+                {repeated && <p className="mb-1 text-ink-soft">{t.elderPage.alerts.latest}</p>}
                 <ul className={lines.length > 1 ? "flex list-disc flex-col gap-1 pl-5" : "flex flex-col gap-1"}>
-                  {lines.map((line) => {
-                    const game = gameOfLine(line);
+                  {lines.map(({ text: line, game }) => {
                     return (
                       <li key={line}>
                         {line}{" "}
@@ -254,7 +276,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
                             className="inline-flex items-center gap-1 text-left font-medium text-brand-dark underline underline-offset-2"
                           >
                             <ChartLine aria-hidden="true" className="size-4" />
-                            See {GAME_NAMES[game]} chart
+                            {t.elderPage.alerts.seeChart(gameName(game))}
                           </button>
                         )}
                       </li>
@@ -269,7 +291,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
                 loading={ack.isPending && ack.variables !== null && ack.variables?.[0] === ids[0]}
                 disabled={ack.isPending}
               >
-                {repeated ? `Acknowledge ${g.alerts.length}` : "Acknowledge"}
+                {repeated ? t.elderPage.alerts.ackN(g.alerts.length) : t.elderPage.alerts.ack}
               </Button>
             </li>
           );
@@ -277,16 +299,16 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
       </ul>
       {groups.length > ALERTS_SHOWN && (
         <button type="button" onClick={() => setShowAll(!showAll)} className="mt-2 text-brand-dark underline">
-          {showAll ? "Show newest only" : `Show ${groups.length - ALERTS_SHOWN} more`}
+          {showAll ? t.elderPage.alerts.showNewest : t.elderPage.alerts.showMore(groups.length - ALERTS_SHOWN)}
         </button>
       )}
       {past.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-ink-soft">Acknowledged ({past.length})</summary>
+          <summary className="cursor-pointer text-ink-soft">{t.elderPage.alerts.acknowledged(past.length)}</summary>
           <ul className="mt-2 flex flex-col gap-1 text-ink-muted">
             {past.map((a) => (
               <li key={a.id}>
-                {alertTime(a.created_at)} · {a.message}
+                {alertTime(a.created_at)} · {serverText(a.message, a.message_i18n)}
               </li>
             ))}
           </ul>
@@ -309,7 +331,7 @@ function PinForm({ patientId, pinned, options }: { patientId: number; pinned: Ga
     onSuccess: (_, pins) => {
       setChoosing(false);
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
-      toast.show({ message: pins ? `Pinned: ${GAME_NAMES[pins[0]!]} and ${GAME_NAMES[pins[1]!]}.` : "Games are automatic again." });
+      toast.show({ message: pins ? t.elderPage.pins.savedPins(gameName(pins[0]!), gameName(pins[1]!)) : t.elderPage.pins.savedAuto });
     },
   });
 
@@ -340,38 +362,38 @@ function PinForm({ patientId, pinned, options }: { patientId: number; pinned: Ga
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">Pin games</h2>
+      <h2 className="text-lg font-semibold">{t.elderPage.pins.title}</h2>
       <p className="text-ink-muted">
         {pinned
-          ? `Pinned: About Today, ${GAME_NAMES[pinned[0]!]}, ${GAME_NAMES[pinned[1]!]}.`
-          : "Automatic: About Today plus the two core games played least recently."}
+          ? t.elderPage.pins.pinnedNow(gameName(pinned[0]!), gameName(pinned[1]!))
+          : t.elderPage.pins.automatic}
       </p>
       {pinned || choosing ? (
         <div className="flex flex-wrap items-end gap-3">
-          {select("pin-slot-2", "Slot 2", first, setFirst)}
-          {select("pin-slot-3", "Slot 3", second, setSecond)}
+          {select("pin-slot-2", t.elderPage.pins.slot2, first, setFirst)}
+          {select("pin-slot-3", t.elderPage.pins.slot3, second, setSecond)}
           <Button type="submit" variant="primary" loading={save.isPending && save.variables !== null} disabled={first === second}>
-            Pin these games
+            {t.elderPage.pins.pin}
           </Button>
           {pinned ? (
             <Button onClick={() => save.mutate(null)} loading={save.isPending && save.variables === null}>
-              Unpin (automatic)
+              {t.elderPage.pins.unpin}
             </Button>
           ) : (
             <Button variant="quiet" onClick={() => setChoosing(false)}>
-              Cancel
+              {t.common.actions.cancel}
             </Button>
           )}
         </div>
       ) : (
         <Button className="self-start" onClick={() => setChoosing(true)}>
-          Choose games to pin
+          {t.elderPage.pins.choose}
         </Button>
       )}
-      {first === second && <p className="text-accent-strong">Choose two different games.</p>}
+      {first === second && <p className="text-accent-strong">{t.elderPage.pins.different}</p>}
       {save.isError && (
         <p role="alert" className="text-danger">
-          Could not save the pinned games.
+          {t.elderPage.pins.failed}
         </p>
       )}
     </form>
@@ -385,27 +407,27 @@ function SignalTiles({ signals }: { signals: Signals }) {
   const a = signals.adherence;
   const tiles = [
     {
-      label: "Stopped early",
+      label: t.elderPage.signals.stoppedEarly,
       value: percent(signals.stopped_early_rate),
-      note: `of ${signals.sessions} sessions`,
+      note: t.elderPage.signals.ofSessions(signals.sessions),
     },
-    { label: "Hints used", value: percent(signals.hint_rate), note: "of rounds played" },
+    { label: t.elderPage.signals.hints, value: percent(signals.hint_rate), note: t.elderPage.signals.ofRounds },
     {
-      label: "Reminder adherence",
+      label: t.elderPage.signals.adherence,
       value: percent(a.rate),
-      note: `marked by the patient (${a.done_by_patient} done, ${a.done_by_caregiver} by caregiver, ${a.missed} missed)`,
+      note: t.elderPage.signals.adherenceNote(a.done_by_patient, a.done_by_caregiver, a.missed),
     },
   ];
   return (
     <section aria-labelledby="signals-heading" className="flex flex-col gap-3">
       <h2 id="signals-heading" className="text-sm font-medium text-ink-muted">
-        Last {signals.days} days · for context, no alerts
+        {t.elderPage.signals.heading(signals.days)}
       </h2>
-      {tiles.map((t) => (
-        <div key={t.label} className="rounded-lg border border-line bg-surface p-4" role="group" aria-label={t.label}>
-          <p className="text-ink-muted">{t.label}</p>
-          <p className="text-2xl font-semibold">{t.value}</p>
-          <p className="text-sm text-ink-muted">{t.note}</p>
+      {tiles.map((tile) => (
+        <div key={tile.label} className="rounded-lg border border-line bg-surface p-4" role="group" aria-label={tile.label}>
+          <p className="text-ink-muted">{tile.label}</p>
+          <p className="text-2xl font-semibold">{tile.value}</p>
+          <p className="text-sm text-ink-muted">{tile.note}</p>
         </div>
       ))}
     </section>
@@ -475,49 +497,49 @@ export function PatientDetail() {
 
   if (patients.isError) {
     return (
-      <CaregiverLayout title="Patient">
-        <LoadError message="Could not load your patients." onRetry={() => void patients.refetch()} />
+      <CaregiverLayout title={t.elderPage.page.patient}>
+        <LoadError message={t.elderPage.page.loadPatientsFailed} onRetry={() => void patients.refetch()} />
       </CaregiverLayout>
     );
   }
   if (patients.isSuccess && !patient) {
     return (
-      <CaregiverLayout title="Patient not found">
-        <p className="mb-4">This patient is not linked to your account.</p>
+      <CaregiverLayout title={t.elderPage.page.notFound}>
+        <p className="mb-4">{t.elderPage.page.notLinked}</p>
         <Link to="/caregiver" className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          All patients
+          {t.elderPage.page.allPatients}
         </Link>
       </CaregiverLayout>
     );
   }
 
   return (
-    <CaregiverLayout title={patient?.name ?? "Patient"}>
+    <CaregiverLayout title={patient?.name ?? t.elderPage.page.patient}>
       <nav className="mb-4 flex flex-wrap gap-x-6 gap-y-2">
         <Link to="/caregiver" className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          All patients
+          {t.elderPage.page.allPatients}
         </Link>
         <Link to={`/caregiver/patients/${patientId}/reminders`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
-          Reminders
+          {t.elderPage.page.reminders}
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
         <Link to={`/caregiver/patients/${patientId}/family`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
-          Family photos
+          {t.elderPage.page.familyPhotos}
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
         <Link to={`/caregiver/patients/${patientId}/memories`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
-          Memory book
+          {t.elderPage.page.memoryBook}
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
         <button type="button" onClick={openSettings} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <Smartphone aria-hidden="true" className="size-4" />
-          Pair a device
+          {t.elderPage.page.pairDevice}
         </button>
         <Link to={`/caregiver/patients/${patientId}/report`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <FileText aria-hidden="true" className="size-4" />
-          Doctor report
+          {t.elderPage.page.doctorReport}
         </Link>
       </nav>
 
@@ -533,15 +555,15 @@ export function PatientDetail() {
 
       <section id="insights" aria-labelledby="insights-heading" className="mb-6 rounded-lg border border-line bg-surface p-4">
         <h2 id="insights-heading" className="mb-2 text-lg font-semibold">
-          In plain words
+          {t.elderPage.page.inPlainWords}
         </h2>
         {insights.isPending && (
-          <div role="status" aria-busy="true" aria-label="Loading insights" className="flex flex-col gap-2">
+          <div role="status" aria-busy="true" aria-label={t.elderPage.page.loadingInsights} className="flex flex-col gap-2">
             <Skeleton className="h-5 w-2/3" />
             <Skeleton className="h-5 w-1/2" />
           </div>
         )}
-        {insights.isError && <LoadError message="Could not load the insights." onRetry={() => void insights.refetch()} />}
+        {insights.isError && <LoadError message={t.elderPage.page.insightsFailed} onRetry={() => void insights.refetch()} />}
         {insights.isSuccess && <InsightsList insights={insights.data} />}
       </section>
 
@@ -550,33 +572,33 @@ export function PatientDetail() {
 
       <section id="week" aria-labelledby="week-heading" className="mb-6 scroll-mt-20 rounded-lg border border-line bg-surface p-4">
         <h2 id="week-heading" className="mb-1 text-lg font-semibold">
-          This week
+          {t.elderPage.page.thisWeek}
         </h2>
         {weekly.isPending && (
-          <div role="status" aria-busy="true" aria-label="Loading the weekly summary">
+          <div role="status" aria-busy="true" aria-label={t.elderPage.page.loadingWeekly}>
             <Skeleton className="h-24 w-full" />
           </div>
         )}
-        {weekly.isError && <LoadError message="Could not load the weekly summary." onRetry={() => void weekly.refetch()} />}
+        {weekly.isError && <LoadError message={t.elderPage.page.weeklyFailed} onRetry={() => void weekly.refetch()} />}
         {weekly.isSuccess && <WeeklySummary weekly={weekly.data} />}
       </section>
 
       <Section
-        title="Overall trend and signals"
-        hint={overallStatus ? `Overall: ${STATUS_WORD[overallStatus]}` : undefined}
+        title={t.elderPage.page.overallTrend}
+        hint={overallStatus ? t.common.status.overall(STATUS_WORD[overallStatus]) : undefined}
         defaultOpen={needsAttention(overallStatus)}
       >
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           {trend.isSuccess && <IndexChart trend={trend.data} />}
           {trend.isPending && (
-            <div role="status" aria-busy="true" aria-label="Loading trends">
+            <div role="status" aria-busy="true" aria-label={t.elderPage.page.loadingTrends}>
               <Skeleton className="h-[21rem] w-full" />
             </div>
           )}
-          {trend.isError && <LoadError message="Could not load the trends." onRetry={() => void trend.refetch()} />}
+          {trend.isError && <LoadError message={t.elderPage.page.trendsFailed} onRetry={() => void trend.refetch()} />}
           {signals.isSuccess && <SignalTiles signals={signals.data} />}
           {signals.isError && (
-            <LoadError message="Could not load the 14-day signals." onRetry={() => void signals.refetch()} />
+            <LoadError message={t.elderPage.page.signalsFailed} onRetry={() => void signals.refetch()} />
           )}
           <div className="lg:col-span-2">
             <MoodStrip patientId={patientId} />
@@ -597,18 +619,14 @@ export function PatientDetail() {
       )}
       {trend.isSuccess && (
         <Section
-          title="Games"
+          title={t.elderPage.page.games}
           hint={gamesHint(trackedTrends.filter((g) => needsAttention(g.trend_status)).length)}
           defaultOpen={trackedTrends.some((g) => needsAttention(g.trend_status))}
         >
           <div className="mb-3">
             <MoodStrip patientId={patientId} />
           </div>
-          <p className="mb-3 text-sm text-ink-muted">
-            Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
-            shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations). Across: sessions in order,
-            dated at each day's first session (hover a dot for its date and time).
-          </p>
+          <p className="mb-3 text-sm text-ink-muted">{t.elderPage.page.chartHelp}</p>
           <div className="grid items-start gap-4 lg:grid-cols-2">
             {trackedTrends.map((g) => (
               <GameTrendChart
@@ -621,10 +639,8 @@ export function PatientDetail() {
           </div>
           {moreTrends.length > 0 && (
             <>
-              <h3 className="mt-6 mb-1 text-base font-semibold">More games</h3>
-              <p className="mb-3 text-sm text-ink-muted">
-                Played outside the core set. Each has its own chart, but they don't count for alerts or the overall status.
-              </p>
+              <h3 className="mt-6 mb-1 text-base font-semibold">{t.elderPage.page.moreGames}</h3>
+              <p className="mb-3 text-sm text-ink-muted">{t.elderPage.page.moreGamesHelp}</p>
               <div className="grid items-start gap-4 lg:grid-cols-2">
                 {moreTrends.map((g) => (
                   <GameTrendChart
@@ -640,75 +656,75 @@ export function PatientDetail() {
         </Section>
       )}
 
-      <Section id="timeline" title="Timeline" hint="Games, reminders, alerts, recordings and settings changes, day by day">
+      <Section id="timeline" title={t.elderPage.page.timeline} hint={t.elderPage.page.timelineHint}>
         <div className="rounded-lg border border-line bg-surface p-4">
           <Timeline patientId={patientId} />
         </div>
       </Section>
 
       {sessions.isPending && (
-        <div role="status" aria-busy="true" aria-label="Loading sessions" className="flex flex-col gap-2">
+        <div role="status" aria-busy="true" aria-label={t.elderPage.page.loadingSessions} className="flex flex-col gap-2">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
         </div>
       )}
       {sessions.isError && (
-        <LoadError message="Could not load sessions for this patient." onRetry={() => void sessions.refetch()} />
+        <LoadError message={t.elderPage.page.sessionsFailed} onRetry={() => void sessions.refetch()} />
       )}
 
       {sessions.isSuccess && (
-        <Section title="Levels and session history" hint={`${sessions.data.length} sessions`}>
+        <Section title={t.elderPage.page.levelsAndHistory} hint={t.elderPage.page.sessionsCount(sessions.data.length)}>
         <div className="flex flex-col gap-6">
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {currentLevels.map(({ type, level, played }) => (
               <div key={type} className="rounded-lg border border-line bg-surface p-4">
-                <p className="text-ink-muted">{GAME_NAMES[type]}</p>
-                <p className="text-2xl font-semibold">Level {level} / 10</p>
-                {!played && <p className="text-ink-muted">Not played yet (starting level)</p>}
+                <p className="text-ink-muted">{gameName(type)}</p>
+                <p className="text-2xl font-semibold">{t.elderPage.page.level(level)}</p>
+                {!played && <p className="text-ink-muted">{t.elderPage.page.notPlayedStart}</p>}
               </div>
             ))}
           </section>
 
           <section className="overflow-x-auto rounded-lg border border-line bg-surface p-4">
-            <h2 className="mb-3 text-lg font-semibold">Session history</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t.elderPage.page.sessionHistory}</h2>
             {sessions.data.length === 0 ? (
-              <p className="text-ink-muted">No games played yet.</p>
+              <p className="text-ink-muted">{t.elderPage.page.noGames}</p>
             ) : (
               <>
                 <table role="table" className="stack-table w-full text-left">
                   <thead role="rowgroup" className="border-b border-line text-ink-muted">
                     <tr role="row">
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Date</th>
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Game</th>
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Status</th>
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Level</th>
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Correct</th>
-                      <th role="columnheader" className="py-2 pr-3 font-medium">Avg reaction</th>
-                      <th role="columnheader" className="py-2 font-medium">Hints</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.date}</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.game}</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.status}</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.level}</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.correct}</th>
+                      <th role="columnheader" className="py-2 pr-3 font-medium">{t.elderPage.table.reaction}</th>
+                      <th role="columnheader" className="py-2 font-medium">{t.elderPage.table.hints}</th>
                     </tr>
                   </thead>
                   <tbody role="rowgroup">
                     {rows.map((s) => (
                       <tr role="row" key={s.id} className="border-b border-line transition-colors duration-150 last:border-0 hover:bg-brand-soft/60">
-                        <td role="cell" data-label="Date" className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
-                        <td role="cell" data-label="Game" className="py-2 pr-3">{GAME_NAMES[s.game_type]}</td>
-                        <td role="cell" data-label="Status" className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
-                        <td role="cell" data-label="Level" className="py-2 pr-3">{levelCell(s)}</td>
-                        <td role="cell" data-label="Correct" className="py-2 pr-3">
+                        <td role="cell" data-label={t.elderPage.table.date} className="py-2 pr-3 whitespace-nowrap">{alertTime(s.started_at)}</td>
+                        <td role="cell" data-label={t.elderPage.table.game} className="py-2 pr-3">{gameName(s.game_type)}</td>
+                        <td role="cell" data-label={t.elderPage.table.status} className={`py-2 pr-3 ${s.completed ? "" : "text-accent-strong"}`}>{statusCell(s)}</td>
+                        <td role="cell" data-label={t.elderPage.table.level} className="py-2 pr-3">{levelCell(s)}</td>
+                        <td role="cell" data-label={t.elderPage.table.correct} className="py-2 pr-3">
                           {s.rounds_correct} / {s.rounds_played}
                         </td>
-                        <td role="cell" data-label="Avg reaction" className="py-2 pr-3">
-                          {s.avg_reaction_ms === null ? "—" : `${(s.avg_reaction_ms / 1000).toFixed(1)} s`}
+                        <td role="cell" data-label={t.elderPage.table.reaction} className="py-2 pr-3">
+                          {s.avg_reaction_ms === null ? "—" : t.elderPage.table.seconds((s.avg_reaction_ms / 1000).toFixed(1))}
                         </td>
-                        <td role="cell" data-label="Hints" className="py-2">{s.hints_used}</td>
+                        <td role="cell" data-label={t.elderPage.table.hints} className="py-2">{s.hints_used}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {sessions.data.length > SESSION_ROWS && (
                   <button type="button" onClick={() => setAllRows(!allRows)} className="mt-3 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
-                    {allRows ? "Show latest only" : `Show all ${sessions.data.length} sessions`}
+                    {allRows ? t.elderPage.page.showLatest : t.elderPage.page.showAll(sessions.data.length)}
                   </button>
                 )}
               </>
@@ -721,22 +737,22 @@ export function PatientDetail() {
       {patient && (
         <Section
           id="voice"
-          title="Voice recordings"
-          hint={patient.voice_task_enabled ? "Weekly picture description · on" : "Weekly picture description · off"}
+          title={t.elderPage.page.voice}
+          hint={patient.voice_task_enabled ? t.elderPage.page.voiceOn : t.elderPage.page.voiceOff}
         >
           <VoiceRecordings patient={patient} />
         </Section>
       )}
 
       {patient && (
-        <Section id="privacy" title="Privacy, devices and family" hint="Photo, photo and research consents, signed-in devices, share links">
+        <Section id="privacy" title={t.elderPage.page.privacy} hint={t.elderPage.page.privacyHint}>
           <PrivacyPanel patient={patient} />
         </Section>
       )}
 
       {patient && (
-        <Section id="settings" title="Settings" hint="Pair a device, language, home city, core games, pinned games, hidden games, festivals, tutorials">
-          <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
+        <Section id="settings" title={t.elderPage.page.settings} hint={t.elderPage.page.settingsHint}>
+          <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label={t.elderPage.page.settings}>
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
             <LanguageForm key={`lang-${patient.language ?? "en"}`} patient={patient} />
             <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
@@ -822,51 +838,51 @@ function SummaryCard({
   const latest = alerts.data?.find((a) => !a.acknowledged);
   const rate = signals?.adherence.rate;
   return (
-    <section aria-label="Summary" className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label={t.elderPage.summary.label} className="mb-6 grid gap-4 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
       <div>
-        <p className="text-ink-muted">Overall</p>
+        <p className="text-ink-muted">{t.elderPage.summary.overall}</p>
         {trend ? (
           <p className="flex items-center gap-3 text-lg">
             <StatusBadge status={trend.cognitive_status} />
           </p>
         ) : (
-          trendFailed ? <p className="text-ink-muted">Not available</p> : <Skeleton className="mt-1 h-6 w-32" />
+          trendFailed ? <p className="text-ink-muted">{t.elderPage.summary.notAvailable}</p> : <Skeleton className="mt-1 h-6 w-32" />
         )}
       </div>
       <div>
-        <p className="text-ink-muted">Latest alert</p>
+        <p className="text-ink-muted">{t.elderPage.summary.latestAlert}</p>
         {latest ? (
           <p className="line-clamp-2">
-            <span className="font-medium capitalize">{latest.severity}</span>
+            <span className="font-medium capitalize">{t.elderPage.alerts.severity[latest.severity]}</span>
             <span className="text-ink-muted"> · {alertTime(latest.created_at)}</span>
             <br />
-            {alertLines(latest.message)[0]}
+            {alertParts(latest)[0]?.text}
           </p>
         ) : (
-          alerts.isPending ? <Skeleton className="mt-1 h-6 w-40" /> : <p>{alerts.isSuccess ? "No new alerts" : "Not available"}</p>
+          alerts.isPending ? <Skeleton className="mt-1 h-6 w-40" /> : <p>{alerts.isSuccess ? t.elderPage.summary.noNewAlerts : t.elderPage.summary.notAvailable}</p>
         )}
       </div>
       <div>
-        <p className="text-ink-muted">Reminders done by the patient</p>
+        <p className="text-ink-muted">{t.elderPage.summary.remindersDone}</p>
         {rate === undefined && !signalsFailed ? (
           <Skeleton className="mt-1 h-7 w-16" />
         ) : (
           <p className="text-lg font-semibold tabular-nums">
-            {rate === undefined ? "Not available" : rate === null ? "—" : <CountUp value={Math.round(rate * 100)} format={(n) => `${Math.round(n)}%`} />}
+            {rate === undefined ? t.elderPage.summary.notAvailable : rate === null ? "—" : <CountUp value={Math.round(rate * 100)} format={(n) => `${Math.round(n)}%`} />}
           </p>
         )}
-        {signals && <p className="text-ink-muted">last {signals.adherence.days} days</p>}
+        {signals && <p className="text-ink-muted">{t.elderPage.summary.lastDays(signals.adherence.days)}</p>}
       </div>
       <div>
-        <p className="text-ink-muted">Last played</p>
+        <p className="text-ink-muted">{t.elderPage.summary.lastPlayed}</p>
         {lastSession ? (
           <p>
-            <span className="font-medium">{GAME_NAMES[lastSession.game_type]}</span>
+            <span className="font-medium">{gameName(lastSession.game_type)}</span>
             <br />
             <span className="text-ink-muted">{alertTime(lastSession.started_at)}</span>
           </p>
         ) : (
-          sessionsLoading ? <Skeleton className="mt-1 h-10 w-36" /> : <p className="text-ink-muted">Not played yet</p>
+          sessionsLoading ? <Skeleton className="mt-1 h-10 w-36" /> : <p className="text-ink-muted">{t.elderPage.summary.notPlayed}</p>
         )}
       </div>
     </section>

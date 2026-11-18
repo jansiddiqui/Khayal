@@ -15,6 +15,9 @@ import { calm, DURATION, useLessMotion } from "../../ui/motion";
 import { Skeleton } from "../../ui/Skeleton";
 import { EmptyState } from "../../ui/States";
 import { useToast } from "../../ui/Toast";
+import { t } from "../../t";
+
+const D = t.dashboard;
 
 /**
  * Add the elder you look after (CLAUDE.md section 11): no email for them; their device pairs
@@ -41,7 +44,7 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
     onSuccess: (elder) => {
       setAdded(elder);
       setTried(false);
-      toast.show({ message: `Added ${elder.name}. Next, pair their phone on their page.` });
+      toast.show({ message: D.addElder.addedToast(elder.name) });
       onAdded?.();
       setName("");
       setCity("");
@@ -55,7 +58,7 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
     },
   });
 
-  const first = name.trim().split(/\s+/)[0] || "they";
+  const first = name.trim().split(/\s+/)[0] || null;
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     setTried(true);
@@ -66,82 +69,86 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3" aria-labelledby="add-elder-title">
       <h2 id="add-elder-title" className="text-lg font-semibold">
-        Add the person you look after
+        {D.addElder.title}
       </h2>
-      <p className="text-ink-muted">No email is needed for them. Their phone or tablet signs in with a 6-digit code you make on their page.</p>
+      <p className="text-ink-muted">{D.addElder.intro}</p>
       <TextInput
-        label="Their name"
+        label={D.addElder.nameLabel}
         required
         maxLength={120}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        error={name.trim() ? null : "Please write their name, as the family calls them."}
+        error={name.trim() ? null : D.addElder.nameError}
         forceError={tried}
         autoComplete="off"
       />
       <TextInput
-        label="City (for the daily “About Today” game)"
+        label={D.addElder.cityLabel}
         maxLength={80}
         value={city}
         onChange={(e) => setCity(e.target.value)}
-        hint="Optional. Used for the question “Which city are you in?”."
+        hint={D.addElder.cityHint}
       />
 
       <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
-        <legend className="px-1 font-medium">Consent</legend>
+        <legend className="px-1 font-medium">{D.addElder.consentLegend}</legend>
         <label className="flex items-start gap-2">
           <input type="checkbox" required checked={guardian} onChange={(e) => setGuardian(e.target.checked)} className="mt-1 size-4 accent-brand" />
-          <span>I am a family member or the legal guardian of this person.</span>
+          <span>{D.addElder.guardian}</span>
         </label>
-        <div role="radiogroup" aria-label="On what basis" className="flex flex-col gap-1.5 pl-6">
+        <div role="radiogroup" aria-label={D.addElder.basisLabel} className="flex flex-col gap-1.5 pl-6">
           <label className="flex items-start gap-2">
             <input type="radio" name="basis" required checked={basis === "elder_agreed"} onChange={() => setBasis("elder_agreed")} className="mt-1 accent-brand" />
-            <span>{first === "they" ? "They" : first} agreed to use Khayal.</span>
+            <span>{D.addElder.agreed(first)}</span>
           </label>
           <label className="flex items-start gap-2">
             <input type="radio" name="basis" checked={basis === "legal_authority"} onChange={() => setBasis("legal_authority")} className="mt-1 accent-brand" />
-            <span>I am legally authorised to decide for them (for example a guardian appointed under Indian law).</span>
+            <span>{D.addElder.legal}</span>
           </label>
         </div>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2 rounded-md border border-line p-3">
-        <legend className="px-1 font-medium">Optional (you can change these later)</legend>
+        <legend className="px-1 font-medium">{D.addElder.optionalLegend}</legend>
         <label className="flex items-start gap-2">
           <input type="checkbox" checked={photos} onChange={(e) => setPhotos(e.target.checked)} className="mt-1 size-4 accent-brand" />
-          <span>Family photos, for “Who is this?” (stored privately; only linked family can see them).</span>
+          <span>{D.addElder.photos}</span>
         </label>
         {photos && (
           <label className="flex flex-col gap-1 pl-6">
-            <span className="text-ink-soft">A photo of them (optional)</span>
+            <span className="text-ink-soft">{D.addElder.photoOfThem}</span>
             <input type="file" accept="image/jpeg,image/png" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           </label>
         )}
         <label className="flex items-start gap-2">
           <input type="checkbox" checked={voice} onChange={(e) => setVoice(e.target.checked)} className="mt-1 size-4 accent-brand" />
-          <span>Weekly voice task: a short recording of them describing a picture.</span>
+          <span>{D.addElder.voice}</span>
         </label>
       </fieldset>
 
       <p className="text-ink-muted">
-        By adding them you agree to the <Link to="/privacy" className="underline">privacy policy</Link> on their behalf.
+        {D.addElder.privacyBefore}
+        <Link to="/privacy" className="underline">
+          {D.addElder.privacyLink}
+        </Link>
+        {D.addElder.privacyAfter}
       </p>
       <Button type="submit" variant="primary" icon={<UserPlus />} loading={add.isPending} disabled={!guardian || !basis} className="self-start">
-        Add
+        {D.addElder.add}
       </Button>
       {tried && (!guardian || !basis) && (
-        <p className="text-sm text-danger">Please confirm the consent above (both parts) before adding them.</p>
+        <p className="text-sm text-danger">{D.addElder.consentMissing}</p>
       )}
       {add.isError && (
         <p role="alert" className="text-danger">
-          {errorDetail(add.error) ?? "Could not add them. Try again."}
+          {errorDetail(add.error) ?? D.addElder.addFailed}
         </p>
       )}
       {added && (
         <p className="text-calm">
-          Added {added.name}.{" "}
+          {D.addElder.added(added.name)}{" "}
           <Link to={`/caregiver/patients/${added.id}#settings`} className="underline">
-            Pair their device
+            {D.addElder.pairDevice}
           </Link>
         </p>
       )}
@@ -172,7 +179,7 @@ export function CaregiverDashboard() {
 
   return (
     <CaregiverLayout
-      title="Dashboard"
+      title={D.page.title}
       meta={
         patients.isSuccess && (
           <LastUpdated updatedAt={patients.dataUpdatedAt} fetching={patients.isFetching} onRefresh={() => void patients.refetch()} />
@@ -183,25 +190,25 @@ export function CaregiverDashboard() {
         <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4" aria-labelledby="people-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="people-title" className="text-lg font-semibold">
-              Today at a glance
+              {D.page.glanceTitle}
             </h2>
             {!showForm && (
               <Button size="sm" icon={<UserPlus />} onClick={() => setAdding(true)}>
-                Add another person
+                {D.page.addAnother}
               </Button>
             )}
           </div>
           {patients.isPending && (
-            <div role="status" aria-busy="true" aria-label="Loading the people you look after" className="flex flex-col gap-3 py-1">
+            <div role="status" aria-busy="true" aria-label={D.page.loadingPeople} className="flex flex-col gap-3 py-1">
               {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-9 w-full" />
               ))}
             </div>
           )}
-          {patients.isError && <LoadError message="Could not load the people you look after." onRetry={() => void patients.refetch()} />}
+          {patients.isError && <LoadError message={D.page.loadFailed} onRetry={() => void patients.refetch()} />}
           {none && (
-            <EmptyState icon={<Users />} title="Nobody here yet">
-              Add the person you look after with the form. Then pair their phone with a 6-digit code.
+            <EmptyState icon={<Users />} title={D.page.emptyTitle}>
+              {D.page.emptyBody}
             </EmptyState>
           )}
           {patients.isSuccess && patients.data.length > 0 && (
@@ -212,8 +219,7 @@ export function CaregiverDashboard() {
             </div>
           )}
           <p className="text-sm text-ink-muted">
-            Overall status compares recent games with each person's own normal: Stable, Watch or Declining (Learning until there
-            are enough games). The numbers are on their page.
+            {D.page.statusHelp}
           </p>
           <Disclaimer />
         </section>
@@ -231,7 +237,7 @@ export function CaregiverDashboard() {
               <AddElderForm onAdded={() => setAdding(false)} />
               {!none && (
                 <Button size="sm" variant="quiet" className="self-start" onClick={() => setAdding(false)}>
-                  Close
+                  {D.page.close}
                 </Button>
               )}
             </motion.section>

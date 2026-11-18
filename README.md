@@ -355,6 +355,14 @@ Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back 
   - Needs the photos opt-in (and the voice opt-in for voice notes); withdrawing deletes them.
 - **Migration:** 0015 (`mood_checkins`, `memory_entries`). Back up `data/khayal.db`, then run `alembic upgrade head`.
 
+## Caregiver screens in Hindi (Round 2 batch 5b)
+
+- Each caregiver picks **English or हिन्दी** for their own screens in **Account → Language for your screens**. It is separate from each elder's app language, which is set on the elder's page.
+- Covered: dashboard, elder page, reminders, family photos, memory book and the doctor report. Account (apart from the language choice), admin and sign-in stay English for now.
+- Caregiver words: `frontend/src/i18n/caregiver/sections/*.ts` (read through `t` from `src/t.ts`). Text the server writes also comes as message keys (`backend/app/services/messages.py`), so alerts, insights and the timeline show in Hindi too, older ones included.
+- Review: `docs/i18n/review.md`, part "Hindi caregiver screens" (`npm run i18n:review`). Screenshots: `docs/i18n/caregiver-screens/`.
+- No migration (a caregiver's choice is stored in `users.language`).
+
 ## More games rotation (more-games-rotation)
 
 - **More games:** 3 games outside the core set, the same all day. A game left out on 2 days in a row comes next, so each appears at least once in any 3 days; the rest are least recently played first.

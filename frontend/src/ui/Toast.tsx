@@ -2,6 +2,7 @@ import { CircleCheck, Info, TriangleAlert, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { calm, DURATION, useLessMotion } from "./motion";
+import { t } from "../t";
 
 export type ToastTone = "success" | "info" | "error";
 
@@ -154,13 +155,13 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: (id: numbe
           }}
           className="touch-manipulation rounded-md px-2 py-1 font-semibold text-brand-dark underline-offset-2 transition-colors hover:bg-brand-soft hover:underline"
         >
-          Undo
+          {t.common.actions.undo}
         </button>
       )}
       <button
         type="button"
         onClick={() => onDismiss(item.id)}
-        aria-label="Close message"
+        aria-label={t.common.actions.closeMessage}
         className="rounded-md p-1 text-ink-muted transition-colors hover:bg-sunken hover:text-ink"
       >
         <X aria-hidden="true" className="size-4" />

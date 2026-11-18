@@ -19,7 +19,7 @@ import {
 import { useAppConfig } from "../../api/useAppConfig";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
-import { copy } from "../../copy";
+import { t, timeText } from "../../t";
 import { Button } from "../../ui/Button";
 import { CountUp } from "../../ui/CountUp";
 import { SelectInput, TextInput } from "../../ui/Field";
@@ -31,10 +31,10 @@ import { useUndoable } from "../../ui/undo";
 import { appNow, cleanInput, defaultRepeat, emptyReminder, formProblem, IST_MINUTES, scheduleSummary } from "./reminderSchedule";
 import { serverDate } from "../../api/client";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // 0 = Monday
+const WEEKDAYS = t.reminders.weekdays; // 0 = Monday
 const TYPES: ReminderType[] = ["medicine", "meal", "appointment", "other"];
 
-const clock = (iso: string) => serverDate(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const clock = (iso: string) => timeText(serverDate(iso));
 
 /**
  * Today's state in words, including "confirmed later" and "not sure" (CLAUDE.md section 6).
@@ -43,14 +43,15 @@ const clock = (iso: string) => serverDate(iso).toLocaleTimeString("en-IN", { hou
  */
 export function todayLabel(r: Reminder, nowHHMM?: string): string {
   if (r.today_status === null) return "—";
+  const w = t.reminders.today;
   if (r.today_status === "done") {
-    const by = r.today_marked_by === "caregiver" ? " (by caregiver)" : "";
-    return r.today_late && r.today_logged_at ? `Done, confirmed later at ${clock(r.today_logged_at)}${by}` : `Done${by}`;
+    const by = r.today_marked_by === "caregiver" ? w.byCaregiver : "";
+    return r.today_late && r.today_logged_at ? w.doneLate(clock(r.today_logged_at), by) : w.done(by);
   }
-  if (r.today_status === "unsure") return "Not sure (family told)";
-  if (r.today_status === "missed") return "Missed";
-  if (nowHHMM && minutes(nowHHMM) >= minutes(r.time_of_day) + 60) return "Not answered yet";
-  return "Pending";
+  if (r.today_status === "unsure") return w.unsure;
+  if (r.today_status === "missed") return w.missed;
+  if (nowHHMM && minutes(nowHHMM) >= minutes(r.time_of_day) + 60) return w.notAnswered;
+  return w.pending;
 }
 
 function minutes(hhmm: string): number {
@@ -60,10 +61,10 @@ function minutes(hhmm: string): number {
 
 /** Medicine only: how long it may still say "It's time for this" (null = the standard hour). */
 const LATE_WINDOWS: { value: string; label: string }[] = [
-  { value: "", label: "1 hour (standard)" },
-  { value: "120", label: "2 hours" },
-  { value: "180", label: "3 hours" },
-  { value: "240", label: "4 hours" },
+  { value: "", label: t.reminders.lateWindows.standard },
+  { value: "120", label: t.reminders.lateWindows.hours(2) },
+  { value: "180", label: t.reminders.lateWindows.hours(3) },
+  { value: "240", label: t.reminders.lateWindows.hours(4) },
 ];
 
 function AdherenceSummary({ patientId, patientName }: { patientId: number; patientName: string }) {
@@ -71,7 +72,7 @@ function AdherenceSummary({ patientId, patientName }: { patientId: number; patie
   // The card keeps its place while loading, so nothing below it jumps when it arrives.
   if (!adherence.isSuccess) {
     return (
-      <section className="mb-6 flex h-[8.5rem] flex-col gap-2 rounded-lg border border-line bg-surface p-4" aria-busy="true" aria-label="Loading adherence">
+      <section className="mb-6 flex h-[8.5rem] flex-col gap-2 rounded-lg border border-line bg-surface p-4" aria-busy="true" aria-label={t.reminders.adherence.loading}>
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-9 w-20" />
         <Skeleton className="h-4 w-80 max-w-full" />
@@ -79,31 +80,31 @@ function AdherenceSummary({ patientId, patientName }: { patientId: number; patie
     );
   }
   const a = adherence.data;
-  const extra = [a.done_late ? `${a.done_late} confirmed later` : null, a.unsure ? `${a.unsure} not sure` : null].filter(Boolean);
+  const w = t.reminders.adherence;
+  const extra = [a.done_late ? w.confirmedLater(a.done_late) : null, a.unsure ? w.notSure(a.unsure) : null].filter(Boolean);
   return (
     <section className="mb-6 flex min-h-[8.5rem] flex-col rounded-lg border border-line bg-surface p-4" aria-labelledby="adherence-heading">
       <h2 id="adherence-heading" className="text-lg font-semibold">
-        Adherence, last {a.days} days
+        {w.heading(a.days)}
       </h2>
       <p className="text-3xl font-semibold tabular-nums">
         {a.rate === null ? "—" : <CountUp value={Math.round(a.rate * 100)} format={(n) => `${Math.round(n)}%`} />}
       </p>
       <p className="text-ink-soft">
-        {a.done_by_patient} done by {patientName} · {a.done_by_caregiver} done by caregiver · {a.missed} missed
+        {w.counts(a.done_by_patient, patientName, a.done_by_caregiver, a.missed)}
         {extra.length > 0 && ` · ${extra.join(" · ")}`}
       </p>
       <p className="text-ink-muted">
-        Only reminders the patient marked done themself count toward the rate; "confirmed later" counts, and shows that it
-        wasn't on time.
+        {w.note}
       </p>
     </section>
   );
 }
 
 const REPEATS: { value: ReminderRepeat; label: string }[] = [
-  { value: "once", label: "Just once" },
-  { value: "daily", label: "Every day" },
-  { value: "weekly_days", label: "On some days" },
+  { value: "once", label: t.reminders.repeats.once },
+  { value: "daily", label: t.reminders.repeats.daily },
+  { value: "weekly_days", label: t.reminders.repeats.weekly_days },
 ];
 const field = "rounded-lg border border-line-strong bg-surface px-3 py-2 transition-colors hover:border-teal-600 focus:border-brand";
 
@@ -123,6 +124,7 @@ function ReminderForm({
   onCancel?: () => void;
   busy: boolean;
 }) {
+  const f = t.reminders.form;
   const offset = useAppConfig()?.utc_offset_minutes ?? IST_MINUTES;
   const today = appNow(offset).date;
   const [form, setForm] = useState<ReminderInput>(initial);
@@ -148,18 +150,18 @@ function ReminderForm({
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label={submitLabel}>
       <div className="flex flex-wrap gap-3">
         <TextInput
-          label="Title"
+          label={f.title}
           value={form.title}
           maxLength={120}
           required
           onChange={(e) => set({ title: e.target.value })}
-          error={form.title.trim() ? null : "Give it a short name, e.g. “Blood pressure tablet”."}
+          error={form.title.trim() ? null : f.titleError}
           forceError={tried}
           wrapperClassName="w-64"
           autoComplete="off"
         />
         <label className="flex flex-col gap-1">
-          <span className="text-ink-soft">Type</span>
+          <span className="text-ink-soft">{f.type}</span>
           <select
             value={form.type}
             onChange={(e) => {
@@ -168,9 +170,9 @@ function ReminderForm({
             }}
             className={field}
           >
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {copy.reminders.types[t]}
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.reminders.types[type]}
               </option>
             ))}
           </select>
@@ -178,7 +180,7 @@ function ReminderForm({
       </div>
 
       <fieldset className="flex flex-wrap items-center gap-2">
-        <legend className="mb-1 text-ink-soft">Repeats</legend>
+        <legend className="mb-1 text-ink-soft">{f.repeats}</legend>
         {REPEATS.map(({ value, label }) => (
           <label key={value} className={`flex items-center gap-2 rounded-md border px-3 py-1.5 ${form.repeat === value ? "border-brand bg-brand-soft" : "border-line"}`}>
             <input
@@ -199,29 +201,29 @@ function ReminderForm({
       <div className="flex flex-wrap items-end gap-3">
         {form.repeat === "once" && (
           <label className="flex flex-col gap-1">
-            <span className="text-ink-soft">Date</span>
+            <span className="text-ink-soft">{f.date}</span>
             <input type="date" required min={today} value={form.on_date ?? ""} onChange={(e) => set({ on_date: e.target.value || null })} className={field} />
           </label>
         )}
         <label className="flex flex-col gap-1">
-          <span className="text-ink-soft">Time</span>
+          <span className="text-ink-soft">{f.time}</span>
           <input type="time" required value={form.time_of_day} onChange={(e) => set({ time_of_day: e.target.value })} className={field} />
         </label>
         {form.repeat !== "once" && (
           <label className="flex flex-col gap-1">
-            <span className="text-ink-soft">Starts</span>
+            <span className="text-ink-soft">{f.starts}</span>
             <input type="date" required value={form.start_date ?? ""} onChange={(e) => set({ start_date: e.target.value || null })} className={field} />
           </label>
         )}
         <label className="flex items-center gap-2 pb-2">
           <input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} />
-          Active
+          {f.active}
         </label>
       </div>
 
       {form.repeat === "weekly_days" && (
         <fieldset className="flex flex-wrap items-center gap-2">
-          <legend className="mb-1 text-ink-soft">Days</legend>
+          <legend className="mb-1 text-ink-soft">{f.days}</legend>
           {WEEKDAYS.map((dayName, day) => (
             <label key={dayName} className="flex items-center gap-1 rounded-md border border-line px-2 py-1">
               <input type="checkbox" checked={form.days_of_week.includes(day)} onChange={() => toggleDay(day)} />
@@ -233,10 +235,10 @@ function ReminderForm({
 
       {form.repeat !== "once" && (
         <fieldset className="flex flex-wrap items-center gap-3">
-          <legend className="mb-1 text-ink-soft">Ends</legend>
+          <legend className="mb-1 text-ink-soft">{f.ends}</legend>
           <label className="flex items-center gap-2">
             <input type="radio" name={`${name}-ends`} checked={form.end_date === null} onChange={() => set({ end_date: null })} />
-            Until I stop it
+            {f.untilStopped}
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -245,12 +247,12 @@ function ReminderForm({
               checked={form.end_date !== null}
               onChange={() => set({ end_date: form.start_date && form.start_date > today ? form.start_date : today })}
             />
-            Ends on
+            {f.endsOn}
           </label>
           {form.end_date !== null && (
             <input
               type="date"
-              aria-label="Ends on date"
+              aria-label={f.endsOnDate}
               min={form.start_date ?? today}
               value={form.end_date}
               onChange={(e) => set({ end_date: e.target.value || null })}
@@ -262,11 +264,11 @@ function ReminderForm({
 
       {form.type === "medicine" && (
         <SelectInput
-          label="Safe late window"
+          label={f.lateWindow}
           wrapperClassName="max-w-md"
           value={form.late_window_minutes ? String(form.late_window_minutes) : ""}
           onChange={(e) => set({ late_window_minutes: e.target.value ? Number(e.target.value) : null })}
-          hint="How long after its time the reminder may still say “It's time for this”. After that it only asks whether it is done, and never suggests taking it. Ask the doctor if unsure: Khayal gives no medical advice."
+          hint={f.lateWindowHint}
         >
           {LATE_WINDOWS.map((w) => (
             <option key={w.value} value={w.value}>
@@ -281,7 +283,7 @@ function ReminderForm({
         <Button type="submit" variant="primary" disabled={!valid} loading={busy}>
           {submitLabel}
         </Button>
-        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
+        {onCancel && <Button onClick={onCancel}>{t.common.actions.cancel}</Button>}
       </div>
     </form>
   );
@@ -348,14 +350,15 @@ export function CaregiverReminders() {
     void queryClient.invalidateQueries({ queryKey: key });
     void queryClient.invalidateQueries({ queryKey: ["adherence", patientId] });
   };
-  const failed = (error: unknown) => toast.show({ tone: "error", message: `Could not save the change. ${errorDetail(error) ?? "Try again."}` });
+  const msg = t.reminders.toasts;
+  const failed = (error: unknown) => toast.show({ tone: "error", message: msg.saveFailed(errorDetail(error) ?? msg.tryAgain) });
 
   useEffect(() => {
     if (highlight === null) return;
     const row = document.getElementById(`reminder-${highlight}`);
     if (row && typeof row.scrollIntoView === "function") row.scrollIntoView({ block: "nearest", behavior: less ? "auto" : "smooth" });
-    const t = setTimeout(() => setHighlight(null), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setHighlight(null), 2000);
+    return () => clearTimeout(timer);
   }, [highlight, less]);
 
   // Optimistic: the list changes at once and rolls back with a message if the server refuses.
@@ -372,7 +375,7 @@ export function CaregiverReminders() {
       failed(error);
     },
     onSuccess: (created) => {
-      toast.show({ message: `Reminder added: ${created.title}, ${scheduleSummary(created, today)}.` });
+      toast.show({ message: msg.added(created.title, scheduleSummary(created, today)) });
       setHighlight(created.id);
       setAdding(false);
       setFormKey((k) => k + 1);
@@ -396,10 +399,10 @@ export function CaregiverReminders() {
       setHighlight(saved.id);
       toast.show({
         message: !toggled
-          ? `Saved: ${saved.title}.`
+          ? msg.saved(saved.title)
           : input.active
-            ? `Resumed: ${saved.title}.`
-            : `Paused: ${saved.title}. It won't be shown until you resume it.`,
+            ? msg.resumed(saved.title)
+            : msg.paused(saved.title),
       });
     },
     onSettled: refresh,
@@ -408,11 +411,11 @@ export function CaregiverReminders() {
   function remove(r: Reminder) {
     const before = snapshot();
     undoable({
-      message: `Reminder deleted: ${r.title}.`,
+      message: msg.deleted(r.title),
       apply: () => put(before?.filter((x) => x.id !== r.id)),
       revert: () => put(before),
       commit: () => deleteReminder(patientId, r.id),
-      failureMessage: `Could not delete “${r.title}”. It is back in the list.`,
+      failureMessage: msg.deleteFailed(r.title),
       onCommitted: refresh,
     });
   }
@@ -420,11 +423,15 @@ export function CaregiverReminders() {
   const current = reminders.data?.filter((r) => !r.past) ?? [];
   const past = reminders.data?.filter((r) => r.past) ?? [];
 
+  const row = t.reminders.row;
+  const page = t.reminders.page;
+  const cols = page.columns;
+  const firstName = patient?.name.split(" ")[0] ?? null;
   const rowActions = (r: Reminder, withEdit: boolean) => (
     <div className="flex flex-wrap gap-1">
       {withEdit && (
-        <Button size="sm" variant="quiet" icon={<Pencil />} onClick={() => setEditing(r.id)} aria-label={`Edit ${r.title}`}>
-          Edit
+        <Button size="sm" variant="quiet" icon={<Pencil />} onClick={() => setEditing(r.id)} aria-label={row.editLabel(r.title)}>
+          {row.edit}
         </Button>
       )}
       {withEdit && (
@@ -433,13 +440,13 @@ export function CaregiverReminders() {
           variant="quiet"
           icon={r.active ? <Pause /> : <Play />}
           onClick={() => update.mutate({ id: r.id, input: { ...toInput(r, today), active: !r.active }, toggled: true })}
-          aria-label={`${r.active ? "Pause" : "Resume"} ${r.title}`}
+          aria-label={r.active ? row.pauseLabel(r.title) : row.resumeLabel(r.title)}
         >
-          {r.active ? "Pause" : "Resume"}
+          {r.active ? row.pause : row.resume}
         </Button>
       )}
-      <Button size="sm" variant="danger-quiet" icon={<Trash2 />} onClick={() => remove(r)} aria-label={`Delete ${r.title}`}>
-        Delete
+      <Button size="sm" variant="danger-quiet" icon={<Trash2 />} onClick={() => remove(r)} aria-label={row.deleteLabel(r.title)}>
+        {row.delete}
       </Button>
     </div>
   );
@@ -450,22 +457,22 @@ export function CaregiverReminders() {
     } ${r.active ? "" : "text-ink-muted"} ${r.id < 0 ? "opacity-70" : ""}`;
 
   return (
-    <CaregiverLayout title={`Reminders${patient ? ` · ${patient.name}` : ""}`}>
+    <CaregiverLayout title={page.title(patient?.name ?? null)}>
       <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 text-brand-dark underline-offset-2 hover:underline">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Back to patient
+        {page.back}
       </Link>
 
-      <AdherenceSummary patientId={patientId} patientName={patient?.name.split(" ")[0] ?? "patient"} />
+      <AdherenceSummary patientId={patientId} patientName={firstName ?? page.patientFallback} />
 
       <section className="mb-6 overflow-x-auto rounded-lg border border-line bg-surface p-4" aria-labelledby="current-reminders">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 id="current-reminders" className="text-lg font-semibold">
-            Reminders
+            {page.heading}
           </h2>
           {!adding && (
             <Button variant="primary" size="sm" icon={<BellPlus />} onClick={() => setAdding(true)}>
-              Add a reminder
+              {page.add}
             </Button>
           )}
         </div>
@@ -483,7 +490,7 @@ export function CaregiverReminders() {
                 key={`${formKey}-${today}`}
                 initial={emptyReminder(today)}
                 isNew
-                submitLabel="Add reminder"
+                submitLabel={page.addSubmit}
                 busy={create.isPending}
                 onSubmit={(input) => create.mutate(input)}
                 onCancel={() => setAdding(false)}
@@ -492,35 +499,35 @@ export function CaregiverReminders() {
           )}
         </AnimatePresence>
         {reminders.isPending && (
-          <div role="status" aria-busy="true" aria-label="Loading reminders" className="flex flex-col gap-3">
+          <div role="status" aria-busy="true" aria-label={page.loading} className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-9 w-full" />
             ))}
           </div>
         )}
-        {reminders.isError && <LoadError message="Could not load reminders." onRetry={() => void reminders.refetch()} />}
+        {reminders.isError && <LoadError message={page.loadFailed} onRetry={() => void reminders.refetch()} />}
         {reminders.isSuccess && current.length === 0 && !adding && (
           <EmptyState
             icon={<BellPlus />}
-            title="No reminders yet"
+            title={page.emptyTitle}
             action={
               <Button variant="primary" size="sm" icon={<BellPlus />} onClick={() => setAdding(true)}>
-                Add the first reminder
+                {page.addFirst}
               </Button>
             }
           >
-            Medicine, meals or an appointment. {patient?.name.split(" ")[0] ?? "They"} sees them on Today's reminders.
+            {page.emptyBody(firstName)}
           </EmptyState>
         )}
         {current.length > 0 && (
           <table role="table" className="stack-table w-full text-left">
             <thead role="rowgroup" className="border-b border-line text-ink-muted">
               <tr role="row">
-                <th role="columnheader" className="py-2 pr-3 font-medium">Title</th>
-                <th role="columnheader" className="py-2 pr-3 font-medium">Type</th>
-                <th role="columnheader" className="py-2 pr-3 font-medium">When</th>
-                <th role="columnheader" className="py-2 pr-3 font-medium">Today</th>
-                <th role="columnheader" className="py-2 font-medium">Actions</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.title}</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.type}</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.when}</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.today}</th>
+                <th role="columnheader" className="py-2 font-medium">{cols.actions}</th>
               </tr>
             </thead>
             <tbody role="rowgroup">
@@ -531,7 +538,7 @@ export function CaregiverReminders() {
                       <ReminderForm
                         initial={toInput(r, today)}
                         isNew={false}
-                        submitLabel="Save changes"
+                        submitLabel={page.saveChanges}
                         busy={update.isPending}
                         onSubmit={(input) => update.mutate({ id: r.id, input })}
                         onCancel={() => setEditing(null)}
@@ -540,15 +547,15 @@ export function CaregiverReminders() {
                   </tr>
                 ) : (
                   <tr role="row" key={r.id} id={`reminder-${r.id}`} className={rowClass(r)}>
-                    <td role="cell" data-label="Title" className="py-2 pr-3 pl-1">
+                    <td role="cell" data-label={cols.title} className="py-2 pr-3 pl-1">
                       {r.title}
-                      {!r.active && " (paused)"}
+                      {!r.active && row.paused}
                     </td>
-                    <td role="cell" data-label="Type" className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
-                    <td role="cell" data-label="When" className="py-2 pr-3">{scheduleSummary(r, today)}</td>
+                    <td role="cell" data-label={cols.type} className="py-2 pr-3">{t.reminders.types[r.type]}</td>
+                    <td role="cell" data-label={cols.when} className="py-2 pr-3">{scheduleSummary(r, today)}</td>
                     <td
                       role="cell"
-                      data-label="Today"
+                      data-label={cols.today}
                       className={`py-2 pr-3 ${r.today_status === "missed" || r.today_status === "unsure" ? "font-medium text-accent-strong" : ""}`}
                     >
                       {todayLabel(r, appNow(offset).time)}
@@ -566,23 +573,23 @@ export function CaregiverReminders() {
 
       {past.length > 0 && (
         <section className="overflow-x-auto rounded-lg border border-line bg-surface p-4" aria-labelledby="past-reminders">
-          <h2 id="past-reminders" className="text-lg font-semibold">Past reminders</h2>
-          <p className="mb-3 text-ink-muted">Their day or end date has passed. They are kept with their done and missed history until you delete them.</p>
+          <h2 id="past-reminders" className="text-lg font-semibold">{page.pastHeading}</h2>
+          <p className="mb-3 text-ink-muted">{page.pastNote}</p>
           <table role="table" className="stack-table w-full text-left">
             <thead role="rowgroup" className="border-b border-line text-ink-muted">
               <tr role="row">
-                <th role="columnheader" className="py-2 pr-3 font-medium">Title</th>
-                <th role="columnheader" className="py-2 pr-3 font-medium">Type</th>
-                <th role="columnheader" className="py-2 pr-3 font-medium">When</th>
-                <th role="columnheader" className="py-2 font-medium">Actions</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.title}</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.type}</th>
+                <th role="columnheader" className="py-2 pr-3 font-medium">{cols.when}</th>
+                <th role="columnheader" className="py-2 font-medium">{cols.actions}</th>
               </tr>
             </thead>
             <tbody role="rowgroup">
               {past.map((r) => (
                 <tr role="row" key={r.id} id={`reminder-${r.id}`} className="border-b border-line text-ink-soft transition-colors last:border-0 hover:bg-brand-soft/60">
-                  <td role="cell" data-label="Title" className="py-2 pr-3 pl-1">{r.title}</td>
-                  <td role="cell" data-label="Type" className="py-2 pr-3">{copy.reminders.types[r.type]}</td>
-                  <td role="cell" data-label="When" className="py-2 pr-3">{scheduleSummary(r, today)}</td>
+                  <td role="cell" data-label={cols.title} className="py-2 pr-3 pl-1">{r.title}</td>
+                  <td role="cell" data-label={cols.type} className="py-2 pr-3">{t.reminders.types[r.type]}</td>
+                  <td role="cell" data-label={cols.when} className="py-2 pr-3">{scheduleSummary(r, today)}</td>
                   <td role="cell" className="py-1.5">{rowActions(r, false)}</td>
                 </tr>
               ))}

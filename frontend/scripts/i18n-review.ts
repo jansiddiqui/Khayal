@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { en } from "../src/i18n/en";
 import { hi } from "../src/i18n/hi";
 import { ur } from "../src/i18n/ur";
+import { cgEn, cgHi } from "../src/i18n/caregiver/en";
 
 const OUT = fileURLToPath(new URL("../../docs/i18n/review.md", import.meta.url));
 
@@ -24,6 +25,8 @@ const STRINGS: Record<string, string | string[] | boolean> = {
   hhmmss: "13:05:00",
   asWords: false,
   relation: "grandson",
+  items: ["{A}", "{B}", "{C}"],
+  hhmm: "13:05",
 };
 
 function paramNames(fn: (...args: never[]) => unknown): string[] {
@@ -100,6 +103,8 @@ function previousStatuses(): Map<string, string> {
     const cells = line.split(/(?<!\\)\|/).map((c) => c.trim());
     // | key | English | Hindi | Urdu | Hindi status | Urdu status |
     if (cells.length >= 8 && cells[1]?.startsWith("`")) out.set(cells[1].replace(/`/g, ""), `${cells[5]}|${cells[6]}`);
+    // | key | English | Hindi | Hindi status | (caregiver screens, keys "cg.")
+    else if (cells.length === 6 && cells[1]?.startsWith("`cg.")) out.set(cells[1].replace(/`/g, ""), cells[4] ?? "draft");
   }
   return out;
 }
@@ -150,15 +155,51 @@ if (leftover.length) {
   total += leftover.length;
   lines.push("");
 }
+// Caregiver screens (Round 2 batch 5b): English and Hindi only.
+const CG_GROUPS: [string, string][] = [
+  ["common", "Header and words used everywhere"],
+  ["dashboard", "Dashboard, adding an elder, today at a glance, feedback"],
+  ["elderPage", "Elder page: summary, alerts, status, mood strip"],
+  ["elderPanels", "Elder page: charts, insights, timeline, weekly card, settings, privacy, pairing"],
+  ["reminders", "Reminders"],
+  ["family", "Family photos"],
+  ["memoryBook", "Memory book"],
+  ["report", "Doctor report"],
+  ["account", "Account: screen language"],
+  ["server", "Written by the server (next actions, insights, timeline, alerts)"],
+];
+const cgRows: Row[] = [];
+walk("", cgEn, cgHi, cgHi, cgRows);
+lines.push(
+  "# Hindi caregiver screens: review",
+  "",
+  "**Status: draft — needs native-speaker review.** Round 2 batch 5b. Everyday spoken Hindi for family members",
+  "(loanwords families use stay: रिमाइंडर, अलर्ट, सेशन, फ़ोटो); the style and glossary are at the top of",
+  "`frontend/src/i18n/caregiver/sections/common.ts`. Change the text in that folder, then set the status here.",
+  "Account (apart from its language choice), admin and sign-in stay English for now.",
+  "",
+);
+let cgTotal = 0;
+for (const [section, title] of CG_GROUPS) {
+  const group = cgRows.filter((r) => r.key.startsWith(`${section}.`));
+  if (!group.length) continue;
+  lines.push(`## Caregiver: ${title}`, "", "| key | English | Hindi | Hindi status |", "|---|---|---|---|");
+  for (const r of group) {
+    const key = `cg.${r.key}`;
+    lines.push(`| \`${key}\` | ${esc(r.en)} | ${esc(r.hi)} | ${statuses.get(key) ?? "draft"} |`);
+    cgTotal++;
+  }
+  lines.push("");
+}
 lines.push(
   "## English on purpose",
   "",
   "Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing",
-  `screen, and the others are for family members (caregiver Hindi is batch 5b). Keys: ${ENGLISH_ONLY.map((p) => `\`${p}*\``).join(", ")}.`,
+  `screen, and the others are for family members. Keys: ${ENGLISH_ONLY.map((p) => `\`${p}*\``).join(", ")}.`,
   "",
-  `${total} strings to review.`,
+  `${total} patient strings and ${cgTotal} caregiver strings to review.`,
   "",
 );
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, lines.join("\n"), "utf8");
-console.log(`Wrote ${OUT} (${total} strings).`);
+console.log(`Wrote ${OUT} (${total} patient strings, ${cgTotal} caregiver strings).`);
