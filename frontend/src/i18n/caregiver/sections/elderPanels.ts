@@ -111,6 +111,15 @@ export const en = {
     failed: "Could not create a code. Please try again.",
     newCode: "New code",
     showCode: "Show pairing code",
+    qrLabel: (name: string) => `QR code to set up ${name}'s phone`,
+    scanHint: (name: string) =>
+      `Or scan this with ${name}'s phone camera, or send them the link: it opens Khayal with the code filled in.`,
+    linkLabel: "Pairing link",
+    copyLink: "Copy link",
+    copied: "Copied",
+    whatsapp: "Send on WhatsApp",
+    shareMessage: (name: string, url: string) => `Open this on ${name}'s phone to set up Khayal (works once, for 10 minutes): ${url}`,
+    linkNote: "The link holds the same one-time code: it works once and ends with the code.",
   },
   privacy: {
     copied: "Copied",
@@ -310,6 +319,15 @@ export const hi: typeof en = {
     failed: "कोड नहीं बन पाया। फिर से कोशिश करें।",
     newCode: "नया कोड",
     showCode: "जोड़ने का कोड दिखाएँ",
+    qrLabel: (name: string) => `${name} का फ़ोन जोड़ने का QR कोड`,
+    scanHint: (name: string) =>
+      `या ${name} के फ़ोन के कैमरे से इसे स्कैन करें, या उन्हें लिंक भेजें: लिंक खोलते ही ख़याल में कोड भरा मिलेगा।`,
+    linkLabel: "जोड़ने का लिंक",
+    copyLink: "लिंक कॉपी करें",
+    copied: "कॉपी हो गया",
+    whatsapp: "WhatsApp पर भेजें",
+    shareMessage: (name: string, url: string) => `ख़याल शुरू करने के लिए इसे ${name} के फ़ोन पर खोलें (एक बार, 10 मिनट तक चलेगा): ${url}`,
+    linkNote: "लिंक में वही एक बार वाला कोड है: एक ही बार चलेगा और कोड के साथ ख़त्म हो जाएगा।",
   },
   privacy: {
     copied: "कॉपी हो गया",

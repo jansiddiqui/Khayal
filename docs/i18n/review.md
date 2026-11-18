@@ -8,6 +8,26 @@ How to review: change the text in `hi.ts` / `ur.ts`, then set the status cell he
 short note). Re-running the script keeps the status cells. Text in `{curly brackets}` is filled in by the app
 (a name, a time, a price). Lines with a number in the key (`praise[2]`) are one of several variants.
 
+## Setting up the phone (pairing; in the elder's language when opened from the family's link)
+
+| key | English | Hindi | Urdu | Hindi status | Urdu status |
+|---|---|---|---|---|---|
+| `pair.title` | Set up this device | यह फ़ोन तैयार करें | <span dir="rtl">یہ فون تیار کریں</span> | draft | draft |
+| `pair.intro` | Ask your family member for the 6-digit code, then type it here. | अपने परिवार से 6 अंकों का कोड माँगिए, फिर उसे यहाँ लिखिए। | <span dir="rtl">اپنے گھر والوں سے 6 ہندسوں کا کوڈ مانگیے، پھر اسے یہاں لکھیے۔</span> | draft | draft |
+| `pair.codeLabel` | 6-digit code | 6 अंकों का कोड | <span dir="rtl">6 ہندسوں کا کوڈ</span> | draft | draft |
+| `pair.submit` | Start | शुरू करें | <span dir="rtl">شروع کریں</span> | draft | draft |
+| `pair.submitting` | Just a moment… | बस एक पल… | <span dir="rtl">بس ایک پل…</span> | draft | draft |
+| `pair.failed` | That code didn't work. Please check the 6 numbers and try again. If it still doesn't work, ask for a new code. | यह कोड नहीं चला। 6 अंक एक बार देख लीजिए और फिर से कोशिश कीजिए। फिर भी न चले, तो नया कोड माँग लीजिए। | <span dir="rtl">یہ کوڈ نہیں چلا۔ 6 ہندسے ایک بار دیکھ لیجیے اور پھر سے کوشش کیجیے۔ پھر بھی نہ چلے تو نیا کوڈ مانگ لیجیے۔</span> | draft | draft |
+| `pair.typed` | 2 of 6 numbers | 6 में से 2 अंक | <span dir="rtl">6 میں سے 2 ہندسے</span> | draft | draft |
+| `pair.readyTitle` | All set | सब तैयार है | <span dir="rtl">سب تیار ہے</span> | draft | draft |
+| `pair.ready` | This phone is now set up for {name}. | यह फ़ोन अब {name} के लिए तैयार है। | <span dir="rtl">یہ فون اب {name} کے لیے تیار ہے۔</span> | draft | draft |
+| `pair.readyStart` | Start | शुरू करें | <span dir="rtl">شروع کریں</span> | draft | draft |
+| `pair.tooMany` | Let's wait a few minutes, then try a new code. | कुछ मिनट रुकते हैं, फिर नया कोड आज़माइए। | <span dir="rtl">کچھ منٹ رکتے ہیں، پھر نیا کوڈ آزمائیے۔</span> | draft | draft |
+| `pair.unavailable` | We could not reach Khayal just now. Please try again in a moment. | अभी ख़याल से जुड़ नहीं पाए। थोड़ी देर में फिर कोशिश कीजिए। | <span dir="rtl">ابھی خیال سے جڑ نہیں پائے۔ تھوڑی دیر میں پھر کوشش کیجیے۔</span> | draft | draft |
+| `pair.caregiverLink` | Family member or doctor? Sign in with email | परिवार वाले या डॉक्टर? ईमेल से साइन इन करें | <span dir="rtl">گھر والے یا ڈاکٹر؟ ای میل سے سائن ان کریں</span> | draft | draft |
+| `pair.fromLinkIntro` | Your family sent this code. Just tap Start. | आपके परिवार ने यह कोड भेजा है। बस 'शुरू करें' दबाइए। | <span dir="rtl">آپ کے گھر والوں نے یہ کوڈ بھیجا ہے۔ بس 'شروع کریں' دبائیے۔</span> | draft | draft |
+| `pair.fromLinkCode` | Your code | आपका कोड | <span dir="rtl">آپ کا کوڈ</span> | draft | draft |
+
 ## Top bar (every screen) and common
 
 | key | English | Hindi | Urdu | Hindi status | Urdu status |
@@ -936,6 +956,14 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.elderPanels.pair.failed` | Could not create a code. Please try again. | कोड नहीं बन पाया। फिर से कोशिश करें। | draft |
 | `cg.elderPanels.pair.newCode` | New code | नया कोड | draft |
 | `cg.elderPanels.pair.showCode` | Show pairing code | जोड़ने का कोड दिखाएँ | draft |
+| `cg.elderPanels.pair.qrLabel` | QR code to set up {name}'s phone | {name} का फ़ोन जोड़ने का QR कोड | draft |
+| `cg.elderPanels.pair.scanHint` | Or scan this with {name}'s phone camera, or send them the link: it opens Khayal with the code filled in. | या {name} के फ़ोन के कैमरे से इसे स्कैन करें, या उन्हें लिंक भेजें: लिंक खोलते ही ख़याल में कोड भरा मिलेगा। | draft |
+| `cg.elderPanels.pair.linkLabel` | Pairing link | जोड़ने का लिंक | draft |
+| `cg.elderPanels.pair.copyLink` | Copy link | लिंक कॉपी करें | draft |
+| `cg.elderPanels.pair.copied` | Copied | कॉपी हो गया | draft |
+| `cg.elderPanels.pair.whatsapp` | Send on WhatsApp | WhatsApp पर भेजें | draft |
+| `cg.elderPanels.pair.shareMessage` | Open this on {name}'s phone to set up Khayal (works once, for 10 minutes): {url} | ख़याल शुरू करने के लिए इसे {name} के फ़ोन पर खोलें (एक बार, 10 मिनट तक चलेगा): {url} | draft |
+| `cg.elderPanels.pair.linkNote` | The link holds the same one-time code: it works once and ends with the code. | लिंक में वही एक बार वाला कोड है: एक ही बार चलेगा और कोड के साथ ख़त्म हो जाएगा। | draft |
 | `cg.elderPanels.privacy.copied` | Copied | कॉपी हो गया | draft |
 | `cg.elderPanels.privacy.copy` | Copy | कॉपी करें | draft |
 | `cg.elderPanels.privacy.sendYourself` | Send it yourself by WhatsApp or email. It works once, and is shown only now. | इसे ख़ुद WhatsApp या ईमेल से भेजें। यह एक ही बार चलता है, और सिर्फ़ अभी दिख रहा है। | draft |
@@ -1408,7 +1436,7 @@ Account (apart from its language choice), admin and sign-in stay English for now
 
 ## English on purpose
 
-Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing
-screen, and the others are for family members. Keys: `demo.*`, `pair.*`, `login.*`, `register.*`.
+The demo, sign-in and sign-up stay English: they are for family members. Pairing is in the elder's language when it is opened
+from the family's link or QR code (?lang=), and English otherwise. Keys: `demo.*`, `login.*`, `register.*`.
 
-438 patient strings and 808 caregiver strings to review.
+453 patient strings and 816 caregiver strings to review.

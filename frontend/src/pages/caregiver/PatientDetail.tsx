@@ -753,7 +753,7 @@ export function PatientDetail() {
       {patient && (
         <Section id="settings" title={t.elderPage.page.settings} hint={t.elderPage.page.settingsHint}>
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label={t.elderPage.page.settings}>
-            <PairDevicePanel patientId={patient.id} patientName={patient.name} />
+            <PairDevicePanel patientId={patient.id} patientName={patient.name} patientLanguage={patient.language} />
             <LanguageForm key={`lang-${patient.language ?? "en"}`} patient={patient} />
             <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
             <CoreGamesForm key={`core-${patient.core_games.join()}`} patient={patient} />

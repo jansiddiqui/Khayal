@@ -105,6 +105,13 @@ Our users are elderly people with memory problems. Every patient screen must fol
 - No important button below the fold at 375 × 812: every game board, every answer and every commit button ("Done", "Create account") is visible without scrolling. Game screens use a compact play mode for this.
 - No hidden timers (see section 7). Reaction Tap is the only game that measures speed.
 - **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
+- **Pairing is easy to find and fast (decided, branch `pair-entry`):**
+  - The landing page header has a "Pair a phone" button at every width (also in the phone menu), and the hero has an outlined "I have a code" next to "Request an invite" ("See how it works" moved to the small links below).
+  - With the code, the caregiver's pairing panel shows a QR code and a link `/pair?code=123456&lang=hi` (the elder's app language; none for English), with "Copy link" and, on phones, "Send on WhatsApp" (a `wa.me` link with the message ready).
+  - The link (or a scanned QR code) opens the pairing page with the code filled in and one big Start. If the code has run out or was used, the usual kind message and the code box come back.
+  - The code is the same one-time code: valid 10 minutes, one use, the same rate limits. No server change.
+  - The pairing page is now in Hindi and Urdu when opened from a link with `?lang=` (only on a device nobody is signed in on); otherwise English as before.
+  - QR codes come from `qrcode-generator` (MIT, no dependencies; approved), drawn as one SVG path in `components/caregiver/QrCode.tsx`.
 - **Fonts (approved dependencies):** `@fontsource/atkinson-hyperlegible` on the patient side, `@fontsource/inter` on the caregiver side.
 - **Patient game names:** "Find the Pairs" (Memory Match), "Follow the Colours" (Sequence Recall), "Remember the Words" (Word Recall), "About Today" (Daily Orientation), "Tap When Green" (Reaction Tap). Caregiver screens keep the clinical names.
 - Demo family photos are plain coloured silhouettes in palette colours (teal, saffron, deep brown), with no names or initials, so they never give away an answer.

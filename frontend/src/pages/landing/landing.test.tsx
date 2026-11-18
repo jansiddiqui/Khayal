@@ -41,6 +41,9 @@ describe("landing page", () => {
     for (const n of NAV) expect(within(header).getAllByText(n.label).length).toBeGreaterThan(0);
     expect(within(header).getByRole("link", { name: t.signIn })).toHaveAttribute("href", "/login");
     expect(within(header).getAllByRole("link", { name: t.requestInvite })[0]).toHaveAttribute("href", "#invite");
+    // pair-entry: "Pair a phone" in the header at every width, and "I have a code" beside the invite button.
+    expect(within(header).getByRole("link", { name: t.pairPhone })).toHaveAttribute("href", "/pair");
+    expect(within(header).getByRole("link", { name: t.pairPhone }).className).not.toMatch(/\bhidden\b/);
     expect(screen.getByRole("link", { name: t.hero.haveCode })).toHaveAttribute("href", "/pair");
     expect(screen.queryByRole("button", { name: t.hero.tryDemo })).not.toBeInTheDocument();
     expect(document.title).toBe(t.title);

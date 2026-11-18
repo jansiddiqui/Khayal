@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Menu, PlayCircle, X } from "lucide-react";
+import { ArrowDown, ArrowRight, KeyRound, Menu, PlayCircle, Smartphone, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
@@ -8,7 +8,7 @@ import { Logo, LogoMark } from "../../components/brand/Logo";
 import { landing as t, NAV } from "./content";
 import { EASE_OUT, goToSection } from "./motion";
 import { PhoneMock } from "./PhoneMock";
-import { primaryButton } from "./styles";
+import { primaryButton, secondaryButton } from "./styles";
 
 // Everything below the hero loads after first paint (and is fetched right away in the background).
 const loadSections = () => import("./Sections");
@@ -48,7 +48,7 @@ function Header() {
         scrolled ? "border-line shadow-[0_8px_20px_-16px_rgb(16_35_37_/_0.35)]" : "border-transparent"
       }`}
     >
-      <div className="mx-auto flex h-[3.6rem] max-w-[72rem] items-center gap-6 px-5 lg:px-10">
+      <div className="mx-auto flex h-[3.6rem] max-w-[72rem] items-center gap-2 px-4 sm:gap-6 sm:px-5 lg:px-10">
         <Link to="/" className="shrink-0 rounded-md" aria-label="Khayal, home">
           <Logo size={34} />
         </Link>
@@ -59,9 +59,14 @@ function Header() {
             </SectionLink>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3 lg:ml-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-3 lg:ml-2">
           <Link to="/login" className={`${link} hidden sm:inline-block`}>
             {t.signIn}
+          </Link>
+          {/* Every width (pair-entry): the quickest way in for someone holding the elder's phone. */}
+          <Link to="/pair" className={`${secondaryButton} min-h-[2.2rem] shrink-0 whitespace-nowrap px-2.5 text-[0.85rem] sm:px-3`}>
+            <Smartphone className="hidden size-[1.05em] min-[400px]:inline" aria-hidden="true" />
+            {t.pairPhone}
           </Link>
           {/* Wider screens only: on phones the hero's own button and the menu carry it. */}
           <span className="hidden sm:inline-flex">
@@ -95,6 +100,11 @@ function Header() {
             <li>
               <Link to="/login" className="block border-b border-line py-3 text-base font-bold">
                 {t.signIn}
+              </Link>
+            </li>
+            <li>
+              <Link to="/pair" className="block border-b border-line py-3 text-base font-bold">
+                {t.pairPhone}
               </Link>
             </li>
           </ul>
@@ -140,13 +150,13 @@ function Hero() {
               {t.requestInvite}
               <ArrowRight className="size-[1.1em]" aria-hidden="true" />
             </SectionLink>
-            <SectionLink
-              id="how"
+            <Link
+              to="/pair"
               className="inline-flex min-h-[2.8rem] items-center gap-2 rounded-full border-2 border-teal-200 px-6 text-[1.05rem] font-bold text-ivory transition-colors duration-150 hover:border-ivory hover:bg-teal-800 active:scale-[0.97] motion-reduce:active:scale-100"
             >
-              {t.hero.secondary}
-              <ArrowDown className="size-[1.1em]" aria-hidden="true" />
-            </SectionLink>
+              <KeyRound className="size-[1.1em]" aria-hidden="true" />
+              {t.hero.haveCode}
+            </Link>
           </motion.div>
         </div>
         <div className="relative lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1 lg:self-end">
@@ -170,9 +180,10 @@ function Hero() {
             {t.hero.pilot}
           </li>
           <li>
-            <Link to="/pair" className="font-bold text-ivory underline decoration-teal-300 underline-offset-[0.25em] hover:decoration-saffron-400">
-              {t.hero.haveCode}
-            </Link>
+            <SectionLink id="how" className="inline-flex items-center gap-1.5 font-bold text-ivory underline decoration-teal-300 underline-offset-[0.25em] hover:decoration-saffron-400">
+              {t.hero.secondary}
+              <ArrowDown className="size-[1.1em]" aria-hidden="true" />
+            </SectionLink>
           </li>
           {config?.demo_mode && (
             <li>

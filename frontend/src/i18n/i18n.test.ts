@@ -16,7 +16,7 @@ function leaves(value: unknown, prefix = ""): [string, unknown][] {
   return [];
 }
 
-const ENGLISH_ON_PURPOSE = /^(demo|pair|login|register)\./;
+const ENGLISH_ON_PURPOSE = /^(demo|login|register)\./;
 /** Not text: the direction, and the "Other" relation (no words added for it). */
 const NOT_TEXT = new Set(["dir", "speechLang", "whoIsThis.relationNames.other"]);
 

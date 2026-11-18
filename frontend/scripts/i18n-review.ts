@@ -70,6 +70,7 @@ function walk(prefix: string, e: unknown, h: unknown, u: unknown, rows: Row[]): 
 
 /** Screens, in the order a patient meets them. A key belongs to the first group whose prefix matches. */
 const GROUPS: [string, string[]][] = [
+  ["Setting up the phone (pairing; in the elder's language when opened from the family's link)", ["pair."]],
   ["Top bar (every screen) and common", ["appName", "nav.", "common.", "a11y."]],
   ["Settings sheet and feedback", ["settings.", "feedback."]],
   ["Mood question (first time Home opens each day)", ["mood."]],
@@ -91,7 +92,7 @@ const GROUPS: [string, string[]][] = [
   ["Tell me about a picture (voice task)", ["voiceTask."]],
 ];
 /** English on purpose: shown before the elder's language is known, or to family members. */
-const ENGLISH_ONLY = ["demo.", "pair.", "login.", "register."];
+const ENGLISH_ONLY = ["demo.", "login.", "register."];
 const SKIP = ["speechLang", "dir", "whoIsThis.relationNames.other"];
 
 const esc = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
@@ -194,8 +195,8 @@ for (const [section, title] of CG_GROUPS) {
 lines.push(
   "## English on purpose",
   "",
-  "Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing",
-  `screen, and the others are for family members. Keys: ${ENGLISH_ONLY.map((p) => `\`${p}*\``).join(", ")}.`,
+  "The demo, sign-in and sign-up stay English: they are for family members. Pairing is in the elder's language when it is opened",
+  `from the family's link or QR code (?lang=), and English otherwise. Keys: ${ENGLISH_ONLY.map((p) => `\`${p}*\``).join(", ")}.`,
   "",
   `${total} patient strings and ${cgTotal} caregiver strings to review.`,
   "",

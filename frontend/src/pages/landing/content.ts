@@ -13,6 +13,8 @@ export const landing = {
   title: "Khayal (خیال) — notice memory changes early, gently, at home",
   signIn: "Sign in",
   requestInvite: "Request an invite",
+  /** Header, every width: straight to setting up an elder's phone with the family's code. */
+  pairPhone: "Pair a phone",
   menu: "Open menu",
   closeMenu: "Close menu",
   skipToContent: "Skip to content",
@@ -23,7 +25,8 @@ export const landing = {
       "A few gentle brain games and reminders each day for elders with early memory loss. Their family sees how they are doing against their own normal, and hears early when something changes.",
     secondary: "See how it works",
     pilot: "Invite-only pilot in India",
-    haveCode: "Setting up an elder's phone? Enter the 6-digit code",
+    /** Outlined button beside "Request an invite" (pair-entry). */
+    haveCode: "I have a code",
     tryDemo: "Try the demo",
     phoneLabel: "Khayal on an elder's phone: the Home screen with the next reminder and three big buttons",
   },

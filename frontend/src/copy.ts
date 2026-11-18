@@ -4,14 +4,28 @@
 // it and reloads the app, so every screen switches together.
 import { en, type Copy } from "./i18n/en";
 import { hi } from "./i18n/hi";
-import { applyToDocument, storedLanguage, type Language } from "./i18n/language";
+import { applyToDocument, saveLanguage, storedLanguage, type Language } from "./i18n/language";
+import { languageFromLink } from "./pairLink";
 import { withTwins } from "./i18n/speechTwin";
 import { ur } from "./i18n/ur";
 
 export type { Copy };
 
 /** The patient app's language for this visit. */
-export const LANGUAGE: Language = storedLanguage();
+// A pairing link from the family (/pair?code=…&lang=hi) carries the elder's language, so the
+// pairing page already speaks it; it is kept for the next start too. Only on a device nobody is
+// signed in on: a signed-in account's own language wins (AuthContext).
+function signedIn(): boolean {
+  try {
+    return localStorage.getItem("khayal.token") !== null;
+  } catch {
+    return false;
+  }
+}
+const fromLink =
+  typeof window === "undefined" || signedIn() ? null : languageFromLink(window.location.pathname, window.location.search);
+if (fromLink) saveLanguage(fromLink, fromLink);
+export const LANGUAGE: Language = fromLink ?? storedLanguage();
 applyToDocument(LANGUAGE);
 
 const urdu = LANGUAGE === "ur" ? withTwins(ur, hi) : null;
