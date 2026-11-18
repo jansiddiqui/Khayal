@@ -4,7 +4,7 @@ import { LanguageForm } from "../../components/caregiver/LanguageForm";
 import { Timeline } from "../../components/caregiver/Timeline";
 import { WeeklySummary } from "../../components/caregiver/WeeklySummary";
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, FileText, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
-import { CoreGamesForm, FestivalsForm, gameLabel, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
+import { CoreGamesForm, FestivalsForm, gameLabel, HiddenGamesForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router";
@@ -606,7 +606,8 @@ export function PatientDetail() {
           </div>
           <p className="mb-3 text-sm text-ink-muted">
             Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
-            shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).
+            shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations). Across: sessions in order,
+            dated at each day's first session (hover a dot for its date and time).
           </p>
           <div className="grid items-start gap-4 lg:grid-cols-2">
             {trackedTrends.map((g) => (
@@ -734,7 +735,7 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <Section id="settings" title="Settings" hint="Pair a device, language, home city, core games, pinned games, festivals, tutorials">
+        <Section id="settings" title="Settings" hint="Pair a device, language, home city, core games, pinned games, hidden games, festivals, tutorials">
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
             <LanguageForm key={`lang-${patient.language ?? "en"}`} patient={patient} />
@@ -746,6 +747,7 @@ export function PatientDetail() {
               pinned={patient.pinned_games}
               options={patient.core_games}
             />
+            <HiddenGamesForm key={`hidden-${(patient.hidden_games ?? []).join()}-${patient.core_games.join()}`} patient={patient} />
             <FestivalsForm key={`festivals-${(patient.festivals ?? []).join()}`} patient={patient} />
             <TutorialAgainForm patientId={patient.id} games={["daily_orientation", ...LEVELLED_GAMES]} />
           </div>

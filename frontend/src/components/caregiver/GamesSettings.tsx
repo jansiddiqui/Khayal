@@ -255,3 +255,72 @@ export function FestivalsForm({ patient }: { patient: Patient }) {
     </form>
   );
 }
+
+/** Levelled games (the ones that can be in the core set or in "More games"). */
+const LEVELLED: readonly GameType[] = [
+  "word_recall", "object_location", "colour_trails", "money_handling", "memory_match", "sequence_recall", "reaction_tap",
+  "clock_setting", "spatial_span",
+];
+
+/**
+ * Settings → "Hide these games": games outside the core set the family doesn't want offered
+ * (more-games-rotation). Hidden games never appear in "More games" or its full list; core games
+ * can't be hidden here (change the core set first).
+ */
+export function HiddenGamesForm({ patient }: { patient: Patient }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const options = LEVELLED.filter((g) => !patient.core_games.includes(g));
+  const [hidden, setHidden] = useState<ReadonlySet<GameType>>(new Set(patient.hidden_games ?? []));
+  const save = useMutation({
+    mutationFn: () => updatePatient(patient.id, { hidden_games: [...hidden] }),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      const n = updated.hidden_games?.length ?? 0;
+      toast.show({ message: n ? `${n} ${n === 1 ? "game is" : "games are"} hidden from More games.` : "No games are hidden." });
+    },
+  });
+  const changed = [...hidden].sort().join() !== [...(patient.hidden_games ?? [])].sort().join();
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save.mutate();
+      }}
+    >
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-lg font-semibold">Hide these games</legend>
+        <p className="max-w-prose text-ink-muted">
+          Games outside the core set come round in “More games”, 3 a day, each at least once every 3 days. Tick a game to
+          hide it there and in “See other games”. Core games can't be hidden: change the core set first.
+        </p>
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {options.map((g) => (
+            <label key={g} className="flex items-center gap-2 py-1">
+              <input
+                type="checkbox"
+                checked={hidden.has(g)}
+                onChange={(e) => {
+                  const next = new Set(hidden);
+                  if (e.target.checked) next.add(g);
+                  else next.delete(g);
+                  setHidden(next);
+                }}
+              />
+              {gameLabel(g)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Button type="submit" className="self-start" loading={save.isPending} disabled={!changed}>
+        Save hidden games
+      </Button>
+      {save.isError && (
+        <p role="alert" className="text-danger">
+          Could not save the hidden games.
+        </p>
+      )}
+    </form>
+  );
+}

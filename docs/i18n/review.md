@@ -176,6 +176,9 @@ short note). Re-running the script keeps the status cells. Text in `{curly brack
 | `games.moreTitle` | More games | और खेल | <span dir="rtl">اور کھیل</span> | draft | draft |
 | `games.moreIntro` | A few more games, if you'd like to play. | अगर मन हो, तो कुछ और खेल। | <span dir="rtl">اگر دل چاہے، تو کچھ اور کھیل۔</span> | draft | draft |
 | `games.moreEmpty` | That's all the games for now. Well played today. | अभी के लिए बस इतने ही खेल। आज बहुत अच्छा खेला। | <span dir="rtl">ابھی کے لیے بس اتنے ہی کھیل۔ آج بہت اچھا کھیلا۔</span> | draft | draft |
+| `games.seeOther` | See other games | दूसरे खेल देखें | <span dir="rtl">دوسرے کھیل دیکھیں</span> | draft | draft |
+| `games.otherTitle` | Other games | दूसरे खेल | <span dir="rtl">دوسرے کھیل</span> | draft | draft |
+| `games.otherIntro` | All the other games. Pick any one. | बाक़ी सारे खेल। कोई भी चुनिए। | <span dir="rtl">باقی سارے کھیل۔ کوئی بھی چنیے۔</span> | draft | draft |
 | `games.practiceDone` | That's how it works. Now let's play. | ऐसे खेलते हैं। अब खेलते हैं। | <span dir="rtl">ایسے کھیلتے ہیں۔ اب کھیلتے ہیں۔</span> | draft | draft |
 | `games.next` | Next one | अगला | <span dir="rtl">اگلا</span> | draft | draft |
 | `games.saving` | Just a moment… | बस एक पल… | <span dir="rtl">بس ایک پل…</span> | draft | draft |
@@ -531,4 +534,4 @@ short note). Re-running the script keeps the status cells. Text in `{curly brack
 Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing
 screen, and the others are for family members (caregiver Hindi is batch 5b). Keys: `demo.*`, `pair.*`, `login.*`, `register.*`.
 
-423 strings to review.
+426 strings to review.

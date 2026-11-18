@@ -74,7 +74,7 @@ const GROUPS: [string, string[]][] = [
   ["Today's reminders", ["reminders."]],
   ["Who is this?", ["whoIsThis."]],
   ["Memories", ["memories."]],
-  ["Games list, between rounds, end of a game", ["games.title", "games.intro", "games.doneToday", "games.listFailed", "games.empty", "games.start", "games.roundOf", "games.praise", "games.roundTryAnother", "games.tutorial", "games.tryOne", "games.more", "games.practiceDone", "games.next", "games.saving", "games.saveFailed", "games.retry", "games.encouragement", "games.endUp", "games.showMeAgain", "games.playAgain", "games.backTo", "games.nextGame", "games.backHome"]],
+  ["Games list, between rounds, end of a game", ["games.title", "games.intro", "games.doneToday", "games.listFailed", "games.empty", "games.start", "games.roundOf", "games.praise", "games.roundTryAnother", "games.tutorial", "games.tryOne", "games.more", "games.seeOther", "games.other", "games.practiceDone", "games.next", "games.saving", "games.saveFailed", "games.retry", "games.encouragement", "games.endUp", "games.showMeAgain", "games.playAgain", "games.backTo", "games.nextGame", "games.backHome"]],
   ["Game: About Today (Daily Orientation)", ["games.orientation.", "days", "months", "seasons.", "timesOfDay.", "cities", "festivals."]],
   ["Game: Find the Pairs (Memory Match)", ["games.memoryMatch.", "cards."]],
   ["Game: Follow the Colours (Sequence Recall)", ["games.sequenceRecall.", "tiles."]],
