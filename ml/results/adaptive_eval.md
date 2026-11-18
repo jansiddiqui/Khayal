@@ -64,6 +64,10 @@ The decline replay of `ml.decline.evaluate` (current settings, alert rule B) on 
 - Lowest regret among the bandits: Linear Thompson sampling.
 - No adaptation (reference): zone 27.4%, MCI detected 0.040, false alarms 0.000.
 
+## Interpretation
+
+The composite score (accuracy × level / 10 × reaction-time ratio) couples difficulty adaptation and decline tracking: the level an engine chooses is part of the signal that decline tracking reads. An engine that keeps accuracy in the target zone moves the decline signal into the level, so how quickly it lowers the level decides how large a decline looks. The bandits lower declining patients' levels faster than the rule engine, so they do not hide decline but exaggerate it: more MCI patients are detected, at the cost of more false alarms in healthy patients. This is why production keeps `KHAYAL_ADAPTIVE_ENGINE=rule`. Future work: a level-independent ability estimate (Elo- or IRT-style, rating the patient against the difficulty of each round) as the tracked score, so that decline tracking gives the same answer whichever engine picks the levels.
+
 ## Run time
 
 | Engine | Decisions | Seconds |

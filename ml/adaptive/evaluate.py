@@ -53,6 +53,19 @@ TITLES = {
 }
 COLOURS = {"rule": "#2a78d6", "linucb": "#d55e00", "thompson": "#009e73", "neural": "#8e5bc9", "fixed": "#8a8984"}
 FRUSTRATION = 0.6
+INTERPRETATION = [
+    "## Interpretation",
+    "",
+    "The composite score (accuracy × level / 10 × reaction-time ratio) couples difficulty adaptation and "
+    "decline tracking: the level an engine chooses is part of the signal that decline tracking reads. An engine "
+    "that keeps accuracy in the target zone moves the decline signal into the level, so how quickly it lowers "
+    "the level decides how large a decline looks. The bandits lower declining patients' levels faster than the "
+    "rule engine, so they do not hide decline but exaggerate it: more MCI patients are detected, at the cost of "
+    "more false alarms in healthy patients. This is why production keeps `KHAYAL_ADAPTIVE_ENGINE=rule`. Future "
+    "work: a level-independent ability estimate (Elo- or IRT-style, rating the patient against the difficulty of "
+    "each round) as the tracked score, so that decline tracking gives the same answer whichever engine picks "
+    "the levels.",
+]
 EDGE_DAYS = 15
 START = decline_eval.START
 
@@ -273,6 +286,7 @@ def to_markdown(results: dict[str, EngineResult], args: argparse.Namespace,
         )
     lines += ["", "![Decline detection by engine](adaptive_decline.png)", ""]
     lines += findings(results)
+    lines += ["", *INTERPRETATION]
     lines += [
         "",
         "## Run time",
