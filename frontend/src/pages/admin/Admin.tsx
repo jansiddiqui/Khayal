@@ -370,7 +370,7 @@ export function AdminPage() {
             aria-selected={tab === t.id}
             aria-controls={`panel-${t.id}`}
             onClick={() => choose(t.id)}
-            className={`-mb-px rounded-t-md border-b-2 px-3 py-2 transition-colors duration-150 ease-calm ${
+            className={`-mb-px border-b-2 px-3 py-2 transition-colors duration-150 ease-calm ${
               tab === t.id ? "border-brand font-semibold text-ink" : "border-transparent text-ink-soft hover:bg-brand-soft hover:text-ink"
             }`}
           >
