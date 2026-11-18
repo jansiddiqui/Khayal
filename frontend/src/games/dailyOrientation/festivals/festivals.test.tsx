@@ -49,6 +49,18 @@ describe("festival dates", () => {
   });
 });
 
+describe("festivals on the same day", () => {
+  it("never offers two that fall on the same day (Onam and Milad-un-Nabi, 26 August 2026)", () => {
+    expect(nextDate("muharram", day("2026-06-01"))).toBe("2026-06-26");
+    expect(nextDate("milad_un_nabi", day("2026-08-01"))).toBe(nextDate("onam", day("2026-08-01")));
+    for (let i = 0; i < 40; i++) {
+      const q = festivalQuestion(["onam", "milad_un_nabi", "diwali"], day("2026-08-10"), Math.random)!;
+      expect(["onam", "milad_un_nabi"]).toContain(q.answer);
+      expect(q.options.filter((o) => o === "onam" || o === "milad_un_nabi")).toHaveLength(1);
+    }
+  });
+});
+
 describe("About Today festival round", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());
