@@ -1,0 +1,8 @@
+# Learning-based difficulty research only (python -m ml.adaptive.evaluate, neural bandit).
+# Not needed by the app: the backend's KHAYAL_ADAPTIVE_ENGINE=bandit uses the NumPy bandits.
+# Install into ml/.venv (gitignored), not backend/.venv.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+numpy==2.2.1
+matplotlib==3.9.2
+pytest==8.3.4

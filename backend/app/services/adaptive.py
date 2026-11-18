@@ -6,8 +6,12 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import config
 from app.models import NON_ADAPTIVE_GAMES, GameRound, GameSession, GameType, PlayerLevel, User
-from ml.adaptive import rule_based
+from ml.adaptive import bandit, rule_based
+
+# Own sessions of a game replayed into the bandit before each decision.
+BANDIT_HISTORY = 60
 
 # Level stored for games without difficulty levels.
 FIXED_LEVEL = 1
@@ -53,14 +57,21 @@ def record_session(
     rounds: Sequence[rule_based.Round],
     completed: bool = True,
 ) -> GameSession:
-    """Store a session and its rounds, then apply the adaptive rule once for the block.
+    """Store a session and its rounds, then apply the adaptive engine once for the block.
 
     The level the rounds were played at is the server's stored level, not a client value.
-    Sessions that were stopped early, and games without levels, never change the level.
+    Games without levels never change the level. With the rule engine (the default),
+    sessions that were stopped early don't either; the bandit (KHAYAL_ADAPTIVE_ENGINE=bandit)
+    may lower or keep the level after one, never raise it (ml.adaptive.bandit guardrails).
     """
     level_start = current_level(db, patient.id, game_type)
-    adapts = completed and game_type not in NON_ADAPTIVE_GAMES
-    level_end = rule_based.next_level(level_start, list(rounds)) if adapts else level_start
+    levelled = game_type not in NON_ADAPTIVE_GAMES
+    if config.ADAPTIVE_ENGINE == "bandit" and levelled and rounds:
+        adapts = True
+        level_end = bandit_level(db, patient.id, game_type, level_start, rounds, completed, started_at)
+    else:
+        adapts = completed and levelled
+        level_end = rule_based.next_level(level_start, list(rounds)) if adapts else level_start
 
     session = GameSession(
         patient_id=patient.id,
@@ -97,6 +108,51 @@ def record_session(
 
     db.commit()
     return session
+
+
+def _day(at: datetime) -> float:
+    return at.timestamp() / 86400
+
+
+def bandit_level(
+    db: Session,
+    patient_id: int,
+    game_type: GameType,
+    level_start: int,
+    rounds: Sequence[rule_based.Round],
+    completed: bool,
+    started_at: datetime,
+) -> int:
+    """Next level from the simulator-warmed bandit (ml.adaptive.prior) after replaying this
+    patient's last sessions of the game: each session's level change is the action and the
+    following session's success is its reward. Deterministic for a given history."""
+    from ml.adaptive.prior import warmed_bandit  # trains on first use (a few seconds)
+
+    earlier = list(
+        db.scalars(
+            select(GameSession)
+            .where(GameSession.patient_id == patient_id, GameSession.game_type == game_type)
+            .order_by(GameSession.started_at.desc(), GameSession.id.desc())
+            .limit(BANDIT_HISTORY)
+        )
+    )[::-1]
+    engine = warmed_bandit(seed=patient_id * 100_003 + len(earlier))
+    history = [
+        bandit.PlayedSession(
+            s.level_start,
+            tuple(rule_based.Round(r.correct, r.reaction_ms, r.hint_used, r.study_ms, r.errors) for r in s.rounds),
+            s.completed,
+            _day(s.started_at),
+        )
+        for s in earlier
+    ]
+    history = [h for h in history if h.rounds]
+    history.append(bandit.PlayedSession(level_start, tuple(rounds), completed, _day(started_at)))
+    for i in range(len(history) - 1):
+        action = max(-1, min(1, history[i + 1].level - history[i].level))
+        engine.learn(bandit.build_context(history[: i + 1]), action, bandit.reward(history[i + 1].rounds, history[i + 1].completed))
+    decision = engine.decide(bandit.build_context(history))
+    return rule_based.clamp_level(level_start + decision.action)
 
 
 def sessions_for(db: Session, patient_id: int, game_type: GameType | None = None) -> list[GameSession]:

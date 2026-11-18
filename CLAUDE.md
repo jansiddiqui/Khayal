@@ -70,6 +70,7 @@ khayal/
 │   └── requirements.txt
 ├── ml/
 │   ├── adaptive/rule_based.py
+│   ├── adaptive/bandit.py    # research bandits (Round 2 batch 1); neural.py needs ml/.venv
 │   ├── decline/zscore.py
 │   ├── decline/simulator.py  # synthetic patient generator
 │   ├── speech/stub.py
@@ -307,3 +308,53 @@ Khayal moves from a public demo to a **real product: an invite-only pilot**. Thi
   - Change password (signs out other sessions), admin reset links (48 h), export my data (zip), delete my account (type DELETE). Passwords at least 10 characters.
   - Demo mode off in production; nothing expires on its own; the admin removes demo accounts once. Backups (decided): the free Voroa database has no backups and is reachable only inside the workspace, so the admin downloads **Admin → Download full backup** weekly (a zip: one JSON file per table, `manifest.json` with the migration revision, every photo and recording; admin-only, one per 10 minutes, logged) into `data/backups/voroa/`, newest 8 kept. Disaster recovery: `python -m app.restore_backup <zip>`, only into an empty database at the same migration revision. Upgrading the database to Starter (₹299/month, automatic daily backups) is recommended before real families join. `scripts/backup-voroa.ps1` is only for databases reachable from outside with a matching `pg_dump` version.
 - **Phase C: redesign of the patient and caregiver UI for daily use, with motion** (section 4 rules still hold).
+
+## 12. Round 2 plan (decided)
+
+Five batches, built one at a time, each on its own branch. Each batch ends with: tests (SQLite + Postgres + frontend + ML), screenshots, merge into `main`, push, then stop for review. Sections 0 and 4 apply throughout.
+
+1. **Learning-based difficulty** (branch `adaptive-bandits`; research, `ml/` only, not live by default).
+   - Contextual bandits behind the `next_level(current_level, recent_rounds)` interface: LinUCB, Thompson sampling, and a small neural bandit (PyTorch, `ml/` only, run from `ml/.venv`).
+   - Actions: level −1, 0 or +1.
+   - Context: last-session success rate, success trend, median RT vs baseline, hints, errors, stopped early, days since last play.
+   - Reward: closeness of the next session's success rate to 0.70, minus a penalty for a stopped-early session.
+   - Safety: at most ±1 per session, levels clamped to 1–10, and the rule engine decides whenever the bandit is unsure.
+   - Evaluation: compare with the rule engine in the simulator (healthy, MCI and moderate; at least 5 seeds) on:
+     - time in the 60–80% zone;
+     - stopped-early rate;
+     - level oscillation;
+     - cumulative regret;
+     - decline detection per engine (does adaptive difficulty hide decline?).
+   - Output: `ml/results/adaptive_eval.md`, `.csv` and charts.
+   - Setting `KHAYAL_ADAPTIVE_ENGINE=rule` (default) or `bandit`. Production is not switched.
+   - **Built** (`ml/adaptive/bandit.py`, `neural.py`, `prior.py`, `evaluate.py`; results in `ml/results/adaptive_eval.md`):
+     - Engines: LinUCB, linear Thompson sampling, and a bootstrapped ensemble of 5 MLPs.
+     - The bandit never raises the level after a stopped-early session or a success rate of 40% or less, and never lowers it after 5/5.
+     - The simulator gained an opt-in `frustration`: more stopping early when a level is too hard.
+     - `KHAYAL_ADAPTIVE_ENGINE=bandit` uses Thompson sampling, warmed on a small seeded simulated cohort at first use, then replays the patient's own sessions. No weights are stored.
+   - **Result:** no bandit beats the rule engine clearly.
+     - Regret: Thompson sampling is lowest (0.047 vs 0.050 per decision), with slightly fewer stopped-early sessions.
+     - Time in the 60–80% zone: the rule engine is highest (54% vs 48–50% for the bandits).
+     - Decline detection: the bandits do not hide decline; they exaggerate it. They lower MCI patients' levels faster, and the composite multiplies by level. MCI detected rose from 0.81 to 0.91–0.96, and false alarms rose from 0.10 to 0.14–0.27.
+     - Recommendation: keep the rule engine.
+2. **Caregiver redesign and reports**:
+   - a mobile-first "Today at a glance" card per elder;
+   - plain-language insights, with the numbers one tap away;
+   - a per-elder timeline that can be filtered;
+   - a weekly summary card;
+   - a print-optimised doctor report (browser "print to PDF", no new dependency).
+3. **Admin**:
+   - pilot overview (active families, sessions per day, invite funnel, retention);
+   - system health (uptime, last cron tick, DB size vs 1 GB, days since the last full backup);
+   - a feedback inbox;
+   - an anonymised research export behind a new versioned, withdrawable research consent;
+   - user search and an admin activity log.
+4. **Mood and memory book**:
+   - a daily optional mood question on Home (Good / Okay / Not so good / Skip), shown to caregivers and in the doctor report, with no alert changes;
+   - a reminiscence "Memories" book (photos, story, optional family voice note), placed without breaking the 3-button Home.
+5. **Hindi and Urdu**:
+   - i18n for the patient screens and read-aloud;
+   - the caregiver UI in English and Hindi;
+   - Urdu right-to-left with Noto Nastaliq Urdu, Hindi with Noto Sans Devanagari;
+   - localised game content;
+   - a translation review file at `docs/i18n/review.md`, marked "draft — needs native-speaker review".

@@ -106,6 +106,7 @@ uses and keeps `?sslmode=require`.
     | `KHAYAL_REMINDER_CHECK_MINUTES` | `15` | How often the server checks for missed reminders and expired demo accounts while awake. |
     | `KHAYAL_DB_POOL_SIZE` / `KHAYAL_DB_MAX_OVERFLOW` | `3` / `2` | Database connections: at most 5 per instance. |
     | `KHAYAL_ALERT_RULE` | `persistence` | Decline alert rule B (see CLAUDE.md section 6). |
+    | `KHAYAL_ADAPTIVE_ENGINE` | `rule` | Leave unset or `rule`. `bandit` is research only (CLAUDE.md section 12); don't switch production. |
 
 11. **Create Web Service**.
 
