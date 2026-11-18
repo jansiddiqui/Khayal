@@ -21,6 +21,7 @@ vi.mock("../api/client", async (importOriginal) => {
     getInsights: vi.fn(),
     getWeekly: vi.fn(),
     getTimeline: vi.fn(),
+    getMoodHistory: vi.fn(),
   };
 });
 const api = vi.mocked(apiClient);
@@ -85,7 +86,8 @@ beforeEach(() => {
   });
   api.getInsights.mockResolvedValue([]);
   api.getTimeline.mockResolvedValue([]);
-  const week = { start: "2026-11-12", end: "2026-11-18", days_played: 6, sessions: 18, completed: 17, accuracy: 0.72, doses: { taken: 13, taken_late: 1, missed: 1, unsure: 0 }, reminders_done: 30, reminders_total: 32, alerts: 1, recordings: 0 };
+  api.getMoodHistory.mockResolvedValue([]);
+  const week = { start: "2026-11-12", end: "2026-11-18", days_played: 6, sessions: 18, completed: 17, accuracy: 0.72, doses: { taken: 13, taken_late: 1, missed: 1, unsure: 0 }, reminders_done: 30, reminders_total: 32, alerts: 1, recordings: 0, mood: { good: 4, okay: 1, not_so_good: 1, skipped: 0 } };
   api.getWeekly.mockResolvedValue({ this_week: week, last_week: { ...week, start: "2026-11-05", end: "2026-11-11", days_played: 7, accuracy: 0.71 } });
 });
 

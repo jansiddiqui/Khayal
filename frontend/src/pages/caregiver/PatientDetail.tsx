@@ -1,4 +1,5 @@
 import { InsightsList } from "../../components/caregiver/Insights";
+import { MoodStrip } from "../../components/caregiver/MoodStrip";
 import { Timeline } from "../../components/caregiver/Timeline";
 import { WeeklySummary } from "../../components/caregiver/WeeklySummary";
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, FileText, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
@@ -505,6 +506,10 @@ export function PatientDetail() {
           Family photos
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
+        <Link to={`/caregiver/patients/${patientId}/memories`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
+          Memory book
+          <ArrowRight aria-hidden="true" className="size-4" />
+        </Link>
         <button type="button" onClick={openSettings} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
           <Smartphone aria-hidden="true" className="size-4" />
           Pair a device
@@ -572,6 +577,9 @@ export function PatientDetail() {
           {signals.isError && (
             <LoadError message="Could not load the 14-day signals." onRetry={() => void signals.refetch()} />
           )}
+          <div className="lg:col-span-2">
+            <MoodStrip patientId={patientId} />
+          </div>
         </div>
       </Section>
 
@@ -592,6 +600,9 @@ export function PatientDetail() {
           hint={gamesHint(trackedTrends.filter((g) => needsAttention(g.trend_status)).length)}
           defaultOpen={trackedTrends.some((g) => needsAttention(g.trend_status))}
         >
+          <div className="mb-3">
+            <MoodStrip patientId={patientId} />
+          </div>
           <p className="mb-3 text-sm text-ink-muted">
             Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
             shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).

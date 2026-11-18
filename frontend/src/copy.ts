@@ -82,6 +82,34 @@ export const copy = {
     /** Status line on "Play a game": today's progress, never a score. */
     gamesProgress: (done: number, total: number) => `${done} of ${total} done today`,
   },
+  /** Once a day, the first time Home opens (Round 2 batch 4). Optional; Skip is always there. */
+  mood: {
+    question: "How are you feeling today?",
+    spoken: "How are you feeling today? Good, okay, or not so good. You can also skip.",
+    good: "Good",
+    okay: "Okay",
+    notSoGood: "Not so good",
+    skip: "Skip for today",
+    thanks: "Thank you for telling me.",
+    gentle: "I hope the day gets a little gentler.",
+    continue: "Continue",
+  },
+  /** The memory book, on the "Memories" side of "Who is this?" (Round 2 batch 4). */
+  memories: {
+    people: "People",
+    memories: "Memories",
+    switchLabel: "Show people or memories",
+    intro: "Photos and stories from your family.",
+    empty: "Your family hasn't added memories yet.",
+    loadFailed: "We could not load your memories just now. Let's try again.",
+    listen: "Listen",
+    readStory: "Read it to me",
+    stop: "Stop",
+    nextMemory: "Next memory",
+    photoOf: (n: number, total: number) => `Photo ${n} of ${total}`,
+    nextPhoto: "Tap the photo to see the next one.",
+    memoryOf: (n: number, total: number) => `Memory ${n} of ${total}`,
+  },
   games: {
     title: "Games",
     intro: "Here are today's games. Pick one to play.",

@@ -35,6 +35,14 @@ const report: DoctorReport = {
   alerts: [{ id: 9, patient_id: 2, type: "decline", message: "Word Recall average dropped (z = −1.6).", severity: "warning", created_at: "2026-11-15T14:30:00Z", acknowledged: false }],
   recordings: 1,
   days_played: 28,
+  mood: { good: 10, okay: 4, not_so_good: 3, skipped: 2 },
+  mood_days: [
+    { date: "2026-11-10", mood: "good" },
+    { date: "2026-11-11", mood: "not_so_good" },
+    { date: "2026-11-12", mood: "not_so_good" },
+    { date: "2026-11-13", mood: "not_so_good" },
+    { date: "2026-11-15", mood: "not_so_good" },
+  ],
 };
 
 beforeEach(() => {
@@ -56,6 +64,8 @@ it("doctor report: period, games, adherence, alerts, notes and the statement; Do
   expect(sheet.getByText("4 sessions to baseline")).toBeInTheDocument();
   expect(sheet.getByText(/Medicine doses: 13 of 14 taken/)).toHaveTextContent("Medicine doses: 13 of 14 taken (2 confirmed later), 1 missed, 0 not sure.");
   expect(sheet.getByText(/Word Recall average dropped/)).toBeInTheDocument();
+  expect(sheet.getByText(/10 good, 4 okay, 3 not so good, 2 skipped, on 5 of 30 days/)).toBeInTheDocument();
+  expect(sheet.getByText(/longest run of “not so good” days was 3/)).toBeInTheDocument();
   expect(sheet.getByText(REPORT_STATEMENT)).toBeInTheDocument();
   expect(REPORT_STATEMENT).toMatch(/not a medical device and this is not a diagnosis/);
 
@@ -82,7 +92,7 @@ it("timeline groups events by day and filters by kind", async () => {
 
   fireEvent.click(screen.getByRole("button", { name: "Games" }));
   expect(screen.getByRole("button", { name: "Games" })).toHaveAttribute("aria-pressed", "false");
-  await waitFor(() => expect(api.getTimeline).toHaveBeenLastCalledWith(2, 14, ["reminder", "alert", "recording", "settings"]));
+  await waitFor(() => expect(api.getTimeline).toHaveBeenLastCalledWith(2, 14, ["reminder", "alert", "recording", "mood", "settings"]));
 });
 
 it("weekly change words", () => {

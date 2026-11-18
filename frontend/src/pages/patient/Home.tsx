@@ -1,9 +1,10 @@
 import { AlarmClock, ClipboardList, Puzzle, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getTodayReminders, getTodaysGames, type TodayReminder } from "../../api/client";
+import { getMoodToday, getTodayReminders, getTodaysGames, type TodayReminder } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { BigButton } from "../../components/BigButton";
 import { Layout } from "../../components/Layout";
+import { MoodCheckin } from "../../components/MoodCheckin";
 import { ProgressRing } from "../../components/ProgressRing";
 import { copy } from "../../copy";
 import { Skeleton } from "../../ui/Skeleton";
@@ -37,6 +38,9 @@ export function PatientHome() {
   const progress = games.data ? copy.patientHome.gamesProgress(gamesDone, gamesTotal) : undefined;
   const remindersProgress =
     reminders.isSuccess && remindersTotal > 0 ? copy.patientHome.gamesProgress(remindersDone, remindersTotal) : undefined;
+  // Once a day, the first time Home opens: "How are you feeling today?" (optional; a failed check never blocks Home).
+  const mood = useQuery({ queryKey: ["moodToday"], queryFn: getMoodToday, staleTime: 0 });
+  if (mood.isSuccess && !mood.data.asked) return <MoodCheckin />;
 
   return (
     <Layout title={copy.patientHome.greetingAt(firstName, new Date().getHours())} snug>

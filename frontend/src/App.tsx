@@ -27,12 +27,14 @@ const MoreGames = page(() => import("./pages/patient/MoreGames"), "MoreGames");
 const PlayGame = page(() => import("./pages/patient/PlayGame"), "PlayGame");
 const Reminders = page(() => import("./pages/patient/Reminders"), "Reminders");
 const WhoIsThis = page(() => import("./pages/patient/WhoIsThis"), "WhoIsThis");
+const Memories = page(() => import("./pages/patient/Memories"), "Memories");
 const VoiceTask = page(() => import("./pages/patient/VoiceTask"), "VoiceTask");
 
 const CaregiverDashboard = page(() => import("./pages/caregiver/Dashboard"), "CaregiverDashboard");
 const PatientDetail = page(() => import("./pages/caregiver/PatientDetail"), "PatientDetail");
 const CaregiverReminders = page(() => import("./pages/caregiver/Reminders"), "CaregiverReminders");
 const DoctorReportPage = page(() => import("./pages/caregiver/Report"), "DoctorReportPage");
+const MemoryBook = page(() => import("./pages/caregiver/MemoryBook"), "MemoryBook");
 const CaregiverFamily = page(() => import("./pages/caregiver/Family"), "CaregiverFamily");
 const CaregiverAccount = page(() => import("./pages/caregiver/Account"), "CaregiverAccount");
 const AdminPage = page(() => import("./pages/admin/Admin"), "AdminPage");
@@ -72,6 +74,7 @@ function AppRoutes() {
       <Route path="/patient/games/:gameType" element={patient(<PlayGame />)} />
       <Route path="/patient/reminders" element={patient(<Reminders />)} />
       <Route path="/patient/who-is-this" element={patient(<WhoIsThis />)} />
+      <Route path="/patient/who-is-this/memories" element={patient(<Memories />)} />
       <Route path="/patient/voice" element={patient(<VoiceTask />)} />
 
       <Route path="/caregiver" element={caregiver(<CaregiverDashboard />)} />
@@ -79,6 +82,7 @@ function AppRoutes() {
       <Route path="/caregiver/patients/:patientId" element={caregiver(<PatientDetail />)} />
       <Route path="/caregiver/patients/:patientId/reminders" element={caregiver(<CaregiverReminders />)} />
       <Route path="/caregiver/patients/:patientId/report" element={caregiver(<DoctorReportPage />)} />
+      <Route path="/caregiver/patients/:patientId/memories" element={caregiver(<MemoryBook />)} />
       <Route path="/caregiver/patients/:patientId/family" element={caregiver(<CaregiverFamily />)} />
       <Route path="/admin" element={caregiver(<AdminPage />)} />
 

@@ -8,9 +8,12 @@ interface ReadAloudValue {
   toggle: () => void;
   /**
    * Speak `text` with the browser's speechSynthesis, if read-aloud is on and supported.
-   * `force` speaks even when read-aloud is off (first-time game tutorials, research.md 3.4).
+   * `force` speaks even when read-aloud is off (first-time game tutorials, research.md 3.4, and
+   * "Read it to me" in the memory book). `onEnd` runs when the speech ends or can't start.
    */
-  speak: (text: string, options?: { force?: boolean }) => void;
+  speak: (text: string, options?: { force?: boolean; onEnd?: () => void }) => void;
+  /** Stop speaking now. */
+  cancel: () => void;
 }
 
 const ReadAloudContext = createContext<ReadAloudValue | null>(null);
@@ -44,24 +47,38 @@ export function ReadAloudProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const speak = useCallback(
-    (text: string, options?: { force?: boolean }) => {
+    (text: string, options?: { force?: boolean; onEnd?: () => void }) => {
       const s = synth();
-      if ((!enabled && !options?.force) || !s) return;
+      if ((!enabled && !options?.force) || !s) {
+        options?.onEnd?.();
+        return;
+      }
       s.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9; // a little slower than default
       utterance.lang = copy.speechLang;
+      if (options?.onEnd) {
+        utterance.onend = options.onEnd;
+        utterance.onerror = options.onEnd;
+      }
       s.speak(utterance);
     },
     [enabled],
   );
 
-  const value = useMemo(() => ({ enabled, toggle, speak }), [enabled, toggle, speak]);
+  const cancel = useCallback(() => synth()?.cancel(), []);
+
+  const value = useMemo(() => ({ enabled, toggle, speak, cancel }), [enabled, toggle, speak, cancel]);
   return <ReadAloudContext.Provider value={value}>{children}</ReadAloudContext.Provider>;
 }
 
 /** Outside a provider (e.g. a game round rendered on its own in a test) nothing is spoken. */
-const SILENT: ReadAloudValue = { enabled: false, toggle: () => undefined, speak: () => undefined };
+const SILENT: ReadAloudValue = {
+  enabled: false,
+  toggle: () => undefined,
+  speak: (_text, options) => options?.onEnd?.(),
+  cancel: () => undefined,
+};
 
 export function useReadAloud(): ReadAloudValue {
   return useContext(ReadAloudContext) ?? SILENT;

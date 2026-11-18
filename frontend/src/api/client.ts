@@ -1106,6 +1106,7 @@ export interface WeekStats {
   reminders_total: number;
   alerts: number;
   recordings: number;
+  mood: { good: number; okay: number; not_so_good: number; skipped: number };
 }
 
 export interface Weekly {
@@ -1113,7 +1114,7 @@ export interface Weekly {
   last_week: WeekStats;
 }
 
-export type TimelineKind = "session" | "reminder" | "alert" | "recording" | "settings";
+export type TimelineKind = "session" | "reminder" | "alert" | "recording" | "settings" | "mood";
 
 export interface TimelineEvent {
   at: string;
@@ -1151,6 +1152,8 @@ export interface DoctorReport {
   alerts: Alert[];
   recordings: number;
   days_played: number;
+  mood: { good: number; okay: number; not_so_good: number; skipped: number };
+  mood_days: { date: string; mood: "good" | "okay" | "not_so_good" | null }[];
 }
 
 export async function getGlance(): Promise<Glance[]> {
@@ -1178,4 +1181,89 @@ export async function getTimeline(patientId: number, days: number, kinds: readon
 export async function getReport(patientId: number, days: number): Promise<DoctorReport> {
   const { data } = await api.get<DoctorReport>(`/patients/${patientId}/report`, { params: { days } });
   return data;
+}
+
+
+// --- mood and memory book (Round 2 batch 4) -----------------------------------------------
+
+export type Mood = "good" | "okay" | "not_so_good";
+
+export interface MoodToday {
+  asked: boolean;
+  mood: Mood | null;
+}
+
+export interface MoodDay {
+  date: string;
+  mood: Mood | null;
+}
+
+export interface MoodCounts {
+  good: number;
+  okay: number;
+  not_so_good: number;
+  skipped: number;
+}
+
+export async function getMoodToday(): Promise<MoodToday> {
+  return (await api.get<MoodToday>("/me/mood/today")).data;
+}
+
+/** Today's answer; null = Skip. */
+export async function answerMood(mood: Mood | null): Promise<MoodToday> {
+  return (await api.post<MoodToday>("/me/mood", { mood })).data;
+}
+
+export async function getMoodHistory(patientId: number, days = 30): Promise<MoodDay[]> {
+  return (await api.get<MoodDay[]>(`/patients/${patientId}/mood`, { params: { days } })).data;
+}
+
+export interface Memory {
+  id: number;
+  patient_id: number;
+  title: string;
+  story: string;
+  photos: FamilyPhoto[];
+  voice_url: string | null;
+  voice_ms: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listMemories(patientId: number): Promise<Memory[]> {
+  return (await api.get<Memory[]>(`/patients/${patientId}/memories`)).data;
+}
+
+export async function createMemory(patientId: number, title: string, story: string): Promise<Memory> {
+  return (await api.post<Memory>(`/patients/${patientId}/memories`, { title, story })).data;
+}
+
+export async function updateMemory(patientId: number, id: number, title: string, story: string): Promise<Memory> {
+  return (await api.put<Memory>(`/patients/${patientId}/memories/${id}`, { title, story })).data;
+}
+
+export async function deleteMemory(patientId: number, id: number): Promise<void> {
+  await api.delete(`/patients/${patientId}/memories/${id}`);
+}
+
+export async function addMemoryPhoto(patientId: number, id: number, photo: Blob): Promise<Memory> {
+  const body = await shrinkPhoto(photo);
+  return (await api.post<Memory>(`/patients/${patientId}/memories/${id}/photos`, body, { headers: { "Content-Type": body.type || "image/jpeg" } })).data;
+}
+
+export async function removeMemoryPhoto(patientId: number, id: number, photoId: string): Promise<Memory> {
+  return (await api.delete<Memory>(`/patients/${patientId}/memories/${id}/photos/${photoId}`)).data;
+}
+
+export async function setMemoryVoice(patientId: number, id: number, audio: Blob, durationMs: number): Promise<Memory> {
+  return (
+    await api.post<Memory>(`/patients/${patientId}/memories/${id}/voice`, audio, {
+      params: { duration_ms: Math.max(1, Math.round(durationMs)) },
+      headers: { "Content-Type": audio.type.split(";")[0] || "audio/webm" },
+    })
+  ).data;
+}
+
+export async function removeMemoryVoice(patientId: number, id: number): Promise<Memory> {
+  return (await api.delete<Memory>(`/patients/${patientId}/memories/${id}/voice`)).data;
 }

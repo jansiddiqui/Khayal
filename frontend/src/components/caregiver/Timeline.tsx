@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Gamepad2, Mic, Pill, Settings2, type LucideIcon } from "lucide-react";
+import { Bell, Gamepad2, Mic, Pill, Settings2, Smile, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { getTimeline, serverDate, type TimelineEvent, type TimelineKind } from "../../api/client";
 import { Skeleton } from "../../ui/Skeleton";
@@ -11,6 +11,7 @@ export const KINDS: { kind: TimelineKind; label: string; icon: LucideIcon }[] = 
   { kind: "reminder", label: "Reminders", icon: Pill },
   { kind: "alert", label: "Alerts", icon: Bell },
   { kind: "recording", label: "Recordings", icon: Mic },
+  { kind: "mood", label: "Mood", icon: Smile },
   { kind: "settings", label: "Settings changes", icon: Settings2 },
 ];
 const ICON = Object.fromEntries(KINDS.map((k) => [k.kind, k.icon])) as Record<TimelineKind, LucideIcon>;

@@ -54,7 +54,7 @@ khayal/
 ├── README.md                 # how to run everything
 ├── frontend/                 # React app (both roles)
 │   └── src/
-│       ├── pages/patient/    # Home, Games, Reminders, WhoIsThis, VoiceTask
+│       ├── pages/patient/    # Home, Games, Reminders, WhoIsThis (+ Memories), VoiceTask
 │       ├── pages/caregiver/  # Dashboard, PatientDetail, Reminders, FamilyPhotos
 │       ├── games/            # one folder per game
 │       ├── components/       # BigButton, Card, Layout, etc.
@@ -127,6 +127,8 @@ The caregiver UI can be a normal dense dashboard.
 - **Feedback** (Round 2 batch 3): id, user_id, role, kind (`hard` | `liked` | `other`), text, page, audio_key/audio_type (voice note, nullable), status (`new` | `read` | `resolved`), created_at, updated_at
 - **AdminLog** (Round 2 batch 3): id, admin_id (nullable), admin_email, at, action, detail; **SystemState**: key, value, updated_at
 - **PatientEvent** (Round 2 batch 2): id, patient_id, actor_id (nullable), at, kind (`settings` | `reminder` | `family`), summary. Settings changes for the caregiver timeline.
+- **MoodCheckin** (Round 2 batch 4): id, patient_id, date (unique per patient), mood (`good` | `okay` | `not_so_good`, null = skipped), answered_at
+- **MemoryEntry** (Round 2 batch 4): id, patient_id, title, story, photo_paths (JSON, 1–5 shown to the elder), voice_path/voice_type/voice_ms (nullable), created_by, created_at, updated_at
 - **Alert**: id, patient_id, type (`decline` | `missed_reminders` | `speech_risk`), message, severity (`info` | `warning` | `critical`), created_at, acknowledged
 
 ## 6. Core logic (implement exactly)
@@ -268,6 +270,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 **File uploads (decided):** photos and audio are sent as the raw request body, one file per request, with the file's own `Content-Type` (e.g. `image/jpeg`, `audio/webm`). No multipart forms, so no `python-multipart` dependency.
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
 - `POST /feedback`, `POST /feedback/{id}/voice`; admin: `GET /admin/overview`, `/admin/health`, `/admin/feedback?status=`, `POST /admin/feedback/{id}/status`, `GET /admin/feedback/{id}/voice`, `/admin/users?q=&role=&kind=`, `/admin/log?action=`, `/admin/research-export` (Round 2 batch 3)
+- `GET /me/mood/today`, `POST /me/mood`, `GET /patients/{id}/mood?days=`; `GET/POST /patients/{id}/memories`, `PUT/DELETE /patients/{id}/memories/{mid}`, `POST/GET/DELETE …/memories/{mid}/photos[/{photo}]`, `POST/GET/DELETE …/memories/{mid}/voice` (Round 2 batch 4)
 - `GET /caregiver/glance`, `GET /patients/{id}/insights`, `GET /patients/{id}/weekly`, `GET /patients/{id}/timeline?days=&kinds=`, `GET /patients/{id}/report?days=` (caregiver views, Round 2 batch 2)
 
 Every route checks the role and the care link. A patient can only see their own data; a caregiver can only see linked patients.
@@ -430,6 +433,20 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
 4. **Mood and memory book**:
    - a daily optional mood question on Home (Good / Okay / Not so good / Skip), shown to caregivers and in the doctor report, with no alert changes;
    - a reminiscence "Memories" book (photos, story, optional family voice note), placed without breaking the 3-button Home.
+   - **Built** (decided in batch 4; screenshots in `docs/mood-memories/screens/`):
+     - **Mood check-in:** the first time Home opens each day, "How are you feeling today?" replaces Home.
+       - Three answers (Good / Okay / Not so good, lucide icons with the words) count as answer options. "Skip for today" is the one action. Everything fits 375 × 812.
+       - After an answer: "Thank you for telling me." For "Not so good" it adds "I hope the day gets a little gentler." Then Continue. Nothing moves on by itself, and the wording never gives advice.
+       - Stored once per day in `mood_checkins` (mood null = skipped); answering again the same day changes it.
+       - Caregivers see a 30-day mood strip (icon + word per day) under the overall trend and above the game charts, a Mood filter on the timeline, "Days feeling good / not so good" on the weekly card, and a Mood section in the doctor report (counts and the longest run of "not so good" days).
+       - The research export gains `mood.csv`. No alert rule uses mood; `ml/notes/mood_covariate.md` lists how it could be used later.
+     - **Memory book:**
+       - **Placement:** the second side of "Who is this?". A two-way People / Memories switch sits at the top of that screen (its navigation); Home keeps exactly 3 buttons.
+       - **Patient side:** memories appear as photo tiles (game pieces). An open memory shows its photo (tap for the next one, "Photo 1 of 2"), title and story, with "Read it to me" (the story, spoken even when Read aloud is off) or "Listen" (the family's voice note), and "Next memory" (or Back when there is only one). The elder sees only pages with at least one photo.
+       - **Caregiver side:** a "Memory book" page (link on the elder page) to add a memory (title, story, 1–5 photos, an optional voice note recorded in the browser, up to 5 minutes), edit it, add or remove photos, replace or remove the voice note, and delete it after a confirmation.
+       - **Consent:** pages need the photos opt-in; voice notes also need the voice opt-in. Withdrawing photos deletes every page; withdrawing voice deletes only the voice notes.
+       - Pages are in "Export my data" (with their files), deleted with the account, and adding or removing one shows on the timeline.
+     - Migration 0015 adds `mood_checkins` and `memory_entries`. Memory files are stored under `memory/{patient_id}/`.
 5. **Hindi and Urdu**:
    - i18n for the patient screens and read-aloud;
    - the caregiver UI in English and Hindi;

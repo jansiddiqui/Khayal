@@ -343,6 +343,18 @@ Admins (`KHAYAL_ADMIN_EMAILS`) see five tabs on `/admin`:
 
 Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back up `data/khayal.db`, then run `alembic upgrade head`.
 
+## Mood check-in and memory book (Round 2 batch 4)
+
+- **Mood:**
+  - Once a day, the first time Home opens, the elder is asked "How are you feeling today?" (Good / Okay / Not so good, or Skip).
+  - Families see the answers as a 30-day strip next to the charts, on the timeline, on the weekly card and in the doctor report.
+  - Mood changes no alert; `ml/notes/mood_covariate.md` describes how it could be used as a covariate later.
+- **Memory book:**
+  - On the elder's page, "Memory book" adds memories: 1–5 photos, a title, a short story, and optionally your own voice telling it, recorded in the browser.
+  - The elder opens "Who is this?" → Memories, taps a memory, and hears the story read aloud or your voice.
+  - Needs the photos opt-in (and the voice opt-in for voice notes); withdrawing deletes them.
+- **Migration:** 0015 (`mood_checkins`, `memory_entries`). Back up `data/khayal.db`, then run `alembic upgrade head`.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

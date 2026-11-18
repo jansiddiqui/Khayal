@@ -22,6 +22,8 @@ export function weeklyLines(w: WeekStats, last: WeekStats): WeekLine[] {
     { label: "Reminders done", now: done(w), before: done(last), share: true },
     { label: "Alerts", now: w.alerts, before: last.alerts },
     { label: "Voice recordings", now: w.recordings, before: last.recordings },
+    { label: "Days feeling good", now: w.mood.good, before: last.mood.good },
+    { label: "Days feeling not so good", now: w.mood.not_so_good, before: last.mood.not_so_good },
   ];
 }
 
