@@ -282,6 +282,8 @@ export const copy = {
     eid_ul_fitr: "Eid ul-Fitr",
     vaisakhi: "Vaisakhi",
     bakrid: "Bakrid (Eid ul-Adha)",
+    muharram: "Muharram",
+    milad_un_nabi: "Milad-un-Nabi (Eid-e-Milad)",
     onam: "Onam",
     raksha_bandhan: "Raksha Bandhan",
     janmashtami: "Janmashtami",

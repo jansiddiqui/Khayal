@@ -54,8 +54,8 @@ export function rollingMean(values: readonly number[], n = 5): number[] {
 /** The chart's element id, so alerts can link to it. */
 export const trendChartId = (game: GameTrend["game_type"]) => `trend-${game}`;
 
-/** Games on Watch or Declining open by default; the others start collapsed. */
-export const opensByDefault = (trend: GameTrend) => trend.trend_status === "watch" || trend.trend_status === "declining";
+/** Only a Declining game's chart opens by default; the closed card still shows its status and z. */
+export const opensByDefault = (trend: GameTrend) => trend.trend_status === "declining";
 
 /**
  * A collapsible card per game: the 5-session average (bold), each session (faint dots), the

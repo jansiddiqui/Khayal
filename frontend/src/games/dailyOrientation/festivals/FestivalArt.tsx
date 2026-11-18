@@ -29,6 +29,29 @@ function Crescent(props: ArtProps) {
   );
 }
 
+/** Muharram: the thin new moon that starts the year, outlined (not the Eid crescent and star). */
+function NewMoon(props: ArtProps) {
+  return (
+    <Art {...props}>
+      <circle cx="32" cy="32" r="26" fill="#1f3b4d" {...STROKE} />
+      <path d="M40 10a22 22 0 1 1-22 38a26 26 0 0 0 22-38z" fill="#f2c14e" {...STROKE} />
+    </Art>
+  );
+}
+
+/** Milad-un-Nabi: a hanging lantern, as lights are put up for the day. */
+function Lantern(props: ArtProps) {
+  return (
+    <Art {...props}>
+      <path d="M32 4v8" fill="none" {...STROKE} />
+      <path d="M24 12h16l-2 6H26z" fill="#2e9e5b" {...STROKE} />
+      <path d="M22 18h20c4 10 4 22 0 32H22c-4-10-4-22 0-32z" fill="#f5b700" {...STROKE} />
+      <path d="M32 22v24M26 34h12" fill="none" stroke="#e65100" strokeWidth="3" strokeLinecap="round" />
+      <path d="M24 50h16l-3 6H27z" fill="#2e9e5b" {...STROKE} />
+    </Art>
+  );
+}
+
 function Wheat(props: ArtProps) {
   return (
     <Art {...props}>
@@ -140,6 +163,8 @@ export const FESTIVAL_ART: Record<FestivalId, ComponentType<ArtProps>> = {
   eid_ul_fitr: Crescent,
   vaisakhi: Wheat,
   bakrid: Crescent,
+  muharram: NewMoon,
+  milad_un_nabi: Lantern,
   onam: FlowerCarpet,
   raksha_bandhan: Rakhi,
   janmashtami: Flute,

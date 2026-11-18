@@ -35,11 +35,11 @@ Domain = str
 DOMAINS: dict[GameType, Domain] = {
     GameType.word_recall: "Verbal memory",
     GameType.memory_match: "Visuospatial memory",
-    GameType.sequence_recall: "Working memory (order)",
+    GameType.sequence_recall: "Working memory: order",
     GameType.reaction_tap: "Speed and attention",
-    GameType.object_location: "Visuospatial memory (where things are)",
+    GameType.object_location: "Visuospatial memory: where things are",
     GameType.spatial_span: "Visuospatial working memory",
-    GameType.money_handling: "Everyday function (money)",
+    GameType.money_handling: "Everyday function: money",
     GameType.clock_setting: "Visuospatial and time",
     GameType.colour_trails: "Attention and task switching",
 }

@@ -1,10 +1,10 @@
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
-import { CoreGamesForm, FestivalsForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
+import { CoreGamesForm, FestivalsForm, gameLabel, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import {
-  acknowledgeAlert,
+  acknowledgeAlerts,
   getSignals,
   getTrend,
   listAlerts,
@@ -12,7 +12,9 @@ import {
   listSessions,
   updatePatient,
   type GameSession,
+  type Alert,
   type GameTrend,
+  type IndexStatus,
   type GameType,
   type Signals,
   type Trend,
@@ -103,6 +105,13 @@ const SEVERITY_STYLE = {
 } as const;
 
 const ALERTS_SHOWN = 3;
+
+const STATUS_WORD: Record<IndexStatus, string> = { stable: "Stable", watch: "Watch", declining: "Declining", insufficient: "Learning" };
+
+function gamesHint(attention: number): string {
+  if (attention === 0) return "No game needs attention; Declining games open by themselves.";
+  return `${attention} ${attention === 1 ? "game needs" : "games need"} attention; Declining charts are open.`;
+}
 /** How long a chart stays highlighted after an alert links to it. */
 export const HIGHLIGHT_MS = 2000;
 
@@ -127,23 +136,69 @@ export function gameOfLine(line: string): GameType | null {
   return hit ? hit[0] : null;
 }
 
+export interface AlertGroup {
+  key: string;
+  /** Newest first. */
+  alerts: Alert[];
+  /** The worst severity in the group. */
+  severity: Alert["severity"];
+}
+
+const SEVERITY_RANK = { info: 0, warning: 1, critical: 2 } as const;
+
+/**
+ * Repeated alerts become one card: decline alerts by the games they name (the numbers change
+ * week to week), missed-reminder and speech alerts by type, "not sure" notices by their message
+ * (one reminder). Groups keep the order of their newest alert.
+ */
+export function groupAlerts(alerts: readonly Alert[]): AlertGroup[] {
+  const keyOf = (a: Alert) => {
+    if (a.type === "decline") {
+      const games = alertLines(a.message).map(gameOfLine).filter(Boolean).sort();
+      return `decline|${games.join(",") || a.message}`;
+    }
+    return a.type === "reminder_unsure" ? `unsure|${a.message}` : a.type;
+  };
+  const groups = new Map<string, Alert[]>();
+  for (const a of alerts) groups.set(keyOf(a), [...(groups.get(keyOf(a)) ?? []), a]);
+  return [...groups.entries()].map(([key, list]) => ({
+    key,
+    alerts: list,
+    severity: list.reduce((worst, a) => (SEVERITY_RANK[a.severity] > SEVERITY_RANK[worst] ? a.severity : worst), list[0]!.severity),
+  }));
+}
+
+const shortDay = (iso: string) => serverDate(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
 function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame: (game: GameType) => void }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const alerts = useQuery({ queryKey: ["alerts", patientId], queryFn: () => listAlerts(patientId) });
   const ack = useMutation({
-    mutationFn: acknowledgeAlert,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["alerts", patientId] }),
+    mutationFn: (ids: number[] | null) => acknowledgeAlerts(patientId, ids ?? undefined),
+    onSuccess: (count) => {
+      void queryClient.invalidateQueries({ queryKey: ["alerts", patientId] });
+      toast.show({ message: count === 1 ? "1 alert acknowledged." : `${count} alerts acknowledged.` });
+    },
   });
   const [showAll, setShowAll] = useState(false);
   const open = alerts.data?.filter((a) => !a.acknowledged) ?? [];
-  const shown = showAll ? open : open.slice(0, ALERTS_SHOWN);
+  const groups = groupAlerts(open);
+  const shown = showAll ? groups : groups.slice(0, ALERTS_SHOWN);
   const past = alerts.data?.filter((a) => a.acknowledged) ?? [];
 
   return (
     <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="alerts-heading">
-      <h2 id="alerts-heading" className="mb-3 text-lg font-semibold">
-        Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
-      </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="alerts-heading" className="text-lg font-semibold">
+          Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
+        </h2>
+        {open.length > 1 && (
+          <Button size="sm" onClick={() => ack.mutate(null)} loading={ack.isPending && ack.variables === null} disabled={ack.isPending}>
+            Acknowledge all
+          </Button>
+        )}
+      </div>
       {alerts.isPending && (
         <div role="status" aria-busy="true" aria-label="Loading alerts" className="flex flex-col gap-2">
           <Skeleton className="h-12 w-full" />
@@ -157,49 +212,65 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
         </p>
       )}
       <ul className="flex flex-col gap-2">
-        {shown.map((a) => {
-          const look = SEVERITY_STYLE[a.severity];
-          const lines = alertLines(a.message);
+        {shown.map((g) => {
+          const newest = g.alerts[0]!;
+          const look = SEVERITY_STYLE[g.severity];
+          const lines = alertLines(newest.message);
+          const ids = g.alerts.map((a) => a.id);
+          const repeated = g.alerts.length > 1;
+          const oldest = g.alerts[g.alerts.length - 1]!;
           return (
-          <li key={a.id} className={`flex flex-wrap items-start gap-3 rounded-md border p-3 ${look.box}`}>
-            <look.icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${look.iconClass}`} />
-            <div className="min-w-0 flex-1">
-              <p className="mb-1">
-                <span className="font-semibold capitalize">{a.severity}</span>
-                <span className="text-ink-muted"> · {ALERT_TYPE_LABEL[a.type]} · {alertTime(a.created_at)}</span>
-              </p>
-              <ul className={lines.length > 1 ? "flex list-disc flex-col gap-1 pl-5" : "flex flex-col gap-1"}>
-                {lines.map((line) => {
-                  const game = gameOfLine(line);
-                  return (
-                    <li key={line}>
-                      {line}{" "}
-                      {game && (
-                        <button
-                          type="button"
-                          onClick={() => onShowGame(game)}
-                          className="inline-flex items-center gap-1 text-left font-medium text-brand-dark underline underline-offset-2"
-                        >
-                          <ChartLine aria-hidden="true" className="size-4" />
-                          See {GAME_NAMES[game]} chart
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              <Disclaimer compact />
-            </div>
-            <Button size="sm" onClick={() => ack.mutate(a.id)} loading={ack.isPending && ack.variables === a.id} disabled={ack.isPending}>
-              Acknowledge
-            </Button>
-          </li>
+            <li key={g.key} className={`flex flex-wrap items-start gap-3 rounded-md border p-3 ${look.box}`}>
+              <look.icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${look.iconClass}`} />
+              <div className="min-w-0 flex-1">
+                <p className="mb-1">
+                  <span className="font-semibold capitalize">{g.severity}</span>
+                  <span className="text-ink-muted">
+                    {" "}
+                    · {ALERT_TYPE_LABEL[newest.type]} ·{" "}
+                    {repeated
+                      ? `${g.alerts.length} alerts, ${shortDay(oldest.created_at)} – ${shortDay(newest.created_at)}`
+                      : alertTime(newest.created_at)}
+                  </span>
+                </p>
+                {repeated && <p className="mb-1 text-ink-soft">Latest:</p>}
+                <ul className={lines.length > 1 ? "flex list-disc flex-col gap-1 pl-5" : "flex flex-col gap-1"}>
+                  {lines.map((line) => {
+                    const game = gameOfLine(line);
+                    return (
+                      <li key={line}>
+                        {line}{" "}
+                        {game && (
+                          <button
+                            type="button"
+                            onClick={() => onShowGame(game)}
+                            className="inline-flex items-center gap-1 text-left font-medium text-brand-dark underline underline-offset-2"
+                          >
+                            <ChartLine aria-hidden="true" className="size-4" />
+                            See {GAME_NAMES[game]} chart
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Disclaimer compact />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => ack.mutate(ids)}
+                loading={ack.isPending && ack.variables !== null && ack.variables?.[0] === ids[0]}
+                disabled={ack.isPending}
+              >
+                {repeated ? `Acknowledge ${g.alerts.length}` : "Acknowledge"}
+              </Button>
+            </li>
           );
         })}
       </ul>
-      {open.length > ALERTS_SHOWN && (
+      {groups.length > ALERTS_SHOWN && (
         <button type="button" onClick={() => setShowAll(!showAll)} className="mt-2 text-brand-dark underline">
-          {showAll ? "Show newest only" : `Show ${open.length - ALERTS_SHOWN} more`}
+          {showAll ? "Show newest only" : `Show ${groups.length - ALERTS_SHOWN} more`}
         </button>
       )}
       {past.length > 0 && (
@@ -253,7 +324,7 @@ function PinForm({ patientId, pinned, options }: { patientId: number; pinned: Ga
       >
         {options.map((g) => (
           <option key={g} value={g}>
-            {GAME_NAMES[g]}
+            {gameLabel(g)}
           </option>
         ))}
       </select>
@@ -377,6 +448,9 @@ export function PatientDetail() {
       return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined, core: core.includes(type) };
     })
     .filter((l) => l.core || l.played);
+  // Sections open only when something needs attention (Watch or Declining); the rest stay closed.
+  const overallStatus = trend.data?.cognitive_status;
+  const needsAttention = (s: IndexStatus | undefined) => s === "watch" || s === "declining";
   const tracked = (g: GameTrend) => g.game_type === "daily_orientation" || core.includes(g.game_type);
   const trackedTrends = trend.data?.games.filter(tracked) ?? [];
   const moreTrends = trend.data?.games.filter((g) => !tracked(g) && g.sessions > 0) ?? [];
@@ -435,7 +509,11 @@ export function PatientDetail() {
       {/* Alerts are always shown, never collapsed. */}
       <AlertsPanel patientId={patientId} onShowGame={showGame} />
 
-      <Section title="Overall trend and signals" defaultOpen>
+      <Section
+        title="Overall trend and signals"
+        hint={overallStatus ? `Overall: ${STATUS_WORD[overallStatus]}` : undefined}
+        defaultOpen={needsAttention(overallStatus)}
+      >
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           {trend.isSuccess && <IndexChart trend={trend.data} />}
           {trend.isPending && (
@@ -463,7 +541,11 @@ export function PatientDetail() {
         </div>
       )}
       {trend.isSuccess && (
-        <Section title="Games" hint="Games on Watch or Declining are open; tap a game to open or close it." defaultOpen>
+        <Section
+          title="Games"
+          hint={gamesHint(trackedTrends.filter((g) => needsAttention(g.trend_status)).length)}
+          defaultOpen={trackedTrends.some((g) => needsAttention(g.trend_status))}
+        >
           <p className="mb-3 text-sm text-ink-muted">
             Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
             shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).

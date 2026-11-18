@@ -751,6 +751,12 @@ export async function listAlerts(patientId: number): Promise<Alert[]> {
   return data;
 }
 
+/** Acknowledge a group of alerts, or (no ids) every new alert for the patient. */
+export async function acknowledgeAlerts(patientId: number, ids?: number[]): Promise<number> {
+  const { data } = await api.post<{ acknowledged: number }>(`/patients/${patientId}/alerts/ack`, ids ? { ids } : {});
+  return data.acknowledged;
+}
+
 export async function acknowledgeAlert(alertId: number): Promise<Alert> {
   const { data } = await api.post<Alert>(`/alerts/${alertId}/ack`);
   return data;
