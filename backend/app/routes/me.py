@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, status
 
-from app.deps import CurrentCaregiver, DbSession, Now
-from app.schemas import ConsentOut, DeleteAccountIn, RemovedOut
+from app.deps import CurrentCaregiver, CurrentPatient, DbSession, Now
+from app.schemas import ConsentOut, DeleteAccountIn, RemovedOut, VoiceCheckIn
 from app.services import accounts, auth, consent, export
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -21,6 +21,15 @@ def export_my_data(caregiver: CurrentCaregiver, db: DbSession, now: Now) -> Resp
         data, media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"},
     )
+
+
+@router.post("/voice-check", status_code=status.HTTP_204_NO_CONTENT)
+def report_voice(body: VoiceCheckIn, patient: CurrentPatient, db: DbSession, now: Now) -> Response:
+    """The elder's device reports which read-aloud voice it found for the app language, so the
+    family can see when Urdu falls back to a Hindi voice or no voice exists (Round 2 batch 5)."""
+    patient.voice_check = {"lang": body.lang, "voice": body.voice, "using": body.using, "checked_at": now.isoformat()}
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/delete", response_model=RemovedOut)

@@ -51,6 +51,11 @@ class User(Base):
     # Patients only: festivals the family celebrates (About Today's festival question). None or
     # empty = the question is off (docs/games/research.md D6).
     festivals: Mapped[list[str] | None] = mapped_column(JSON, default=None)
+    # Round 2 batch 5: the language the patient app shows ("en", "hi" or "ur"), set by a caregiver.
+    language: Mapped[str] = mapped_column(String(5), default="en", server_default="en")
+    # Patients only: what read-aloud found on the elder's device for that language (reported by the
+    # device): {"lang", "voice", "using", "checked_at"}; None until the device has checked.
+    voice_check: Mapped[dict[str, str | None] | None] = mapped_column(JSON, default=None)
 
 
 class CareLink(Base):

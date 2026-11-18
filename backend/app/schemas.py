@@ -118,6 +118,8 @@ class UserOut(BaseModel):
     festivals: list[str] | None = None
     voice_task_enabled: bool = False
     voice_consent_at: datetime | None = None
+    # Round 2 batch 5: the patient app's language ("en", "hi", "ur").
+    language: str = "en"
     # Public demo only: when this account and its data are deleted.
     demo_expires_at: datetime | None = None
     # Patients only: the separate opt-in for family photos (and the elder's own photo).
@@ -179,6 +181,9 @@ class PatientOut(BaseModel):
     voice_consent_at: datetime | None = None
     photos_enabled: bool = False
     has_photo: bool = False
+    # Round 2 batch 5: the language the elder's app shows, and what read-aloud found on their device.
+    language: str = "en"
+    voice_check: dict[str, str | None] | None = None
 
 
 class ConsentToggleIn(BaseModel):
@@ -295,6 +300,8 @@ class PatientUpdateIn(BaseModel):
     festivals: list[FestivalId] | None = None
     # Caregiver consent for the weekly voice task.
     voice_task_enabled: bool | None = None
+    # The elder's app language (Round 2 batch 5).
+    language: Literal["en", "hi", "ur"] | None = None
 
     @model_validator(mode="after")
     def _check_pins(self) -> "PatientUpdateIn":
@@ -851,3 +858,15 @@ class MemoryOut(BaseModel):
     voice_ms: int | None
     created_at: datetime
     updated_at: datetime
+
+
+# --- languages (Round 2 batch 5) -------------------------------------------------------------
+
+
+class VoiceCheckIn(BaseModel):
+    """What the elder's device found for read-aloud: the app language, the voice it will use (if
+    any) and which language that voice speaks ("ur" / "hi" / "en", or "none" when it can't speak)."""
+
+    lang: Literal["en", "hi", "ur"]
+    voice: Annotated[str, StringConstraints(max_length=120)] | None = None
+    using: Literal["en", "hi", "ur", "none"]
