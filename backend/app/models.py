@@ -417,6 +417,8 @@ class ConsentKind(str, Enum):
     # Optional features for one elder.
     photos = "photos"
     voice = "voice"
+    # Round 2 batch 3: anonymised data of this elder may go into research exports (withdrawable).
+    research = "research"
 
 
 class Consent(Base):
@@ -468,3 +470,62 @@ class PatientEvent(Base):
     # "settings", "reminder" or "family".
     kind: Mapped[str] = mapped_column(String(24))
     summary: Mapped[str] = mapped_column(String(300))
+
+
+class SystemState(Base):
+    """Small key/value facts about the server for the admin health panel (Round 2 batch 3):
+    last_tick_at (external cron), last_housekeeping_at, last_start_at, last_backup_at, last_backup_by."""
+
+    __tablename__ = "system_state"
+
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value: Mapped[str] = mapped_column(String(200))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FeedbackKind(str, Enum):
+    hard = "hard"  # "Something was hard"
+    liked = "liked"  # "I liked this"
+    other = "other"  # caregivers: anything else
+
+
+class FeedbackStatus(str, Enum):
+    new = "new"
+    read = "read"
+    resolved = "resolved"
+
+
+class Feedback(Base):
+    """"Send feedback" from a caregiver (header) or a patient (Settings sheet). Read by admins."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), default=None, index=True)
+    role: Mapped[Role] = mapped_column(SAEnum(Role, native_enum=False, length=16))
+    kind: Mapped[FeedbackKind] = mapped_column(SAEnum(FeedbackKind, native_enum=False, length=16))
+    text: Mapped[str | None] = mapped_column(String(2000), default=None)
+    # The screen it was sent from ("/patient/games", "/caregiver/patients/3").
+    page: Mapped[str | None] = mapped_column(String(200), default=None)
+    # Optional voice note (patients with the voice opt-in): storage key and type.
+    audio_key: Mapped[str | None] = mapped_column(String(200), default=None)
+    audio_type: Mapped[str | None] = mapped_column(String(40), default=None)
+    status: Mapped[FeedbackStatus] = mapped_column(
+        SAEnum(FeedbackStatus, native_enum=False, length=16), default=FeedbackStatus.new
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AdminLog(Base):
+    """What admins did (approve, invite, reset link, backup, research export, feedback status ...)."""
+
+    __tablename__ = "admin_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    admin_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    # Kept when the admin account is deleted.
+    admin_email: Mapped[str] = mapped_column(String(254))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    action: Mapped[str] = mapped_column(String(40), index=True)
+    detail: Mapped[str] = mapped_column(String(500), default="")

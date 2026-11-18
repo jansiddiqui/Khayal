@@ -17,6 +17,9 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.models import (
+    AdminLog,
+    Feedback,
+    PatientEvent,
     Alert,
     CareInvite,
     CareLink,
@@ -37,7 +40,7 @@ from app.models import (
     StoredFile,
     User,
 )
-from app.services import family, speech, storage
+from app.services import family, feedback, speech, storage
 
 
 def demo_expiry(now: datetime) -> datetime | None:
@@ -58,7 +61,7 @@ def _file_keys(db: Session, user_id: int) -> list[str]:
     photo = db.scalar(select(User.photo_key).where(User.id == user_id))
     if photo:
         keys.append(photo)
-    return keys
+    return keys + feedback.audio_keys(db, user_id)
 
 
 def delete_user(db: Session, user_id: int) -> None:
@@ -80,6 +83,10 @@ def delete_user(db: Session, user_id: int) -> None:
     db.execute(delete(CareLink).where(or_(CareLink.caregiver_id == user_id, CareLink.patient_id == user_id)))
     db.execute(delete(Consent).where(or_(Consent.user_id == user_id, Consent.patient_id == user_id)))
     db.execute(delete(DeviceSession).where(DeviceSession.patient_id == user_id))
+    db.execute(delete(Feedback).where(Feedback.user_id == user_id))
+    db.execute(delete(PatientEvent).where(PatientEvent.patient_id == user_id))
+    db.execute(update(PatientEvent).where(PatientEvent.actor_id == user_id).values(actor_id=None))
+    db.execute(update(AdminLog).where(AdminLog.admin_id == user_id).values(admin_id=None))
     db.execute(update(DeviceSession).where(DeviceSession.paired_by == user_id).values(paired_by=None))
     db.execute(delete(CareInvite).where(or_(CareInvite.patient_id == user_id, CareInvite.created_by == user_id)))
     db.execute(update(CareInvite).where(CareInvite.used_by == user_id).values(used_by=None))

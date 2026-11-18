@@ -7,9 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
-from app.background import start_background_tasks
+from app.background import start_background_tasks, mark_time
 from app.db import ensure_schema_current
-from app.routes import admin, alerts, auth, caregiver, demo, family, games, health, internal, invites, me, patients, reminders, speech, trends
+from app.services import system_state
+from app.routes import admin, alerts, auth, caregiver, demo, family, feedback, games, health, internal, invites, me, patients, reminders, speech, trends
 
 
 def _setup_logging() -> None:
@@ -26,6 +27,7 @@ def _setup_logging() -> None:
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     _setup_logging()
     ensure_schema_current()
+    mark_time(system_state.LAST_START)
     tasks = start_background_tasks()
     yield
     for task in tasks:
@@ -66,6 +68,7 @@ def create_app() -> FastAPI:
         admin.router,
         me.router,
         caregiver.router,
+        feedback.router,
     ):
         app.include_router(router, prefix="/api")
     return app

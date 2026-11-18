@@ -53,6 +53,10 @@ LIMITS: dict[str, SlidingWindowLimiter] = {
     "invite": SlidingWindowLimiter(5, timedelta(hours=1)),
     # Full backups (admin page): heavy, so one per 10 minutes for the whole server.
     "backup": SlidingWindowLimiter(1, timedelta(minutes=10)),
+    # "Send feedback": plenty for real use, not for flooding the inbox.
+    "feedback": SlidingWindowLimiter(10, timedelta(hours=1)),
+    # Research exports (admin page).
+    "research": SlidingWindowLimiter(5, timedelta(hours=1)),
 }
 
 

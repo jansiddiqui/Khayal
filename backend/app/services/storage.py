@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from app import config
 from app.models import StoredFile
 
-_KEY = re.compile(r"^(family|speech|profile)/\d+/[0-9a-f]{32}\.(jpg|webm|ogg)$")
+_KEY = re.compile(r"^(family|speech|profile|feedback)/\d+/[0-9a-f]{32}\.(jpg|webm|ogg)$")
 
 
 class InvalidKeyError(ValueError):
