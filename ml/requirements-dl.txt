@@ -1,0 +1,7 @@
+# Deep-learning experiments only (python -m ml.dl.run). Not needed by the app or the backend.
+# CPU build of PyTorch; on Colab, skip this file and use the preinstalled torch.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+numpy==2.2.1
+matplotlib==3.9.2
+pytest==8.3.4

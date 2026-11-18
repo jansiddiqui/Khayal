@@ -18,6 +18,13 @@ CSV columns (stable; also used to train the LSTM later):
 patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints,
 median_rt_ms, completed, composite
 `composite` is empty for stopped-early sessions (they are excluded from scoring).
+
+Study time (`study_ms`, CLAUDE.md section 7) is optional: pass `study_rng` to
+`simulate_patient` to also get how long the patient looked before playing each round
+(Find the Pairs and Remember the Words only). It is drawn from that separate generator,
+so all other numbers stay exactly the same with or without it. It is not in the CSV.
+Model (an assumption, not fitted to real data): about 1.5 s per card pair or 1.8 s per
+word for a healthy adult, slower as ability falls, with log-normal noise.
 """
 
 import argparse
@@ -61,9 +68,14 @@ DELAYED = "word_recall_delayed"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span", "object_location")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
 CORE: tuple[str, ...] = ("word_recall", "object_location", "colour_trails", "money_handling")
+# The core set before games v2 (app/services/core_games.py LEGACY_CORE). With delayed=False it
+# reproduces the pre-games-v2 simulator exactly (used by the deep-learning experiments, ml/dl/).
+LEGACY_CORE: tuple[str, ...] = ("memory_match", "sequence_recall", "word_recall", "reaction_tap")
 # Games that record `errors` in the app (wrong taps / clock error bits / misplacements).
 ERROR_GAMES = frozenset({"colour_trails", "clock_setting", "object_location"})
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall", "spatial_span", "object_location"})
+# Study time per item for a healthy adult (ms): per card pair, per word.
+STUDY_MS_PER_ITEM = {"memory_match": 1500, "word_recall": 1800}
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
     "memory_match": 2600,
@@ -105,6 +117,8 @@ class SimSession:
     level_end: int
     rounds: tuple[RoundSummary, ...]
     completed: bool
+    # Per round, ms looked at before playing; only filled when simulated with a study_rng.
+    study_ms: tuple[int | None, ...] = ()
 
     def summary(self, session_id: int | None = None) -> SessionSummary:
         return SessionSummary(self.game_type, self.started_at, self.level_start, self.rounds, self.completed, session_id)
@@ -136,6 +150,22 @@ def difficulty(game: str, level: int) -> float:
 def red_chance(level: int) -> float:
     """Same rule as the frontend's Reaction Tap: no red below level 4, then 10% → 40%."""
     return 0.0 if level < 4 else min(0.4, 0.1 + (level - 4) * 0.05)
+
+
+def study_items(game: str, level: int) -> int:
+    """Cards pairs (Find the Pairs) or words (Remember the Words) shown at this level, as in the app."""
+    level = min(10, max(1, level))
+    if game == "memory_match":
+        return min(10, level + 1)
+    return 3 + ((level - 1) * 5) // 9
+
+
+def study_time(game: str, level: int, ability: float, rng: np.random.Generator) -> int | None:
+    """How long the patient looks before playing one round (ms); None for games without a study phase."""
+    if game not in STUDY_MS_PER_ITEM:
+        return None
+    slow = 1.0 + 1.0 * max(0.0, 0.8 - ability)
+    return int(STUDY_MS_PER_ITEM[game] * study_items(game, level) * slow * rng.lognormal(0.0, 0.3))
 
 
 def play_round(game: str, level: int, ability: float, rng: np.random.Generator) -> RoundSummary:
@@ -233,13 +263,26 @@ def simulate_patient(
     days: int,
     rng: np.random.Generator,
     start: datetime,
+    study_rng: np.random.Generator | None = None,
+    *,
     core: Sequence[str] = CORE,
     options: SimOptions | None = None,
+    params: ProfileParams | None = None,
+    onset_day: int = 0,
+    play_every: int = 1,
+    delayed: bool = True,
 ) -> list[SimSession]:
     """`days` days of play for one patient, starting at local midnight `start` (tz-aware).
+
     Slots 2-3 rotate through `core` (4 levelled games). With `options`, `options.engine`
-    chooses the levels (and learns from each next session's reward)."""
-    params = PARAMS[profile]
+    chooses the levels (and learns from each next session's reward). With `delayed`, a
+    delayed word recall follows Remember the Words when another game comes after it that day.
+    With `study_rng`, each session also gets `study_ms` per round (drawn only from `study_rng`).
+    For robustness tests (all off by default, which gives exactly the usual patients):
+    `params` replaces the profile's parameters, the decline starts on `onset_day` instead of
+    day 0, and with `play_every` = 2 the patient can only play every other day.
+    """
+    params = params or PARAMS[profile]
     ability0 = float(rng.normal(0.80, 0.04))
     rotation = tuple(core)
     levels = {g: START_LEVEL for g in rotation}
@@ -250,9 +293,12 @@ def simulate_patient(
     pending: dict[str, tuple[Context, int]] = {}  # game -> (context, action) awaiting its reward
 
     for day in range(days):
+        if day % play_every:
+            continue
         if rng.random() > params.play_probability:
             continue
-        ability = ability0 - params.decline_per_day * day + float(rng.normal(0.0, params.daily_noise))
+        declined = params.decline_per_day * max(0, day - onset_day)
+        ability = ability0 - declined + float(rng.normal(0.0, params.daily_noise))
         # Today's games: About Today + the 2 core games played least recently (ties random).
         tiebreak = rng.permutation(len(rotation))
         flex = sorted(rotation, key=lambda g: (last_played[g], tiebreak[rotation.index(g)]))[:2]
@@ -266,6 +312,9 @@ def simulate_patient(
             stopped = rng.random() < p_stop
             n_rounds = int(rng.integers(1, BLOCK_SIZE)) if stopped else BLOCK_SIZE
             rounds = tuple(play_round(game, level, ability, rng) for _ in range(n_rounds))
+            study = (
+                tuple(study_time(game, level, ability, study_rng) for _ in rounds) if study_rng is not None else ()
+            )
 
             level_end = level
             if game != ORIENTATION and options is not None:
@@ -279,13 +328,18 @@ def simulate_patient(
                 last_played[game] = day
 
             out.append(
-                SimSession(patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped)
+                SimSession(
+                    patient_id, profile, day, game, clock, level, level_end, rounds, completed=not stopped, study_ms=study
+                )
             )
             clock += timedelta(minutes=float(rng.uniform(4, 9)))
             # The delayed check comes at the start of the next game, if there is one today.
-            if game == "word_recall" and not stopped and position < len(todays) - 1:
-                delayed = tuple(play_round(DELAYED, level, ability, rng) for _ in range(words_at(level)))
-                out.append(SimSession(patient_id, profile, day, DELAYED, clock, level, level, delayed, completed=True))
+            if delayed and game == "word_recall" and not stopped and position < len(todays) - 1:
+                recall = tuple(play_round(DELAYED, level, ability, rng) for _ in range(words_at(level)))
+                # No study phase: the words were studied in Remember the Words.
+                no_study = (None,) * len(recall) if study_rng is not None else ()
+                out.append(SimSession(patient_id, profile, day, DELAYED, clock, level, level, recall, completed=True,
+                                      study_ms=no_study))
                 clock += timedelta(minutes=1)
     return out
 
