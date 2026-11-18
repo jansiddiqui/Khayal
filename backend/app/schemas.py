@@ -656,6 +656,13 @@ class DoseWeekOut(BaseModel):
     unsure: int
 
 
+class MoodCountsOut(BaseModel):
+    good: int
+    okay: int
+    not_so_good: int
+    skipped: int
+
+
 class WeekStatsOut(BaseModel):
     start: date
     end: date
@@ -668,6 +675,7 @@ class WeekStatsOut(BaseModel):
     reminders_total: int
     alerts: int
     recordings: int
+    mood: MoodCountsOut
 
 
 class WeeklyOut(BaseModel):
@@ -677,7 +685,7 @@ class WeeklyOut(BaseModel):
 
 class TimelineEventOut(BaseModel):
     at: datetime
-    kind: Literal["session", "reminder", "alert", "recording", "settings"]
+    kind: Literal["session", "reminder", "alert", "recording", "settings", "mood"]
     title: str
     detail: str
     tone: Literal["good", "neutral", "attention"]
@@ -716,6 +724,8 @@ class ReportOut(BaseModel):
     alerts: list[AlertOut]
     recordings: int
     days_played: int
+    mood: MoodCountsOut
+    mood_days: list["MoodDayOut"]
 
 
 # --- admin (Round 2 batch 3) ----------------------------------------------------------------
@@ -803,3 +813,41 @@ class AdminLogOut(BaseModel):
     at: datetime
     action: str
     detail: str
+
+
+# --- mood and memory book (Round 2 batch 4) ------------------------------------------------
+
+MoodValue = Literal["good", "okay", "not_so_good"]
+
+
+class MoodIn(BaseModel):
+    # None = Skip.
+    mood: MoodValue | None
+
+
+class MoodTodayOut(BaseModel):
+    # True once the patient answered or skipped today: Home doesn't ask again.
+    asked: bool
+    mood: MoodValue | None
+
+
+class MoodDayOut(BaseModel):
+    date: date
+    mood: MoodValue | None
+
+
+class MemoryIn(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    story: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] = ""
+
+
+class MemoryOut(BaseModel):
+    id: int
+    patient_id: int
+    title: str
+    story: str
+    photos: list[FamilyPhotoOut]
+    voice_url: str | None
+    voice_ms: int | None
+    created_at: datetime
+    updated_at: datetime

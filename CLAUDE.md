@@ -101,6 +101,7 @@ Our users are elderly people with memory problems. Every patient screen must fol
 **Patient UI decisions (decided after the UI audit, `docs/ui-audit.md`):**
 
 - Game pieces (cards, tiles, answer options, word choices) never count toward the 3-button rule. The rule covers navigation and actions.
+- **Quiet links (accepted after Round 2 batch 3):** a secondary sheet (e.g. the Settings sheet) may have one quiet text link below its main controls, such as "Tell us something". It does not count toward the 3-button rule; main screens never get one.
 - No important button below the fold at 375 × 812: every game board, every answer and every commit button ("Done", "Create account") is visible without scrolling. Game screens use a compact play mode for this.
 - No hidden timers (see section 7). Reaction Tap is the only game that measures speed.
 - **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
@@ -413,7 +414,7 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
        - These times are stored in a new `system_state` table.
      - **Feedback:**
        - Caregivers: "Send feedback" in the header: Something was hard / I liked this / Something else, plus a message.
-       - Patients: a quiet "Tell us something" link under Done in the Settings sheet. The sheet keeps its 3 main controls; the link is a fourth, quieter one, **to review**. It opens two big choices ("Something was hard" / "I liked this", plus Back). The next step has a few words, a voice note (only when the elder's voice opt-in is on; stops by itself after 1 minute) and Send.
+       - Patients: a quiet "Tell us something" link under Done in the Settings sheet. The sheet keeps its 3 main controls; the link is a fourth, quieter one (accepted, section 4 "Quiet links"). It opens two big choices ("Something was hard" / "I liked this", plus Back). The next step has a few words, a voice note (only when the elder's voice opt-in is on; stops by itself after 1 minute) and Send.
        - Limited to 10 per hour per person.
        - Admins mark each item read or resolved, or reopen it, and can play voice notes.
        - Withdrawing the voice opt-in deletes feedback voice notes. Deleting an account deletes its feedback. "Export my data" includes it.

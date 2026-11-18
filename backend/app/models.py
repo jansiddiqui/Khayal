@@ -529,3 +529,43 @@ class AdminLog(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     action: Mapped[str] = mapped_column(String(40), index=True)
     detail: Mapped[str] = mapped_column(String(500), default="")
+
+
+class Mood(str, Enum):
+    good = "good"
+    okay = "okay"
+    not_so_good = "not_so_good"
+
+
+class MoodCheckin(Base):
+    """"How are you feeling today?" (Round 2 batch 4): once a day, optional. `mood` is None when
+    the patient tapped Skip, so the question is not asked again that day."""
+
+    __tablename__ = "mood_checkins"
+    __table_args__ = (UniqueConstraint("patient_id", "date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    date: Mapped[date] = mapped_column(Date)
+    mood: Mapped[Mood | None] = mapped_column(SAEnum(Mood, native_enum=False, length=16), default=None)
+    answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MemoryEntry(Base):
+    """A memory book page (Round 2 batch 4): 1-5 photos, a title, a short story and an optional
+    family voice note. Needs the elder's photos opt-in; the voice note also the voice opt-in."""
+
+    __tablename__ = "memory_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    story: Mapped[str] = mapped_column(String(2000), default="")
+    # File names under memory/{patient_id}/ (storage), in display order.
+    photo_paths: Mapped[list[str]] = mapped_column(JSON, default=list)
+    voice_path: Mapped[str | None] = mapped_column(String(80), default=None)
+    voice_type: Mapped[str | None] = mapped_column(String(40), default=None)
+    voice_ms: Mapped[int | None] = mapped_column(default=None)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

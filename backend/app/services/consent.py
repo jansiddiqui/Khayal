@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.models import Consent, ConsentKind, FamilyMember, SpeechSample, User
-from app.services import family, feedback, speech, storage
+from app.services import family, feedback, memories, speech, storage
 
 ELDER_BASES = ("elder_agreed", "legal_authority")
 
@@ -59,6 +59,7 @@ def set_photos(db: Session, caregiver: User, patient: User, enabled: bool, now: 
             store.delete(db, patient.photo_key)
             patient.photo_key = None
             removed += 1
+        removed += memories.withdraw_photos(db, patient.id)
         patient.photos_enabled = False
         _withdraw(db, patient.id, ConsentKind.photos, now)
     db.commit()
@@ -76,7 +77,7 @@ def set_voice(db: Session, caregiver: User, patient: User, enabled: bool, now: d
         samples = speech.samples_for(db, patient.id)
         for sample in samples:
             store.delete(db, speech.audio_key(patient.id, sample.audio_path))
-        removed = len(samples) + feedback.delete_voice_notes(db, patient.id)
+        removed = len(samples) + feedback.delete_voice_notes(db, patient.id) + memories.withdraw_voice(db, patient.id, now)
         db.execute(delete(SpeechSample).where(SpeechSample.patient_id == patient.id))
         _withdraw(db, patient.id, ConsentKind.voice, now)
         speech.set_enabled(db, patient, False, now)

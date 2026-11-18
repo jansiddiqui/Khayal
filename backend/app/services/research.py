@@ -20,7 +20,7 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Consent, ConsentKind, GameSession, Reminder, ReminderLog, Role, User
+from app.models import Consent, ConsentKind, GameSession, MoodCheckin, Reminder, ReminderLog, Role, User
 from app.services.clock import as_utc, local
 
 RESEARCH_POLICY_VERSION = "research-2026-11-draft-1"
@@ -35,6 +35,7 @@ SESSION_COLUMNS = [
     "avg_reaction_ms", "completed",
 ]
 REMINDER_COLUMNS = ["participant", "day", "reminder_type", "status", "confirmed_later", "marked_by"]
+MOOD_COLUMNS = ["participant", "day", "mood"]
 
 
 def has_consent(db: Session, patient_id: int) -> bool:
@@ -96,6 +97,7 @@ def build(db: Session, now: datetime) -> tuple[bytes, int]:
     codes = {pid: f"P{secrets.token_hex(4)}" for pid in elders}
     sessions: list[dict[str, object]] = []
     reminders: list[dict[str, object]] = []
+    moods: list[dict[str, object]] = []
     for pid in elders:
         played = list(
             db.scalars(select(GameSession).where(GameSession.patient_id == pid).order_by(GameSession.started_at))
@@ -108,7 +110,8 @@ def build(db: Session, now: datetime) -> tuple[bytes, int]:
                 .order_by(ReminderLog.date)
             )
         )
-        starts = [local(as_utc(s.started_at)).date() for s in played] + [log.date for log in logs]
+        checkins = list(db.scalars(select(MoodCheckin).where(MoodCheckin.patient_id == pid).order_by(MoodCheckin.date)))
+        starts = [local(as_utc(s.started_at)).date() for s in played] + [log.date for log in logs] + [m.date for m in checkins]
         if not starts:
             continue
         origin: date = min(starts)
@@ -127,6 +130,8 @@ def build(db: Session, now: datetime) -> tuple[bytes, int]:
                     "completed": int(s.completed),
                 }
             )
+        for m in checkins:
+            moods.append({"participant": codes[pid], "day": (m.date - origin).days, "mood": m.mood.value if m.mood else "skipped"})
         for log in logs:
             reminders.append(
                 {
@@ -140,6 +145,7 @@ def build(db: Session, now: datetime) -> tuple[bytes, int]:
             )
     sessions.sort(key=lambda r: (str(r["participant"]), int(r["day"])))  # type: ignore[call-overload]
     reminders.sort(key=lambda r: (str(r["participant"]), int(r["day"])))  # type: ignore[call-overload]
+    moods.sort(key=lambda r: (str(r["participant"]), int(r["day"])))  # type: ignore[call-overload]
     readme = (
         "Khayal research export (anonymised)\n"
         f"Made on {local(now).date().isoformat()}. Families with an active research consent only "
@@ -148,11 +154,12 @@ def build(db: Session, now: datetime) -> tuple[bytes, int]:
         "No names, emails, cities, photos, recordings, reminder titles or exact dates are included.\n\n"
         f"sessions.csv: {', '.join(SESSION_COLUMNS)}\n"
         f"reminders.csv: {', '.join(REMINDER_COLUMNS)}\n"
-        "Mood answers will be added when the daily mood question exists (Round 2 batch 4).\n"
+        f"mood.csv: {', '.join(MOOD_COLUMNS)} (good / okay / not_so_good / skipped)\n"
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("README.txt", readme)
         z.writestr("sessions.csv", _csv(SESSION_COLUMNS, sessions))
         z.writestr("reminders.csv", _csv(REMINDER_COLUMNS, reminders))
+        z.writestr("mood.csv", _csv(MOOD_COLUMNS, moods))
     return buf.getvalue(), len(codes)

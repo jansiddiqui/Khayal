@@ -10,7 +10,7 @@ from app import config
 from app.background import start_background_tasks, mark_time
 from app.db import ensure_schema_current
 from app.services import system_state
-from app.routes import admin, alerts, auth, caregiver, demo, family, feedback, games, health, internal, invites, me, patients, reminders, speech, trends
+from app.routes import admin, alerts, auth, caregiver, demo, family, feedback, memories, mood, games, health, internal, invites, me, patients, reminders, speech, trends
 
 
 def _setup_logging() -> None:
@@ -69,6 +69,8 @@ def create_app() -> FastAPI:
         me.router,
         caregiver.router,
         feedback.router,
+        mood.router,
+        memories.router,
     ):
         app.include_router(router, prefix="/api")
     return app

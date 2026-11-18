@@ -14,6 +14,8 @@ from app.schemas import (
     DoseWeekOut,
     GlanceOut,
     InsightOut,
+    MoodCountsOut,
+    MoodDayOut,
     NextActionOut,
     ReportGameOut,
     ReportOut,
@@ -26,7 +28,7 @@ from app.services import care, caregiver_views, decline
 
 router = APIRouter(tags=["caregiver views"])
 
-EventKind = Literal["session", "reminder", "alert", "recording", "settings"]
+EventKind = Literal["session", "reminder", "alert", "recording", "settings", "mood"]
 
 
 def _patient(db: DbSession, caregiver: User, patient_id: int) -> User:
@@ -66,7 +68,7 @@ def get_insights(patient_id: int, caregiver: CurrentCaregiver, db: DbSession, no
 
 
 def _week(w: caregiver_views.WeekStats) -> WeekStatsOut:
-    return WeekStatsOut(**{**asdict(w), "doses": DoseWeekOut(**asdict(w.doses))})
+    return WeekStatsOut(**{**asdict(w), "doses": DoseWeekOut(**asdict(w.doses)), "mood": MoodCountsOut(**asdict(w.mood))})
 
 
 @router.get("/patients/{patient_id}/weekly", response_model=WeeklyOut)
@@ -131,4 +133,6 @@ def get_report(
         alerts=[AlertOut.model_validate(a) for a in r.alerts],
         recordings=r.recordings,
         days_played=r.days_played,
+        mood=MoodCountsOut(**asdict(r.mood)),
+        mood_days=[MoodDayOut(date=d, mood=m) for d, m in r.mood_days],  # type: ignore[arg-type]
     )
