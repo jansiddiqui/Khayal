@@ -184,6 +184,8 @@ class PatientOut(BaseModel):
     # Round 2 batch 5: the language the elder's app shows, and what read-aloud found on their device.
     language: str = "en"
     voice_check: dict[str, str | None] | None = None
+    # Games outside the core set the family hid from "More games" (more-games-rotation).
+    hidden_games: list[GameType] | None = None
 
 
 class ConsentToggleIn(BaseModel):
@@ -302,6 +304,8 @@ class PatientUpdateIn(BaseModel):
     voice_task_enabled: bool | None = None
     # The elder's app language (Round 2 batch 5).
     language: Literal["en", "hi", "ur"] | None = None
+    # Games outside the core set the family hides from "More games"; [] or null = none hidden.
+    hidden_games: list[GameType] | None = None
 
     @model_validator(mode="after")
     def _check_pins(self) -> "PatientUpdateIn":

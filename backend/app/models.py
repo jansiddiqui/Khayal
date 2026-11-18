@@ -53,6 +53,12 @@ class User(Base):
     festivals: Mapped[list[str] | None] = mapped_column(JSON, default=None)
     # Round 2 batch 5: the language the patient app shows ("en", "hi" or "ur"), set by a caregiver.
     language: Mapped[str] = mapped_column(String(5), default="en", server_default="en")
+    # Patients only: games outside the core set the family hid ("Hide these games"); they never
+    # appear in "More games" or its full list. None = nothing hidden.
+    hidden_games: Mapped[list[str] | None] = mapped_column(JSON, default=None)
+    # Patients only: what "More games" offered: {"day": ISO date, "picks": [...], "offered": {game: ISO date}}.
+    # Today's list is worked out once and kept all day (services/today_games.py).
+    more_games_state: Mapped[dict[str, object] | None] = mapped_column(JSON, default=None)
     # Patients only: what read-aloud found on the elder's device for that language (reported by the
     # device): {"lang", "voice", "using", "checked_at"}; None until the device has checked.
     voice_check: Mapped[dict[str, str | None] | None] = mapped_column(JSON, default=None)

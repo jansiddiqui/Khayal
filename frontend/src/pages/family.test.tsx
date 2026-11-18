@@ -263,7 +263,9 @@ describe("caregiver family page", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Delete Rahul" }));
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Rahul" })).toBeNull());
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    // The Undo of this delete message (an earlier message may still be showing its own Undo).
+    const deleted = (await screen.findByText(/Rahul deleted/)).closest("[role=status]") as HTMLElement;
+    fireEvent.click(within(deleted).getByRole("button", { name: "Undo" }));
     expect(await screen.findByRole("listitem", { name: "Rahul" })).toBeInTheDocument();
     expect(api.deleteFamilyMember).not.toHaveBeenCalled();
 

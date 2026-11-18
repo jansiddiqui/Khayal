@@ -62,6 +62,29 @@ export const opensByDefault = (trend: GameTrend) => trend.trend_status === "decl
  * baseline mean (dashed) and a ±1.5 std band. The closed card still shows name, z and status.
  * `highlighted` briefly rings the card when an alert links to it.
  */
+const MAX_TICKS = 6;
+
+/** Session numbers (1-based) to label: each day's first session, at most MAX_TICKS, spread evenly. */
+export function sessionTicks(times: readonly number[]): number[] {
+  const firsts: number[] = [];
+  let lastDay = "";
+  times.forEach((t, i) => {
+    const day = new Date(t).toDateString();
+    if (day !== lastDay) firsts.push(i + 1);
+    lastDay = day;
+  });
+  if (firsts.length <= MAX_TICKS) return firsts;
+  const step = (firsts.length - 1) / (MAX_TICKS - 1);
+  return Array.from({ length: MAX_TICKS }, (_, k) => firsts[Math.round(k * step)]!);
+}
+
+/** "Session 12 · 9 Nov 2026, 4:30 pm" for the tooltip. */
+export function sessionLabel(n: number, t: number | undefined): string {
+  if (t === undefined) return `Session ${n}`;
+  const when = new Date(t).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return `Session ${n} · ${when}`;
+}
+
 export function GameTrendChart({
   trend,
   overall,
@@ -72,9 +95,12 @@ export function GameTrendChart({
   highlighted?: boolean;
 }) {
   const averages = rollingMean(trend.points.map((p) => p.composite));
-  const data = trend.points.map((p, i) => ({ t: Date.parse(p.started_at), composite: p.composite, average: averages[i]! }));
+  // One step per session (several can share a day); the date sits under each day's first session.
+  const data = trend.points.map((p, i) => ({ x: i + 1, t: Date.parse(p.started_at), composite: p.composite, average: averages[i]! }));
+  const ticks = sessionTicks(data.map((d) => d.t));
   const { baseline_mean: mean, baseline_std: std } = trend;
-  const top = Math.max(1, ...data.map((d) => d.composite), mean !== null && std !== null ? mean + BAND_Z * std : 0);
+  // The axis fits the scores: low-level games (score = accuracy × level / 10) aren't squashed at the bottom.
+  const top = Math.max(0.1, ...data.map((d) => d.composite), mean !== null && std !== null ? mean + BAND_Z * std : 0);
   const name = GAME_NAMES[trend.game_type];
 
   return (
@@ -109,10 +135,11 @@ export function GameTrendChart({
       ) : (
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
+            <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
               <CartesianGrid vertical={false} stroke={GRID} />
-              <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={shortDate}
-                tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} minTickGap={24} />
+              <XAxis dataKey="x" type="number" domain={[1, Math.max(2, data.length)]} ticks={ticks}
+                tickFormatter={(x: number) => shortDate(data[x - 1]?.t ?? 0)}
+                tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
               <YAxis domain={[0, Math.ceil(top * 10) / 10]} tick={AXIS} tickLine={false} axisLine={false} width={44} />
               {mean !== null && std !== null && (
                 <>
@@ -123,7 +150,7 @@ export function GameTrendChart({
                 </>
               )}
               <Tooltip
-                labelFormatter={(t) => new Date(Number(t)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                labelFormatter={(x) => sessionLabel(Number(x), data[Number(x) - 1]?.t)}
                 formatter={(value, key) => [Number(value).toFixed(2), key === "average" ? "5-session average" : "This session"]}
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />

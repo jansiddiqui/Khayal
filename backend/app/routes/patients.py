@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from app.services import activity, research
 from app.services.game_names import GAME_NAMES
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, Now, ensure_patient_access
-from app.models import Role, User
+from app.models import Role, User, GameType, LEVELLED_GAMES
 from app.presenters import patient_out
 from app.schemas import (
     AddElderIn,
@@ -100,6 +100,20 @@ def update_patient(
         if new_pins != patient.pinned_games:
             changes.append("Pinned " + " and ".join(GAME_NAMES[g] for g in pins) if pins else "Today's games back to automatic")
         patient.pinned_games = new_pins
+    if "hidden_games" in body.model_fields_set:
+        wanted = sorted({g.value for g in body.hidden_games or []})
+        core = {g.value for g in core_games.core_games(patient)}
+        if any(g in core for g in wanted):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Core games can't be hidden.")
+        if any(GameType(g) not in LEVELLED_GAMES for g in wanted):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only levelled games can be hidden.")
+        if (wanted or None) != (sorted(patient.hidden_games) if patient.hidden_games else None):
+            changes.append("Hidden from More games: " + (", ".join(GAME_NAMES[g] for g in wanted) if wanted else "none"))
+        patient.hidden_games = wanted or None
+    # A game that joins the core set can't stay hidden.
+    if patient.hidden_games:
+        core_now = {g.value for g in core_games.core_games(patient)}
+        patient.hidden_games = [g for g in patient.hidden_games if g not in core_now] or None
     if body.language is not None and body.language != patient.language:
         patient.language = body.language
         # The device checks its voices again for the new language.

@@ -355,6 +355,13 @@ Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back 
   - Needs the photos opt-in (and the voice opt-in for voice notes); withdrawing deletes them.
 - **Migration:** 0015 (`mood_checkins`, `memory_entries`). Back up `data/khayal.db`, then run `alembic upgrade head`.
 
+## More games rotation (more-games-rotation)
+
+- **More games:** 3 games outside the core set, the same all day. A game left out on 2 days in a row comes next, so each appears at least once in any 3 days; the rest are least recently played first.
+- **See other games:** a quiet link under them opens the full list.
+- **Hide these games:** families can hide games in the elder's Settings. Core games can't be hidden.
+- **Migration:** 0017 (`users.hidden_games`, `users.more_games_state`).
+
 ## Hindi and Urdu (Round 2 batch 5)
 
 - **Choosing the language:** on the elder's page, open Settings → Language and pick English, हिन्दी or اردو. Their phone switches the next time the app comes to the front.

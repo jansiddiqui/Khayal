@@ -101,7 +101,7 @@ Our users are elderly people with memory problems. Every patient screen must fol
 **Patient UI decisions (decided after the UI audit, `docs/ui-audit.md`):**
 
 - Game pieces (cards, tiles, answer options, word choices) never count toward the 3-button rule. The rule covers navigation and actions.
-- **Quiet links (accepted after Round 2 batch 3):** a secondary sheet (e.g. the Settings sheet) may have one quiet text link below its main controls, such as "Tell us something". It does not count toward the 3-button rule; main screens never get one.
+- **Quiet links (accepted after Round 2 batch 3):** a secondary sheet (e.g. the Settings sheet) or a secondary screen (e.g. "More games", with "See other games") may have one quiet text link below its main controls, such as "Tell us something". It does not count toward the 3-button rule; main screens (Home, today's games, a game) never get one.
 - No important button below the fold at 375 × 812: every game board, every answer and every commit button ("Done", "Create account") is visible without scrolling. Game screens use a compact play mode for this.
 - No hidden timers (see section 7). Reaction Tap is the only game that measures speed.
 - **Patient sign-in = device pairing.** The caregiver patient page shows a 6-digit pairing code, valid for 10 minutes. The patient's device enters it once and stays signed in for 90 days. Caregivers keep email + password login.
@@ -125,6 +125,7 @@ The caregiver UI can be a normal dense dashboard.
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
 - **SpeechSample**: id, patient_id, audio_path, content_type, recorded_at, duration_ms, transcript (nullable), risk_score (nullable), model_version
 - **Feedback** (Round 2 batch 3): id, user_id, role, kind (`hard` | `liked` | `other`), text, page, audio_key/audio_type (voice note, nullable), status (`new` | `read` | `resolved`), created_at, updated_at
+- **User** (more-games-rotation): hidden_games (JSON, games outside the core set hidden from More games), more_games_state (JSON, today's 3 and the offer history)
 - **AdminLog** (Round 2 batch 3): id, admin_id (nullable), admin_email, at, action, detail; **SystemState**: key, value, updated_at
 - **PatientEvent** (Round 2 batch 2): id, patient_id, actor_id (nullable), at, kind (`settings` | `reminder` | `family`), summary. Settings changes for the caregiver timeline.
 - **MoodCheckin** (Round 2 batch 4): id, patient_id, date (unique per patient), mood (`good` | `okay` | `not_so_good`, null = skipped), answered_at
@@ -170,6 +171,10 @@ The caregiver UI can be a normal dense dashboard.
 **Theme (decided):** all colours and fonts come from `frontend/src/theme.css`. Light mode only. One calm primary (deep indigo), one warm accent (marigold); warm paper + Atkinson Hyperlegible on the patient side, near-white + Inter on the caregiver side.
 
 **Secondary signals** (shown on the dashboard, no alerts yet): stopped-early rate and hint rate over the last 14 days, and reminder adherence (patient-marked only).
+
+**Delayed Word Recall scores (checked in more-games-rotation):** the scoring is right. After a level-2 Remember the Words session, a perfect delayed check scores 0.2 and half right scores 0.1 (composite = accuracy × level / 10); a perfect check at level 4 scores 0.4. Low values at low levels are real results. The charts used to start the y-axis at 0–1 for every game, which squashed them near 0; the axis now fits the scores.
+
+**Score charts (decided):** the x-axis is the session number, dated at each day's first session (at most 6 dates), so several sessions on one day never repeat a date. The tooltip says "Session 12 · 9 Nov 2026, 4:30 pm".
 
 Each decline alert carries a plain explanation, e.g. "Memory Match average dropped from 0.62 to 0.41 over the last 5 sessions (z = −2.7)."
 
@@ -244,7 +249,24 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 - Slots 2–3 of Today's games rotate only through the core set (least recently played, as above). About Today stays slot 1, and the voice task still replaces slot 3 when due. "Pin games" picks from the core set.
 - Every other game is an optional **"More games"** game: playable any time and still recorded with its own warm-up and baseline, but not in the daily rotation and not part of decline alerts or the overall index unless it is in the core set. About Today always counts.
 - **Who gets which set:** new patients get the default set (`DEFAULT_CORE`): Remember the Words (verbal memory), Where did it go? (visuospatial memory), Join in order (executive/speed), Market day (everyday function); the simulator plays the same set. Patients who had already played before games v2 keep their 4 games (migration 0012), so their baselines keep counting. The caregiver changes the set under Settings → Core games (4 different levelled games, each shown with its domain); pins that leave the set return to automatic.
-- **Patient access (my proposal, within section 4):** once all of today's games are done, the end screen adds a secondary "More games" button. That screen shows at most 3 games outside the core set, least recently played first (`GET /me/games/more`), so the 3-button rule holds and every game gets its turn.
+- **Patient access (my proposal, within section 4):** once all of today's games are done, the end screen adds a secondary "More games" button. That screen shows 3 games outside the core set (`GET /me/games/more`, rotation below), so the 3-button rule holds and every game gets its turn.
+- **More games rotation (decided, branch `more-games-rotation`).**
+  - **Principles and reasons:**
+    - **Few options:** choice overload and Hick's law. Decision time and the chance of giving up grow with the number of choices, which matters more with memory problems. So only 3 are shown at a time.
+    - **Variety:** varied practice supports engagement and adherence in cognitive training. So every game outside the core set comes round.
+    - **Fairness:** no game is silently hidden. Before this change a game could disappear for good; now only the family can hide one, on purpose.
+    - **Predictability for people with memory problems:** the list and its order stay the same all day.
+  - **Rule** (`services/today_games.py`, `rotate`):
+    1. A game not offered on either of the last 2 days (or never offered) is offered today. With 3 slots and at most 5 games outside the core set, at most 2 are due at once. So every game appears at least once in any 3 consecutive days, whatever the patient plays (a 30-day simulation covers not playing, playing the first, all, at random, and playing only games from the full list).
+    2. The remaining places go to the least recently played (never played first). Only plays before today count.
+    3. Ties are broken by a shuffle seeded with the date.
+    - Today's list is worked out once, stored with the offer history (`User.more_games_state`), and kept all day.
+  - **"See other games":** one quiet link under the 3 (section 4 quiet-link rule, here on a secondary screen). It opens the full list (`GET /me/games/more/all`): today's 3 first, then the rest, least recently played first.
+  - **"Hide these games":** a caregiver setting per elder (Settings, checkboxes; `User.hidden_games`, migration 0017).
+    - Hidden games never appear in either list and leave the rotation.
+    - Core games can't be hidden there. A hidden game that joins the core set is no longer hidden.
+    - Hiding shows on the timeline.
+- **Before this change** the list was the 3 least recently played games, counting today's plays too. So it changed during the day. Games the patient never played from it kept ranking low and could stay off the list for good: with 5 games and 3 places, the 2 most recently played (often from before games v2) only came back if the patient played the shown ones.
 - **Caregiver charts:** the core games and About Today come first; games outside the set appear under "More games" only once played.
 - The other games-v2 decisions (D1–D6, D8) are in `docs/games/research.md` section 6.
 
@@ -271,6 +293,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
 - `POST /feedback`, `POST /feedback/{id}/voice`; admin: `GET /admin/overview`, `/admin/health`, `/admin/feedback?status=`, `POST /admin/feedback/{id}/status`, `GET /admin/feedback/{id}/voice`, `/admin/users?q=&role=&kind=`, `/admin/log?action=`, `/admin/research-export` (Round 2 batch 3)
 - `PATCH /patients/{id}` takes `language`; `POST /me/voice-check` (elder's device; Round 2 batch 5)
+- `GET /me/games/more/all` ("See other games"); `PATCH /patients/{id}` takes `hidden_games` (more-games-rotation)
 - `GET /me/mood/today`, `POST /me/mood`, `GET /patients/{id}/mood?days=`; `GET/POST /patients/{id}/memories`, `PUT/DELETE /patients/{id}/memories/{mid}`, `POST/GET/DELETE …/memories/{mid}/photos[/{photo}]`, `POST/GET/DELETE …/memories/{mid}/voice` (Round 2 batch 4)
 - `GET /caregiver/glance`, `GET /patients/{id}/insights`, `GET /patients/{id}/weekly`, `GET /patients/{id}/timeline?days=&kinds=`, `GET /patients/{id}/report?days=` (caregiver views, Round 2 batch 2)
 

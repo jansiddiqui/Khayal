@@ -148,6 +148,8 @@ export interface Patient {
   /** The elder's app language and what read-aloud found on their device (Round 2 batch 5). */
   language?: string;
   voice_check?: VoiceCheck | null;
+  /** Games outside the core set the family hid from "More games". */
+  hidden_games?: GameType[] | null;
 }
 
 export interface VoiceCheck {
@@ -689,6 +691,12 @@ export async function getMoreGames(): Promise<TodaysGames["games"]> {
   return data;
 }
 
+/** "See other games": every game outside the core set that the family didn't hide. */
+export async function getAllMoreGames(): Promise<TodaysGames["games"]> {
+  const { data } = await api.get<TodaysGames["games"]>("/me/games/more/all");
+  return data;
+}
+
 export interface CatalogGame {
   game_type: GameType;
   /** The domain it mainly tests, e.g. "Verbal memory". */
@@ -710,6 +718,8 @@ export interface PatientChanges {
   voice_task_enabled?: boolean;
   /** The elder's app language (Round 2 batch 5). */
   language?: "en" | "hi" | "ur";
+  /** Games outside the core set hidden from "More games"; [] or null = none. */
+  hidden_games?: GameType[] | null;
 }
 
 export async function updatePatient(patientId: number, changes: PatientChanges): Promise<Patient> {
