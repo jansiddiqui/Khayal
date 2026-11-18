@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.services import activity
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, ensure_patient_access
 from app.models import FamilyMember, User
 from app.schemas import FamilyMemberIn, FamilyMemberOut, FamilyPhotoOut
@@ -42,6 +43,7 @@ def add_family_member(patient_id: int, body: FamilyMemberIn, caregiver: CurrentC
     ensure_patient_access(db, caregiver, patient_id)
     member = FamilyMember(patient_id=patient_id, name=body.name, relation=body.relation, note=body.note or None)
     db.add(member)
+    activity.record(db, patient_id, caregiver, "family", f"Family member added: {member.name} ({member.relation})")
     db.commit()
     return _out(member)
 
@@ -60,7 +62,9 @@ def update_family_member(
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_family_member(patient_id: int, member_id: int, caregiver: CurrentCaregiver, db: DbSession) -> Response:
     ensure_patient_access(db, caregiver, patient_id)
-    family.delete_member(db, _member(db, patient_id, member_id))
+    member = _member(db, patient_id, member_id)
+    activity.record(db, patient_id, caregiver, "family", f"Family member removed: {member.name} ({member.relation})")
+    family.delete_member(db, member)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -451,3 +451,20 @@ class DeviceSession(Base):
     # A short description of the browser, to tell devices apart ("Android phone, Chrome").
     device_label: Mapped[str] = mapped_column(String(120), default="")
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class PatientEvent(Base):
+    """A settings change about an elder, for the caregiver timeline (Round 2 batch 2): city, core
+    games, pins, festivals, reminders added/changed/removed, family members, tutorials. Consents,
+    device pairing, sessions, reminder logs, alerts and recordings come from their own tables."""
+
+    __tablename__ = "patient_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # Who made the change; None once that account is deleted.
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    # "settings", "reminder" or "family".
+    kind: Mapped[str] = mapped_column(String(24))
+    summary: Mapped[str] = mapped_column(String(300))

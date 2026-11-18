@@ -613,3 +613,106 @@ class SpeechSampleOut(BaseModel):
     risk_score: float | None
     model_version: str
     audio_url: str
+
+
+# --- caregiver views (Round 2 batch 2) -----------------------------------------------------
+
+
+class DoseCountsOut(BaseModel):
+    taken: int
+    missed: int
+    unsure: int
+    to_come: int
+
+
+class NextActionOut(BaseModel):
+    kind: Literal["check_dose", "missed_dose", "alerts", "pair", "add_reminders", "inactive", "all_good"]
+    text: str
+
+
+class GlanceOut(BaseModel):
+    patient_id: int
+    name: str
+    cognitive_status: Literal["insufficient", "stable", "watch", "declining"]
+    games_done: int
+    games_total: int
+    medicines: DoseCountsOut
+    alerts_open: int
+    last_active_at: datetime | None
+    next_action: NextActionOut
+
+
+class InsightOut(BaseModel):
+    key: str
+    tone: Literal["good", "neutral", "attention"]
+    text: str
+    detail: str
+
+
+class DoseWeekOut(BaseModel):
+    taken: int
+    taken_late: int
+    missed: int
+    unsure: int
+
+
+class WeekStatsOut(BaseModel):
+    start: date
+    end: date
+    days_played: int
+    sessions: int
+    completed: int
+    accuracy: float | None
+    doses: DoseWeekOut
+    reminders_done: int
+    reminders_total: int
+    alerts: int
+    recordings: int
+
+
+class WeeklyOut(BaseModel):
+    this_week: WeekStatsOut
+    last_week: WeekStatsOut
+
+
+class TimelineEventOut(BaseModel):
+    at: datetime
+    kind: Literal["session", "reminder", "alert", "recording", "settings"]
+    title: str
+    detail: str
+    tone: Literal["good", "neutral", "attention"]
+    game_type: GameType | None
+
+
+class ReportPointOut(BaseModel):
+    day: date
+    composite: float
+
+
+class ReportGameOut(BaseModel):
+    game_type: GameType
+    sessions: int
+    first_half: float | None
+    second_half: float | None
+    z: float | None
+    status: Literal["insufficient", "stable", "watch", "declining"]
+    sessions_to_baseline: int
+    points: list[ReportPointOut]
+
+
+class ReportOut(BaseModel):
+    patient_id: int
+    name: str
+    start: date
+    end: date
+    days: int
+    generated_at: datetime
+    cognitive_index: float | None
+    cognitive_status: Literal["insufficient", "stable", "watch", "declining"]
+    games: list[ReportGameOut]
+    doses: DoseWeekOut
+    reminders_done: int
+    reminders_total: int
+    alerts: list[AlertOut]
+    recordings: int
+    days_played: int
