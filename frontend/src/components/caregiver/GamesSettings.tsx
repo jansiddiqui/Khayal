@@ -10,6 +10,27 @@ import { FESTIVAL_IDS, type FestivalId } from "../../games/dailyOrientation/fest
 
 const CORE_SIZE = 4;
 
+/** What the patient sees each game called (copy.ts), next to the clinical name caregivers see. */
+export const PATIENT_TITLES: Partial<Record<GameType, string>> = {
+  memory_match: copy.games.memoryMatch.title,
+  sequence_recall: copy.games.sequenceRecall.title,
+  word_recall: copy.games.wordRecall.title,
+  daily_orientation: copy.games.orientation.title,
+  reaction_tap: copy.games.reactionTap.title,
+  colour_trails: copy.games.colourTrails.title,
+  clock_setting: copy.games.clockSetting.title,
+  money_handling: copy.games.market.title,
+  spatial_span: copy.games.spatialSpan.title,
+  object_location: copy.games.objectLocation.title,
+};
+
+/** "Paired Associates (object location) — “Where did it go?”", plus " (domain)" when given. */
+export function gameLabel(game: GameType, domain?: string): string {
+  const title = PATIENT_TITLES[game];
+  const base = title ? `${GAME_NAMES[game]} — “${title}”` : GAME_NAMES[game];
+  return domain ? `${base} (${domain})` : base;
+}
+
 /**
  * The patient's core set (CLAUDE.md section 7, research.md D7): 4 levelled games that rotate
  * through Today's games and count for decline alerts and the overall status. Other games are
@@ -57,7 +78,7 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
           <ul className="flex flex-wrap gap-2">
             {patient.core_games.map((g) => (
               <li key={g} className="rounded-md border border-line bg-sunken px-3 py-1.5">
-                <span className="font-medium">{GAME_NAMES[g]}</span>
+                <span className="font-medium">{gameLabel(g)}</span>
                 {catalog.isSuccess && <span className="text-ink-muted"> · {domainOf(g)}</span>}
               </li>
             ))}
@@ -85,7 +106,7 @@ export function CoreGamesForm({ patient }: { patient: Patient }) {
                 >
                   {(catalog.data ?? []).map((c) => (
                     <option key={c.game_type} value={c.game_type}>
-                      {GAME_NAMES[c.game_type]} ({c.domain})
+                      {gameLabel(c.game_type, c.domain)}
                     </option>
                   ))}
                 </select>
@@ -155,7 +176,7 @@ export function TutorialAgainForm({ patientId, games }: { patientId: number; gam
           >
             {games.map((g) => (
               <option key={g} value={g}>
-                {GAME_NAMES[g]}
+                {gameLabel(g)}
               </option>
             ))}
           </select>

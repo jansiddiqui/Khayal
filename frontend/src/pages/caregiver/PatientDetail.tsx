@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
-import { CoreGamesForm, FestivalsForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
+import { CoreGamesForm, FestivalsForm, gameLabel, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
@@ -324,7 +324,7 @@ function PinForm({ patientId, pinned, options }: { patientId: number; pinned: Ga
       >
         {options.map((g) => (
           <option key={g} value={g}>
-            {GAME_NAMES[g]}
+            {gameLabel(g)}
           </option>
         ))}
       </select>
