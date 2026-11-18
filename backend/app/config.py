@@ -80,6 +80,13 @@ ALERT_RULE = os.getenv("KHAYAL_ALERT_RULE", "persistence")
 if ALERT_RULE not in ("any", "persistence", "two_games", "index", "persistence_or_index"):
     raise ValueError(f"Unknown KHAYAL_ALERT_RULE: {ALERT_RULE}")
 
+# Adaptive difficulty (ml/adaptive): "rule" (rule_based.next_level, the default) or "bandit"
+# (a simulator-warmed linear Thompson-sampling bandit with the rule engine as fallback;
+# research, Round 2 batch 1, ml/results/adaptive_eval.md). Production stays on "rule".
+ADAPTIVE_ENGINE = os.getenv("KHAYAL_ADAPTIVE_ENGINE", "rule").strip().lower()
+if ADAPTIVE_ENGINE not in ("rule", "bandit"):
+    raise ValueError(f"Unknown KHAYAL_ADAPTIVE_ENGINE: {ADAPTIVE_ENGINE} (use rule or bandit)")
+
 # Wrong codes allowed per client address in PAIRING_CODE_MINUTES before pairing pauses.
 PAIRING_MAX_FAILURES = 10
 

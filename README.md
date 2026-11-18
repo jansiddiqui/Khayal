@@ -256,6 +256,26 @@ python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv
 
 Columns: `patient_id, profile, day, game_type, level_start, level_end, rounds, correct, hints, median_rt_ms, completed, composite` (composite is empty for stopped-early sessions).
 
+## Learning-based difficulty (research, Round 2 batch 1)
+
+The app uses the rule engine (`ml/adaptive/rule_based.py`). `ml/adaptive/bandit.py` adds contextual bandits behind the same `next_level(current_level, recent_rounds)` interface: LinUCB and linear Thompson sampling (NumPy), and `ml/adaptive/neural.py` a small neural bandit (an ensemble of 5 MLPs, PyTorch).
+
+- **Actions:** level −1, stay or +1.
+- **Context:** success rate, trend, reaction time vs baseline, hints, errors, stopped early, days since the previous session, level.
+- **Reward:** how close the next session's success rate is to 70%, minus 0.5 if it was stopped early.
+- **Safety:** at most ±1 per session and levels stay in 1–10. The bandit never raises the level after a stopped-early session or a success rate of 40% or less, and never lowers it after 5/5. The rule engine decides while the bandit is unsure.
+
+Evaluation against the rule engine (the neural bandit needs PyTorch, so run it from `ml/.venv`; install it there with `pip install -r ml/requirements-bandit.txt`):
+
+```powershell
+# from the repo root
+ml\.venv\Scripts\python -m ml.adaptive.evaluate --patients-per-profile 30 --seeds 5
+```
+
+It writes `ml/results/adaptive_eval.md`, `.csv`, `adaptive_regret.png`, `adaptive_metrics.png` and `adaptive_decline.png`. The report covers time in the 60–80% zone, stopped-early rate, oscillation, regret and decline detection per engine.
+
+`KHAYAL_ADAPTIVE_ENGINE=bandit` switches the backend to the Thompson-sampling bandit. It is trained on a small seeded simulated cohort the first time it is needed (a few seconds), then replays the patient's own sessions. The default is `rule`, and production stays on `rule`.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

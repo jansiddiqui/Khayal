@@ -7,6 +7,11 @@ least recently (the "Today's games" rule; CLAUDE.md section 7, "Core set"). Each
 difficulty, and levels move through the real adaptive engine (`ml.adaptive.rule_based`),
 so the data looks like what the app records, not made-up final scores.
 
+Learning-based difficulty (Round 2, batch 1): pass `options=SimOptions(engine=...)` to let an
+`ml.adaptive.bandit` engine choose the levels instead, optionally with `frustration` (patients
+stop early more often when the level is too hard for them) and a `log` of every decision with
+its expected reward per action (for regret). Without options the output is unchanged.
+
 CLI:  python -m ml.decline.simulator --patients 30 --days 90 --out data/sim.csv [--seed 42]
 
 CSV columns (stable; also used to train the LSTM later):
@@ -19,14 +24,17 @@ import argparse
 import csv
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
 
-from ml.adaptive.rule_based import BLOCK_SIZE, START_LEVEL, Round, next_level
+from ml.adaptive.bandit import ACTIONS, STOP_PENALTY, Context, Decision, Engine, PlayedSession, build_context
+from ml.adaptive.bandit import reward as bandit_reward
+from ml.adaptive.bandit import success_reward
+from ml.adaptive.rule_based import BLOCK_SIZE, MAX_LEVEL, MIN_LEVEL, START_LEVEL, Round, next_level
 from ml.decline.zscore import RoundSummary, SessionSummary, trend
 
 Profile = Literal["healthy", "mci", "moderate"]
@@ -53,6 +61,8 @@ DELAYED = "word_recall_delayed"
 LEVELLED = ("memory_match", "sequence_recall", "word_recall", "reaction_tap", "colour_trails", "clock_setting", "money_handling", "spatial_span", "object_location")
 # The core set the simulated patients play (the app's default, app/services/core_games.py).
 CORE: tuple[str, ...] = ("word_recall", "object_location", "colour_trails", "money_handling")
+# Games that record `errors` in the app (wrong taps / clock error bits / misplacements).
+ERROR_GAMES = frozenset({"colour_trails", "clock_setting", "object_location"})
 HINT_GAMES = frozenset({"memory_match", "sequence_recall", "word_recall", "spatial_span", "object_location"})
 # Typical reaction time per round for a healthy older adult, by game (ms).
 BASE_RT_MS = {
@@ -143,6 +153,75 @@ def play_round(game: str, level: int, ability: float, rng: np.random.Generator) 
     return RoundSummary(correct=correct, hint_used=hint, reaction_ms=rt)
 
 
+def hint_probability(game: str, level: int, ability: float) -> float:
+    gap = ability - difficulty(game, level)
+    return min(0.45, 0.05 + max(0.0, -gap) * 1.6) if game in HINT_GAMES else 0.0
+
+
+def success_probability(game: str, level: int, ability: float) -> float:
+    """Chance that one round is right, hints included (same model as `play_round`)."""
+    p = _sigmoid(9.0 * (ability - difficulty(game, level)))
+    h = hint_probability(game, level, ability)
+    return (1 - h) * p + h * min(0.97, p + 0.2)
+
+
+def stop_probability(game: str, level: int, ability: float, frustration: float = 0.0) -> float:
+    """Chance of stopping a session early. `frustration` adds stops when the level is too hard:
+    frustration x how far the expected success rate is below 60%."""
+    p = float(np.clip(0.03 + 0.5 * max(0.0, 0.75 - ability), 0.02, 0.4))
+    if frustration and game != ORIENTATION:
+        p = min(0.7, p + frustration * max(0.0, 0.6 - success_probability(game, level, ability)))
+    return p
+
+
+def expected_reward(game: str, level: int, ability: float, frustration: float = 0.0) -> float:
+    """Expected bandit reward of a session at `level` (ml.adaptive.bandit.reward): the success
+    reward over Binomial(5, p) outcomes, minus the stop penalty times the stop probability."""
+    p = success_probability(game, level, ability)
+    full = sum(
+        math.comb(BLOCK_SIZE, k) * p**k * (1 - p) ** (BLOCK_SIZE - k) * success_reward(k / BLOCK_SIZE)
+        for k in range(BLOCK_SIZE + 1)
+    )
+    return full - STOP_PENALTY * stop_probability(game, level, ability, frustration)
+
+
+@dataclass(frozen=True)
+class DecisionLog:
+    """One level decision of a simulated patient, with the oracle's view for regret."""
+
+    patient_id: int
+    profile: "Profile"
+    day: int
+    game_type: str
+    level: int
+    success: float
+    completed: bool
+    decision: Decision
+    expected: dict[int, float]  # action -> expected reward of the next session (today's ability)
+
+    @property
+    def regret(self) -> float:
+        return max(self.expected.values()) - self.expected[self.decision.action]
+
+
+@dataclass
+class SimOptions:
+    """Let an adaptive engine pick the levels (Round 2, batch 1). The engine keeps learning
+    across every patient simulated with the same options."""
+
+    engine: Engine
+    frustration: float = 0.0
+    log: list[DecisionLog] | None = field(default=None)
+
+
+def _engine_round(game: str, level: int, ability: float, r: RoundSummary) -> Round:
+    """The round as the app stores it, with `errors` for the games that record them."""
+    errors = None
+    if game in ERROR_GAMES:
+        errors = 0 if r.correct else 1 + int(round(10 * max(0.0, difficulty(game, level) - ability)))
+    return Round(r.correct, r.reaction_ms, r.hint_used, errors=errors)
+
+
 def words_at(level: int) -> int:
     """Remember the Words shows 3 words at level 1 up to 8 at level 10 (frontend wordCount)."""
     return 3 + (level - 1) * 5 // 9
@@ -155,15 +234,20 @@ def simulate_patient(
     rng: np.random.Generator,
     start: datetime,
     core: Sequence[str] = CORE,
+    options: SimOptions | None = None,
 ) -> list[SimSession]:
     """`days` days of play for one patient, starting at local midnight `start` (tz-aware).
-    Slots 2-3 rotate through `core` (4 levelled games)."""
+    Slots 2-3 rotate through `core` (4 levelled games). With `options`, `options.engine`
+    chooses the levels (and learns from each next session's reward)."""
     params = PARAMS[profile]
     ability0 = float(rng.normal(0.80, 0.04))
     rotation = tuple(core)
     levels = {g: START_LEVEL for g in rotation}
     last_played = {g: -1 for g in rotation}
     out: list[SimSession] = []
+    frustration = options.frustration if options else 0.0
+    played: dict[str, list[PlayedSession]] = {g: [] for g in rotation}
+    pending: dict[str, tuple[Context, int]] = {}  # game -> (context, action) awaiting its reward
 
     for day in range(days):
         if rng.random() > params.play_probability:
@@ -177,14 +261,18 @@ def simulate_patient(
         todays = (ORIENTATION, *flex)
         for position, game in enumerate(todays):
             # Stopped early more often as ability falls.
-            p_stop = float(np.clip(0.03 + 0.5 * max(0.0, 0.75 - ability), 0.02, 0.4))
+            level = 1 if game == ORIENTATION else levels[game]
+            p_stop = stop_probability(game, level, ability, frustration)
             stopped = rng.random() < p_stop
             n_rounds = int(rng.integers(1, BLOCK_SIZE)) if stopped else BLOCK_SIZE
-            level = 1 if game == ORIENTATION else levels[game]
             rounds = tuple(play_round(game, level, ability, rng) for _ in range(n_rounds))
 
             level_end = level
-            if game != ORIENTATION and not stopped:
+            if game != ORIENTATION and options is not None:
+                step = _Step(patient_id, profile, day, game, level, ability, (clock - start).total_seconds() / 86400)
+                level_end = _engine_step(options, played[game], pending, step, rounds, completed=not stopped)
+                levels[game] = level_end
+            elif game != ORIENTATION and not stopped:
                 level_end = next_level(level, [Round(r.correct, r.reaction_ms, r.hint_used) for r in rounds])
                 levels[game] = level_end
             if game != ORIENTATION:
@@ -200,6 +288,48 @@ def simulate_patient(
                 out.append(SimSession(patient_id, profile, day, DELAYED, clock, level, level, delayed, completed=True))
                 clock += timedelta(minutes=1)
     return out
+
+
+@dataclass(frozen=True)
+class _Step:
+    patient_id: int
+    profile: Profile
+    day: int
+    game: str
+    level: int
+    ability: float
+    clock_days: float
+
+
+def _engine_step(
+    options: SimOptions,
+    history: list[PlayedSession],
+    pending: dict[str, tuple[Context, int]],
+    step: _Step,
+    rounds: tuple[RoundSummary, ...],
+    *,
+    completed: bool,
+) -> int:
+    """Reward the previous decision for this game, then let the engine choose the next level."""
+    engine_rounds = tuple(_engine_round(step.game, step.level, step.ability, r) for r in rounds)
+    if step.game in pending:
+        ctx0, action0 = pending.pop(step.game)
+        options.engine.learn(ctx0, action0, bandit_reward(engine_rounds, completed))
+    history.append(PlayedSession(step.level, engine_rounds, completed, step.clock_days))
+    ctx = build_context(history)
+    decision = options.engine.decide(ctx)
+    pending[step.game] = (ctx, decision.action)
+    if options.log is not None:
+        expected = {
+            a: expected_reward(step.game, step.level + a, step.ability, options.frustration)
+            for a in ACTIONS
+            if MIN_LEVEL <= step.level + a <= MAX_LEVEL
+        }
+        options.log.append(
+            DecisionLog(step.patient_id, step.profile, step.day, step.game, step.level, ctx.success, completed,
+                        decision, expected)
+        )
+    return step.level + decision.action
 
 
 def composites(sessions: Sequence[SimSession]) -> list[float | None]:
