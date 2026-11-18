@@ -84,10 +84,19 @@ def list_sessions(
 
 @router.get("/me/games/more", response_model=list[TodayGameOut])
 def get_more_games(patient: CurrentPatient, db: DbSession, now: Now) -> list[TodayGameOut]:
-    """"More games": up to 3 levelled games outside the core set, least recently played first."""
+    """"More games": 3 games outside the core set, by the rotation in services/today_games.py."""
     return [
         TodayGameOut(game_type=g.game_type, done_today=g.done_today)
         for g in today_games.more_games(db, patient, local(now).date())
+    ]
+
+
+@router.get("/me/games/more/all", response_model=list[TodayGameOut])
+def get_all_more_games(patient: CurrentPatient, db: DbSession, now: Now) -> list[TodayGameOut]:
+    """"See other games": every game outside the core set that the family didn't hide."""
+    return [
+        TodayGameOut(game_type=g.game_type, done_today=g.done_today)
+        for g in today_games.all_more_games(db, patient, local(now).date())
     ]
 
 
