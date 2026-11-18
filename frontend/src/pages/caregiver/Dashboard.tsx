@@ -1,14 +1,14 @@
-import { ChevronRight, UserPlus, Users } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { addElder, errorDetail, listPatients, uploadElderPhoto, type AddElderInput, type Patient } from "../../api/client";
+import { Link } from "react-router";
+import { addElder, errorDetail, getGlance, uploadElderPhoto, type AddElderInput, type Glance, type Patient } from "../../api/client";
 import { Disclaimer } from "../../components/caregiver/Disclaimer";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
-import { formatZ, StatusBadge } from "../../components/caregiver/Status";
-import { ActiveState, LastUpdated } from "../../components/caregiver/LiveState";
+import { GlanceCard } from "../../components/caregiver/GlanceCard";
+import { LastUpdated } from "../../components/caregiver/LiveState";
 import { Button } from "../../ui/Button";
 import { TextInput } from "../../ui/Field";
 import { calm, DURATION, useLessMotion } from "../../ui/motion";
@@ -51,6 +51,7 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
       setVoice(false);
       setPhoto(null);
       void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      void queryClient.invalidateQueries({ queryKey: ["glance"] });
     },
   });
 
@@ -148,12 +149,21 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
   );
 }
 
-/** Declining first, then Watch, Stable and Learning: the people who need attention come first. */
+/** Who needs you first: a dose to check, a missed dose or new alerts; then Declining, Watch, Stable, Learning. */
+const ACTION_ORDER = { check_dose: 0, missed_dose: 1, alerts: 2, pair: 3, add_reminders: 4, inactive: 5, all_good: 6 } as const;
 const STATUS_ORDER = { declining: 0, watch: 1, stable: 2, insufficient: 3 } as const;
 
+export function sortGlances(cards: readonly Glance[]): Glance[] {
+  return [...cards].sort(
+    (a, b) =>
+      Math.min(ACTION_ORDER[a.next_action.kind], 3) - Math.min(ACTION_ORDER[b.next_action.kind], 3) ||
+      STATUS_ORDER[a.cognitive_status] - STATUS_ORDER[b.cognitive_status] ||
+      a.name.localeCompare(b.name),
+  );
+}
+
 export function CaregiverDashboard() {
-  const patients = useQuery({ queryKey: ["patients"], queryFn: listPatients, refetchInterval: 60_000 });
-  const navigate = useNavigate();
+  const patients = useQuery({ queryKey: ["glance"], queryFn: getGlance, refetchInterval: 60_000 });
   const less = useLessMotion();
   const [adding, setAdding] = useState(false);
   const none = patients.isSuccess && patients.data.length === 0;
@@ -173,7 +183,7 @@ export function CaregiverDashboard() {
         <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4" aria-labelledby="people-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="people-title" className="text-lg font-semibold">
-              The people you look after
+              Today at a glance
             </h2>
             {!showForm && (
               <Button size="sm" icon={<UserPlus />} onClick={() => setAdding(true)}>
@@ -195,58 +205,15 @@ export function CaregiverDashboard() {
             </EmptyState>
           )}
           {patients.isSuccess && patients.data.length > 0 && (
-            <table role="table" className="stack-table w-full text-left">
-              <thead role="rowgroup" className="border-b border-line text-ink-muted">
-                <tr role="row">
-                  <th role="columnheader" className="py-2 pr-4 font-medium">Name</th>
-                  <th role="columnheader" className="py-2 pr-4 font-medium">Status</th>
-                  <th role="columnheader" className="py-2 pr-4 font-medium">Index</th>
-                  <th role="columnheader" className="py-2 pr-4 font-medium">Today</th>
-                  <th role="columnheader" className="py-2 font-medium">City</th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                {[...patients.data].sort((a, b) => STATUS_ORDER[a.cognitive_status] - STATUS_ORDER[b.cognitive_status]).map((p) => (
-                  <tr
-                    role="row"
-                    key={p.id}
-                    onClick={(event) => {
-                      // The whole row opens their page for a mouse; the name stays the real link.
-                      if ((event.target as HTMLElement).closest("a")) return;
-                      navigate(`/caregiver/patients/${p.id}`);
-                    }}
-                    className="group cursor-pointer border-b border-line transition-colors duration-150 ease-calm last:border-0 hover:bg-brand-soft"
-                  >
-                    <td role="cell" data-label="Name" className="py-2.5 pr-4 pl-1">
-                      <Link
-                        to={`/caregiver/patients/${p.id}`}
-                        className="inline-flex items-center gap-1 font-medium text-brand-dark underline-offset-2 hover:underline"
-                      >
-                        {p.name}
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="size-4 opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
-                        />
-                      </Link>
-                    </td>
-                    <td role="cell" data-label="Status" className="py-2.5 pr-4">
-                      <StatusBadge status={p.cognitive_status} />
-                    </td>
-                    <td role="cell" data-label="Index" className="py-2.5 pr-4 tabular-nums">
-                      {p.cognitive_index === null ? "—" : formatZ(p.cognitive_index)}
-                    </td>
-                    <td role="cell" data-label="Today" className="py-2.5 pr-4">
-                      <ActiveState lastActiveAt={p.last_active_at} />
-                    </td>
-                    <td role="cell" data-label="City" className="py-2.5 text-ink-soft">{p.city ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid gap-4 md:grid-cols-2">
+              {sortGlances(patients.data).map((g) => (
+                <GlanceCard key={g.patient_id} glance={g} />
+              ))}
+            </div>
           )}
           <p className="text-sm text-ink-muted">
-            Status comes from the overall cognitive index (mean z-score across games): Stable, Watch below −0.5, Declining
-            below −1.5.
+            Overall status compares recent games with each person's own normal: Stable, Watch or Declining (Learning until there
+            are enough games). The numbers are on their page.
           </p>
           <Disclaimer />
         </section>

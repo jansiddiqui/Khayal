@@ -17,6 +17,10 @@ vi.mock("../api/client", async (importOriginal) => {
     getTrend: vi.fn(),
     getSignals: vi.fn(),
     listRecordings: vi.fn(),
+    getGlance: vi.fn(),
+    getInsights: vi.fn(),
+    getWeekly: vi.fn(),
+    getTimeline: vi.fn(),
   };
 });
 const api = vi.mocked(apiClient);
@@ -79,22 +83,60 @@ beforeEach(() => {
     hint_rate: 0.08,
     adherence: { days: 14, done_by_patient: 30, done_by_caregiver: 4, missed: 6, rate: 0.75 },
   });
+  api.getInsights.mockResolvedValue([]);
+  api.getTimeline.mockResolvedValue([]);
+  const week = { start: "2026-11-12", end: "2026-11-18", days_played: 6, sessions: 18, completed: 17, accuracy: 0.72, doses: { taken: 13, taken_late: 1, missed: 1, unsure: 0 }, reminders_done: 30, reminders_total: 32, alerts: 1, recordings: 0 };
+  api.getWeekly.mockResolvedValue({ this_week: week, last_week: { ...week, start: "2026-11-05", end: "2026-11-11", days_played: 7, accuracy: 0.71 } });
 });
 
-it("patient list shows a status dot with a word and the index", async () => {
-  api.listPatients.mockResolvedValue([
-    { id: 2, name: "Rahim", ...base, cognitive_index: 0.3, cognitive_status: "stable" },
-    { id: 3, name: "Kamala", ...base, cognitive_index: -0.9, cognitive_status: "watch" },
-    { id: 4, name: "Shanti", ...base, cognitive_index: -2.1, cognitive_status: "declining" },
-    { id: 5, name: "New", ...base, cognitive_index: null, cognitive_status: "insufficient" },
+function card(id: number, name: string, status: apiClient.IndexStatus, kind: apiClient.NextActionKind, text: string): apiClient.Glance {
+  return {
+    patient_id: id, name, cognitive_status: status, games_done: 1, games_total: 3,
+    medicines: { taken: 1, missed: 0, unsure: kind === "check_dose" ? 1 : 0, to_come: 2 },
+    alerts_open: kind === "alerts" ? 2 : 0, last_active_at: null, next_action: { kind, text },
+  };
+}
+
+it("dashboard shows one glance card per elder, who needs you first, with the ONE next action", async () => {
+  api.getGlance.mockResolvedValue([
+    card(2, "Rahim", "stable", "all_good", "Nothing needs you today"),
+    card(3, "Kamala", "watch", "check_dose", "Check the 9:00 AM Blood pressure tablet with Kamala"),
+    card(4, "Shanti", "declining", "alerts", "Look at 2 new alerts"),
   ]);
   renderWithProviders(<App />, { route: "/caregiver" });
-  const row = async (name: string) => within((await screen.findByRole("link", { name })).closest("tr")!);
-  expect((await row("Rahim")).getByText("Stable")).toBeInTheDocument();
-  expect((await row("Kamala")).getByText("Watch")).toBeInTheDocument();
-  expect((await row("Kamala")).getByRole("cell", { name: "−0.9" })).toBeInTheDocument();
-  expect((await row("Shanti")).getByText("Declining")).toBeInTheDocument();
-  expect((await row("New")).getByText("Learning")).toBeInTheDocument();
+  const cards = await screen.findAllByRole("article");
+  expect(cards.map((c) => within(c).getByRole("heading").textContent)).toEqual(["Kamala", "Shanti", "Rahim"]);
+  const kamala = within(cards[0]!);
+  expect(kamala.getByText("Watch")).toBeInTheDocument();
+  expect(kamala.getByText("1 of 3 games done today")).toBeInTheDocument();
+  expect(kamala.getByText("Medicines: 1 taken · 1 not sure · 2 to come")).toBeInTheDocument();
+  expect(kamala.getByRole("link", { name: /Check the 9:00 AM Blood pressure tablet/ })).toHaveAttribute("href", "/caregiver/patients/3/reminders");
+  expect(within(cards[1]!).getByRole("link", { name: /Look at 2 new alerts/ })).toHaveAttribute("href", "/caregiver/patients/4#alerts");
+  expect(within(cards[2]!).getByRole("link", { name: /Nothing needs you today/ })).toHaveAttribute("href", "/caregiver/patients/2#week");
+  // No z-scores on the dashboard.
+  expect(screen.queryByText(/−\d\.\d/)).not.toBeInTheDocument();
+});
+
+it("patient page puts plain words first, with the numbers on tap, and a weekly comparison", async () => {
+  api.listPatients.mockResolvedValue([{ id: 2, name: "Kamala", ...base, cognitive_index: -1.9, cognitive_status: "declining" }]);
+  api.getInsights.mockResolvedValue([
+    { key: "doses", tone: "attention", text: "2 doses unsure this week", detail: "Last 7 days, medicine reminders only: taken 12, missed 0, not sure 2." },
+    { key: "games_memory", tone: "good", text: "Memory games steady this month", detail: "Word Recall: z = −0.2" },
+  ]);
+  renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+  const insights = within(await screen.findByRole("region", { name: "In plain words" }));
+  const dose = await insights.findByText("2 doses unsure this week");
+  const details = dose.closest("details")!;
+  expect(details).not.toHaveAttribute("open");
+  fireEvent.click(dose);
+  expect(details).toHaveAttribute("open");
+  expect(insights.getByText(/taken 12, missed 0, not sure 2/)).toBeInTheDocument();
+
+  const week = within(await screen.findByRole("region", { name: "This week" }));
+  expect(await week.findByText("1 fewer than the week before")).toBeInTheDocument();
+  expect(week.getByText("72%")).toBeInTheDocument();
+  expect(week.getByText("1 point higher than the week before")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Doctor report" })).toHaveAttribute("href", "/caregiver/patients/2/report");
 });
 
 it("patient page shows the index, game trends with explanations, and secondary signals", async () => {

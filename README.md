@@ -316,6 +316,17 @@ ml/.venv/Scripts/python -m pytest ml/dl
 - **Colab:** `ml/notebooks/dl_decline.ipynb` clones the repository and runs the same command. A private repository needs a `GITHUB_TOKEN` Colab secret.
 - **Games:** the experiments simulate the pre-games-v2 core set (Memory Match, Sequence Recall, Word Recall, Reaction Tap) without delayed recall (`core=LEGACY_CORE, delayed=False`). That is exactly the simulator the reported results were made with.
 
+## Caregiver views and the doctor report (Round 2 batch 2)
+
+- **Dashboard:** one "Today at a glance" card per elder, with games done today, today's medicines, alerts that need a look and the ONE next action, such as "Check the 9:00 AM tablet with Kamala". Cards for people who need you come first.
+- **Elder page:**
+  - "In plain words" insights such as "Memory games steady this month" or "2 doses unsure this week". Tap "Numbers" to see the figures behind each one.
+  - A "This week" card comparing the last 7 days with the 7 before.
+  - A filterable timeline of games, reminders, alerts, recordings and settings changes.
+- **Doctor report:** "Doctor report" on the elder page opens a print-ready summary for 30 or 90 days. "Download PDF" opens the browser's print window; choose "Save as PDF". Notes typed there print with it and are not saved. Every report ends with the statement that Khayal is not a medical device and the report is not a diagnosis.
+- **Migration:** settings changes are stored in `patient_events` (migration 0013). Back up `data/khayal.db`, then run `alembic upgrade head` from `backend/`.
+- **Screenshots:** in `docs/caregiver/screens/`, with a sample report PDF made from demo data.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

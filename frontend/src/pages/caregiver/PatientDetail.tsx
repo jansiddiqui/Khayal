@@ -1,11 +1,16 @@
-import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
+import { InsightsList } from "../../components/caregiver/Insights";
+import { Timeline } from "../../components/caregiver/Timeline";
+import { WeeklySummary } from "../../components/caregiver/WeeklySummary";
+import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, FileText, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
 import { CoreGamesForm, FestivalsForm, gameLabel, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import {
   acknowledgeAlerts,
   getSignals,
+  getInsights,
+  getWeekly,
   getTrend,
   listAlerts,
   listPatients,
@@ -25,7 +30,7 @@ import { Disclaimer } from "../../components/caregiver/Disclaimer";
 import { PairDevicePanel } from "../../components/caregiver/PairDevicePanel";
 import { PrivacyPanel } from "../../components/caregiver/PrivacyPanel";
 import { VoiceRecordings } from "../../components/caregiver/VoiceRecordings";
-import { formatZ, StatusBadge } from "../../components/caregiver/Status";
+import { StatusBadge } from "../../components/caregiver/Status";
 import { GAME_NAMES, GameTrendChart, IndexChart, trendChartId } from "../../components/caregiver/TrendCharts";
 import { Button } from "../../ui/Button";
 import { CountUp } from "../../ui/CountUp";
@@ -188,7 +193,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
   const past = alerts.data?.filter((a) => a.acknowledged) ?? [];
 
   return (
-    <section className="mb-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="alerts-heading">
+    <section id="alerts" className="mb-6 scroll-mt-20 rounded-lg border border-line bg-surface p-4" aria-labelledby="alerts-heading">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 id="alerts-heading" className="text-lg font-semibold">
           Alerts{open.length > 0 ? ` (${open.length} new)` : ""}
@@ -222,7 +227,7 @@ function AlertsPanel({ patientId, onShowGame }: { patientId: number; onShowGame:
           return (
             <li key={g.key} className={`flex flex-wrap items-start gap-3 rounded-md border p-3 ${look.box}`}>
               <look.icon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${look.iconClass}`} />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[14rem] flex-1">
                 <p className="mb-1">
                   <span className="font-semibold capitalize">{g.severity}</span>
                   <span className="text-ink-muted">
@@ -411,8 +416,18 @@ export function PatientDetail() {
   const sessions = useQuery({ queryKey: ["sessions", patientId], queryFn: () => listSessions(patientId) });
   const trend = useQuery({ queryKey: ["trend", patientId], queryFn: () => getTrend(patientId) });
   const signals = useQuery({ queryKey: ["signals", patientId], queryFn: () => getSignals(patientId) });
+  const insights = useQuery({ queryKey: ["insights", patientId], queryFn: () => getInsights(patientId) });
+  const weekly = useQuery({ queryKey: ["weekly", patientId], queryFn: () => getWeekly(patientId) });
   const patient = patients.data?.find((p) => p.id === patientId);
   const [allRows, setAllRows] = useState(false);
+  const { hash } = useLocation();
+  const ready = patient !== undefined;
+  useEffect(() => {
+    if (!hash || !ready) return;
+    const target = document.getElementById(hash.slice(1));
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    target?.scrollIntoView({ block: "start" });
+  }, [hash, ready]);
 
   // An alert's "See … chart" scrolls to that game's chart and rings it for 2 seconds.
   const [highlighted, setHighlighted] = useState<GameType | null>(null);
@@ -494,6 +509,10 @@ export function PatientDetail() {
           <Smartphone aria-hidden="true" className="size-4" />
           Pair a device
         </button>
+        <Link to={`/caregiver/patients/${patientId}/report`} className="inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2 transition-colors duration-150 hover:bg-brand-soft hover:text-ink">
+          <FileText aria-hidden="true" className="size-4" />
+          Doctor report
+        </Link>
       </nav>
 
       <SummaryCard
@@ -506,8 +525,35 @@ export function PatientDetail() {
         lastSession={sessions.data?.[0]}
       />
 
+      <section id="insights" aria-labelledby="insights-heading" className="mb-6 rounded-lg border border-line bg-surface p-4">
+        <h2 id="insights-heading" className="mb-2 text-lg font-semibold">
+          In plain words
+        </h2>
+        {insights.isPending && (
+          <div role="status" aria-busy="true" aria-label="Loading insights" className="flex flex-col gap-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        )}
+        {insights.isError && <LoadError message="Could not load the insights." onRetry={() => void insights.refetch()} />}
+        {insights.isSuccess && <InsightsList insights={insights.data} />}
+      </section>
+
       {/* Alerts are always shown, never collapsed. */}
       <AlertsPanel patientId={patientId} onShowGame={showGame} />
+
+      <section id="week" aria-labelledby="week-heading" className="mb-6 scroll-mt-20 rounded-lg border border-line bg-surface p-4">
+        <h2 id="week-heading" className="mb-1 text-lg font-semibold">
+          This week
+        </h2>
+        {weekly.isPending && (
+          <div role="status" aria-busy="true" aria-label="Loading the weekly summary">
+            <Skeleton className="h-24 w-full" />
+          </div>
+        )}
+        {weekly.isError && <LoadError message="Could not load the weekly summary." onRetry={() => void weekly.refetch()} />}
+        {weekly.isSuccess && <WeeklySummary weekly={weekly.data} />}
+      </section>
 
       <Section
         title="Overall trend and signals"
@@ -580,6 +626,12 @@ export function PatientDetail() {
           )}
         </Section>
       )}
+
+      <Section id="timeline" title="Timeline" hint="Games, reminders, alerts, recordings and settings changes, day by day">
+        <div className="rounded-lg border border-line bg-surface p-4">
+          <Timeline patientId={patientId} />
+        </div>
+      </Section>
 
       {sessions.isPending && (
         <div role="status" aria-busy="true" aria-label="Loading sessions" className="flex flex-col gap-2">
@@ -722,11 +774,11 @@ function Section({
     >
       <summary
         onClick={() => (openedByHand.current = true)}
-        className="mb-3 flex cursor-pointer list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden"
+        className="mb-3 flex cursor-pointer list-none flex-wrap items-baseline gap-x-2 gap-y-0.5 [&::-webkit-details-marker]:hidden"
       >
         <ChevronRight aria-hidden="true" className="size-4 shrink-0 self-center text-ink-muted transition-transform group-open:rotate-90" />
         <h2 className="text-lg font-semibold">{title}</h2>
-        {hint && <span className="text-sm text-ink-muted">{hint}</span>}
+        {hint && <span className="basis-full pl-6 text-sm text-ink-muted sm:basis-auto sm:pl-0">{hint}</span>}
       </summary>
       <div className="section-body">{children}</div>
     </details>
@@ -761,7 +813,6 @@ function SummaryCard({
         {trend ? (
           <p className="flex items-center gap-3 text-lg">
             <StatusBadge status={trend.cognitive_status} />
-            {trend.cognitive_index !== null && <span className="text-ink-muted">index {formatZ(trend.cognitive_index)}</span>}
           </p>
         ) : (
           trendFailed ? <p className="text-ink-muted">Not available</p> : <Skeleton className="mt-1 h-6 w-32" />

@@ -32,6 +32,7 @@ const VoiceTask = page(() => import("./pages/patient/VoiceTask"), "VoiceTask");
 const CaregiverDashboard = page(() => import("./pages/caregiver/Dashboard"), "CaregiverDashboard");
 const PatientDetail = page(() => import("./pages/caregiver/PatientDetail"), "PatientDetail");
 const CaregiverReminders = page(() => import("./pages/caregiver/Reminders"), "CaregiverReminders");
+const DoctorReportPage = page(() => import("./pages/caregiver/Report"), "DoctorReportPage");
 const CaregiverFamily = page(() => import("./pages/caregiver/Family"), "CaregiverFamily");
 const CaregiverAccount = page(() => import("./pages/caregiver/Account"), "CaregiverAccount");
 const AdminPage = page(() => import("./pages/admin/Admin"), "AdminPage");
@@ -77,6 +78,7 @@ function AppRoutes() {
       <Route path="/caregiver/account" element={caregiver(<CaregiverAccount />)} />
       <Route path="/caregiver/patients/:patientId" element={caregiver(<PatientDetail />)} />
       <Route path="/caregiver/patients/:patientId/reminders" element={caregiver(<CaregiverReminders />)} />
+      <Route path="/caregiver/patients/:patientId/report" element={caregiver(<DoctorReportPage />)} />
       <Route path="/caregiver/patients/:patientId/family" element={caregiver(<CaregiverFamily />)} />
       <Route path="/admin" element={caregiver(<AdminPage />)} />
 
