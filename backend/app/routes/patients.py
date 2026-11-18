@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.services import activity
+from app.services import activity, research
 from app.services.game_names import GAME_NAMES
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import Role, User
@@ -114,6 +114,10 @@ def update_patient(
 def toggle_consent(patient_id: int, body: ConsentToggleIn, caregiver: CurrentCaregiver, db: DbSession, now: Now) -> ConsentToggleOut:
     """Opt in to, or withdraw, family photos or voice recordings. Withdrawing deletes that data."""
     patient = _elder(db, caregiver, patient_id)
+    if body.kind == "research":
+        # Nothing is deleted: the data stays in the app; later research exports leave them out.
+        research.set_consent(db, caregiver, patient, body.granted, now)
+        return ConsentToggleOut(patient=patient_out(patient), deleted=0)
     setter = consent.set_photos if body.kind == "photos" else consent.set_voice
     deleted = setter(db, caregiver, patient, body.granted, now)
     return ConsentToggleOut(patient=patient_out(patient), deleted=deleted)

@@ -17,6 +17,7 @@ from app.models import (
     CareLink,
     DeviceSession,
     FamilyMember,
+    Feedback,
     GameSession,
     PatientEvent,
     PlayerLevel,
@@ -51,6 +52,7 @@ def build(db: Session, user: User, now: datetime) -> bytes:
             "policy_version": config.POLICY_VERSION,
             "account": account,
             "consents_given": [_row(c) for c in consent.for_user(db, user)],
+            "feedback_sent": [_row(f, skip=("audio_key",)) for f in db.scalars(select(Feedback).where(Feedback.user_id == user.id))],
             "elders": [],
         }
         for elder in care.linked_patients(db, user):
@@ -79,6 +81,7 @@ def build(db: Session, user: User, now: datetime) -> bytes:
                 "family": [_row(m) for m in members],
                 "voice_recordings": [_row(s) for s in samples],
                 "devices": [_row(d) for d in db.scalars(select(DeviceSession).where(DeviceSession.patient_id == elder.id))],
+                "feedback": [_row(f, skip=("audio_key",)) for f in db.scalars(select(Feedback).where(Feedback.user_id == elder.id))],
                 "settings_changes": [_row(e) for e in db.scalars(select(PatientEvent).where(PatientEvent.patient_id == elder.id))],
             }
             data["elders"].append(entry)

@@ -123,6 +123,8 @@ The caregiver UI can be a normal dense dashboard.
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
 - **SpeechSample**: id, patient_id, audio_path, content_type, recorded_at, duration_ms, transcript (nullable), risk_score (nullable), model_version
+- **Feedback** (Round 2 batch 3): id, user_id, role, kind (`hard` | `liked` | `other`), text, page, audio_key/audio_type (voice note, nullable), status (`new` | `read` | `resolved`), created_at, updated_at
+- **AdminLog** (Round 2 batch 3): id, admin_id (nullable), admin_email, at, action, detail; **SystemState**: key, value, updated_at
 - **PatientEvent** (Round 2 batch 2): id, patient_id, actor_id (nullable), at, kind (`settings` | `reminder` | `family`), summary. Settings changes for the caregiver timeline.
 - **Alert**: id, patient_id, type (`decline` | `missed_reminders` | `speech_risk`), message, severity (`info` | `warning` | `critical`), created_at, acknowledged
 
@@ -264,6 +266,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 
 **File uploads (decided):** photos and audio are sent as the raw request body, one file per request, with the file's own `Content-Type` (e.g. `image/jpeg`, `audio/webm`). No multipart forms, so no `python-multipart` dependency.
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
+- `POST /feedback`, `POST /feedback/{id}/voice`; admin: `GET /admin/overview`, `/admin/health`, `/admin/feedback?status=`, `POST /admin/feedback/{id}/status`, `GET /admin/feedback/{id}/voice`, `/admin/users?q=&role=&kind=`, `/admin/log?action=`, `/admin/research-export` (Round 2 batch 3)
 - `GET /caregiver/glance`, `GET /patients/{id}/insights`, `GET /patients/{id}/weekly`, `GET /patients/{id}/timeline?days=&kinds=`, `GET /patients/{id}/report?days=` (caregiver views, Round 2 batch 2)
 
 Every route checks the role and the care link. A patient can only see their own data; a caregiver can only see linked patients.
@@ -394,6 +397,35 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
    - a feedback inbox;
    - an anonymised research export behind a new versioned, withdrawable research consent;
    - user search and an admin activity log.
+   - **Built** (decided in batch 3; screenshots in `docs/admin/screens/`):
+     - **Admin page:** five tabs (Overview, Feedback, People and invites, Data, Activity log). The open tab is in the address, e.g. `/admin#feedback`.
+     - **Pilot overview** (`GET /admin/overview`): demo accounts are left out of every number.
+       - A **family** is one elder with their family. It is **active** in a period when the elder played a game or ticked a reminder themself.
+       - Tiles: families, active in the last 7 and 30 days, family accounts.
+       - A games-per-day bar chart for the last 30 days.
+       - **Funnel:** requested → approved → invite links made (including direct invites) → signed up → elder's device paired → active in the last 30 days.
+       - **Retention ("still playing after N days")** for 7 and 30 days: of the elders whose first game was at least N days ago, the share who played again N or more days after their first game.
+     - **System health** (`GET /admin/health`):
+       - server up since: the process start, i.e. the last wake on the free host;
+       - last external cron tick and last housekeeping run;
+       - database size against 1 GB (`pg_database_size` on Postgres, page count × page size on SQLite), with a warning from 80%;
+       - days since the last "Download full backup", with a warning after 7 days or when there has never been one.
+       - These times are stored in a new `system_state` table.
+     - **Feedback:**
+       - Caregivers: "Send feedback" in the header: Something was hard / I liked this / Something else, plus a message.
+       - Patients: a quiet "Tell us something" link under Done in the Settings sheet. The sheet keeps its 3 main controls; the link is a fourth, quieter one, **to review**. It opens two big choices ("Something was hard" / "I liked this", plus Back). The next step has a few words, a voice note (only when the elder's voice opt-in is on; stops by itself after 1 minute) and Send.
+       - Limited to 10 per hour per person.
+       - Admins mark each item read or resolved, or reopen it, and can play voice notes.
+       - Withdrawing the voice opt-in deletes feedback voice notes. Deleting an account deletes its feedback. "Export my data" includes it.
+     - **Research consent:** a separate, optional, withdrawable consent per elder ("Research" in the elder's privacy section), recorded with `RESEARCH_POLICY_VERSION`. Withdrawing deletes nothing; later exports leave the elder out, and the consent text says past exports can't be called back.
+     - **Research export** (`GET /admin/research-export`, admin only, 5 per hour, logged): a zip of `sessions.csv`, `reminders.csv` and `README.txt`.
+       - Only consented, non-demo elders are included.
+       - Each elder gets a random ID that is new in every export, and dates become day numbers from that elder's first record.
+       - No names, emails, cities, photos, recordings, reminder titles or notes.
+       - Mood is added in batch 4.
+     - **User search** (`GET /admin/users?q=&role=&kind=`): name or email, role, real or demo.
+     - **Activity log** (`GET /admin/log?action=`, new `admin_log` table) records approve/decline request, direct invite, revoke invite, reset link, demo removal, full backup, research export and feedback status changes.
+     - Migration 0014 adds `system_state`, `feedback` and `admin_log`. The research consent is a new consent kind and needs no schema change.
 4. **Mood and memory book**:
    - a daily optional mood question on Home (Good / Okay / Not so good / Skip), shown to caregivers and in the doctor report, with no alert changes;
    - a reminiscence "Memories" book (photos, story, optional family voice note), placed without breaking the 3-button Home.

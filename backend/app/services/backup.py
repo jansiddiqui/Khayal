@@ -169,8 +169,11 @@ def _write_table(z: zipfile.ZipFile, connection: Connection, table: Table) -> in
     with z.open(f"tables/{table.name}.json", "w", force_zip64=True) as raw:
         out = io.TextIOWrapper(raw, encoding="utf-8")
         out.write("[")
-        result = connection.execution_options(stream_results=True, yield_per=_BATCH).execute(
-            select(table).order_by(*_order_by(table))
+        # Streaming is set on this one statement: Connection.execution_options would change the
+        # session's connection for every later statement too (later writes would fail on Postgres).
+        result = connection.execute(
+            select(table).order_by(*_order_by(table)),
+            execution_options={"stream_results": True, "yield_per": _BATCH},
         )
         for row in result:
             out.write(",\n" if count else "\n")

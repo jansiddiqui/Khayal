@@ -716,7 +716,7 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <Section id="privacy" title="Privacy, devices and family" hint="Photo, photo consent, signed-in devices, share links">
+        <Section id="privacy" title="Privacy, devices and family" hint="Photo, photo and research consents, signed-in devices, share links">
           <PrivacyPanel patient={patient} />
         </Section>
       )}

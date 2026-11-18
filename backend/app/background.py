@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import config, db
-from app.services import accounts, ratelimit, reminders
+from app.services import accounts, ratelimit, reminders, system_state
 from app.services.clock import utc_now
 
 log = logging.getLogger("khayal.background")
@@ -56,6 +56,16 @@ class Housekeeping:
     skipped: bool = False
 
 
+def mark_time(key: str, factory: SessionFactory | None = None) -> None:
+    """Store "now" under `key` for the admin health panel; never fails the caller."""
+    try:
+        with _factory(factory)() as session:
+            system_state.mark(session, key)
+            session.commit()
+    except Exception:
+        log.exception("Could not store %s", key)
+
+
 def housekeeping_once(factory: SessionFactory | None = None) -> Housekeeping:
     """Run every housekeeping step once. One failing step never stops the others."""
     global _last_run
@@ -74,6 +84,7 @@ def housekeeping_once(factory: SessionFactory | None = None) -> Housekeeping:
             log.exception("Removing expired demo accounts failed")
         ratelimit.prune_all(utc_now())
         _last_run = utc_now()
+        mark_time(system_state.LAST_HOUSEKEEPING, factory)
         log.info("Housekeeping: reminders checked for %s patient(s), %s expired account(s) removed", patients, removed)
         return Housekeeping(patients, removed)
     finally:

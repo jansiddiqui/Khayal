@@ -40,6 +40,24 @@ export const copy = {
     off: "Off",
     noVibration: "This phone can't vibrate, so there is nothing to switch here.",
     done: "Done",
+    /** A quiet link under Done that opens the feedback view (Round 2 batch 3). */
+    tellUs: "Tell us something",
+  },
+  /** Send feedback from the Settings sheet (Round 2 batch 3): two big choices, then words or a voice note. */
+  feedback: {
+    title: "Tell us something",
+    question: "How was it?",
+    hard: "Something was hard",
+    liked: "I liked this",
+    words: "A few words, if you like",
+    record: "Record a voice note",
+    stop: "Stop",
+    recorded: "Your voice note is ready",
+    send: "Send",
+    sending: "Sending…",
+    thanks: "Thank you. The Khayal team will read this.",
+    retry: "That didn't send. Let's try again.",
+    back: "Back",
   },
   patientHome: {
     greeting: (name: string) => `Hello, ${name}!`,

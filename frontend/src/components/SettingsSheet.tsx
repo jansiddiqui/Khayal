@@ -1,20 +1,33 @@
 import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { copy } from "../copy";
 import { useFeedback } from "../ui/feedback";
 import { calm, DURATION, pressable, useLessMotion } from "../ui/motion";
 import { BigButton } from "./BigButton";
+import { PatientFeedback } from "./PatientFeedback";
 
 /**
  * The small settings sheet next to Read aloud: gentle vibration and soft sound, each one big
- * switch with its state in words. At most 3 controls (two switches and Done), CLAUDE.md section 4.
+ * switch with its state in words. At most 3 controls (two switches and Done), CLAUDE.md section 4;
+ * under Done, a quiet "Tell us something" link opens the feedback view in the same sheet.
  */
-export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SettingsSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const { settings, set, canVibrate, cue } = useFeedback();
   const less = useLessMotion();
   const ref = useRef<HTMLDialogElement>(null);
   const s = copy.settings;
+  const [view, setView] = useState<"settings" | "feedback">("settings");
+  const close = () => {
+    setView("settings");
+    onClose();
+  };
 
   useEffect(() => {
     const dialog = ref.current;
@@ -34,10 +47,10 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
       aria-labelledby="settings-title"
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        close();
       }}
       onClick={(event) => {
-        if (event.target === ref.current) onClose(); // a tap on the dimmed background closes it
+        if (event.target === ref.current) close(); // a tap on the dimmed background closes it
       }}
       className="mx-auto mt-auto mb-0 w-full max-w-xl bg-transparent p-0 backdrop:bg-[rgb(16_35_37/0.4)] sm:mb-auto"
     >
@@ -50,31 +63,45 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
             transition={calm(DURATION.page)}
             className="flex flex-col gap-4 rounded-t-3xl border-4 border-b-0 border-ink bg-paper p-5 text-ink sm:rounded-3xl sm:border-b-4"
           >
-            <h2 id="settings-title" className="text-3xl font-bold">
-              {s.title}
-            </h2>
-            <p className="text-2xl">{s.intro}</p>
-            {canVibrate ? (
-              <Switch
-                label={s.vibration}
-                on={settings.vibration}
-                onToggle={() => {
-                  set({ vibration: !settings.vibration });
-                  if (!settings.vibration && navigator.vibrate) navigator.vibrate(12);
-                }}
-              />
+            {view === "feedback" ? (
+              <PatientFeedback onDone={() => setView("settings")} />
             ) : (
-              <p className="text-xl text-ink-soft">{s.noVibration}</p>
+              <>
+                <h2 id="settings-title" className="text-3xl font-bold">
+                  {s.title}
+                </h2>
+                <p className="text-2xl">{s.intro}</p>
+                {canVibrate ? (
+                  <Switch
+                    label={s.vibration}
+                    on={settings.vibration}
+                    onToggle={() => {
+                      set({ vibration: !settings.vibration });
+                      if (!settings.vibration && navigator.vibrate)
+                        navigator.vibrate(12);
+                    }}
+                  />
+                ) : (
+                  <p className="text-xl text-ink-soft">{s.noVibration}</p>
+                )}
+                <Switch
+                  label={s.sound}
+                  on={settings.sound}
+                  onToggle={() => {
+                    set({ sound: !settings.sound });
+                    if (!settings.sound) setTimeout(() => cue("success"), 0);
+                  }}
+                />
+                <BigButton label={s.done} icon={<Check />} onClick={close} />
+                <button
+                  type="button"
+                  onClick={() => setView("feedback")}
+                  className="min-h-11 self-center rounded-lg px-3 text-xl text-brand-dark underline underline-offset-4"
+                >
+                  {s.tellUs}
+                </button>
+              </>
             )}
-            <Switch
-              label={s.sound}
-              on={settings.sound}
-              onToggle={() => {
-                set({ sound: !settings.sound });
-                if (!settings.sound) setTimeout(() => cue("success"), 0);
-              }}
-            />
-            <BigButton label={s.done} icon={<Check />} onClick={onClose} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -82,7 +109,15 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
   );
 }
 
-function Switch({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+function Switch({
+  label,
+  on,
+  onToggle,
+}: {
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
       type="button"
@@ -95,7 +130,9 @@ function Switch({ label, on, onToggle }: { label: string; on: boolean; onToggle:
     >
       <span>{label}</span>
       <span className="flex items-center gap-3">
-        <span className="text-xl">{on ? copy.settings.on : copy.settings.off}</span>
+        <span className="text-xl">
+          {on ? copy.settings.on : copy.settings.off}
+        </span>
         <span
           aria-hidden="true"
           className={`relative h-9 w-16 rounded-full border-2 transition-colors duration-200 ${on ? "border-brand bg-brand" : "border-line-strong bg-sunken"}`}

@@ -182,7 +182,7 @@ class PatientOut(BaseModel):
 
 
 class ConsentToggleIn(BaseModel):
-    kind: Literal["photos", "voice"]
+    kind: Literal["photos", "voice", "research"]
     granted: bool
 
 
@@ -716,3 +716,90 @@ class ReportOut(BaseModel):
     alerts: list[AlertOut]
     recordings: int
     days_played: int
+
+
+# --- admin (Round 2 batch 3) ----------------------------------------------------------------
+
+
+class DayCountOut(BaseModel):
+    date: date
+    count: int
+
+
+class FunnelOut(BaseModel):
+    requested: int
+    approved: int
+    invited: int
+    signed_up: int
+    paired: int
+    active: int
+
+
+class RetentionOut(BaseModel):
+    days: int
+    eligible: int
+    retained: int
+
+
+class PilotOverviewOut(BaseModel):
+    families: int
+    active_7: int
+    active_30: int
+    caregivers: int
+    sessions_per_day: list[DayCountOut]
+    funnel: FunnelOut
+    retention_7: RetentionOut
+    retention_30: RetentionOut
+
+
+class SystemHealthOut(BaseModel):
+    started_at: datetime
+    uptime_seconds: int
+    last_start_at: datetime | None
+    last_tick_at: datetime | None
+    last_housekeeping_at: datetime | None
+    database: str
+    db_bytes: int | None
+    db_limit_bytes: int
+    db_warning: bool
+    last_backup_at: datetime | None
+    last_backup_by: str | None
+    days_since_backup: int | None
+    backup_warning: bool
+
+
+class FeedbackIn(BaseModel):
+    kind: Literal["hard", "liked", "other"]
+    text: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    page: Annotated[str, StringConstraints(max_length=200)] | None = None
+
+
+class FeedbackSentOut(BaseModel):
+    id: int
+
+
+class AdminFeedbackOut(BaseModel):
+    id: int
+    role: Role
+    kind: Literal["hard", "liked", "other"]
+    text: str | None
+    page: str | None
+    has_voice: bool
+    status: Literal["new", "read", "resolved"]
+    created_at: datetime
+    # The sender, so the admin can follow up ("Kamala (elder of Priya)"); None once deleted.
+    sender: str | None
+
+
+class FeedbackStatusIn(BaseModel):
+    status: Literal["new", "read", "resolved"]
+
+
+class AdminLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    admin_email: str
+    at: datetime
+    action: str
+    detail: str

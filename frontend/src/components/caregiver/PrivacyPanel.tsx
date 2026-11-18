@@ -11,6 +11,7 @@ import {
   listShares,
   revokeDevice,
   revokeShare,
+  listElderConsents,
   setElderConsent,
   signOutAllDevices,
   uploadElderPhoto,
@@ -136,6 +137,38 @@ function PhotosConsent({ patient }: { patient: Patient }) {
   );
 }
 
+/** The research opt-in text, as recorded with the consent (backend services/research.py). */
+export const RESEARCH_TEXT =
+  "Use my family's anonymised data for research: game results and reminder ticks, under a random ID, " +
+  "with no names, photos, recordings or cities. You can withdraw at any time; exports made before you " +
+  "withdraw can't be called back.";
+
+function ResearchConsent({ patient }: { patient: Patient }) {
+  const queryClient = useQueryClient();
+  const consents = useQuery({ queryKey: ["consents", patient.id], queryFn: () => listElderConsents(patient.id) });
+  const on = consents.data?.some((c) => c.kind === "research" && c.withdrawn_at === null) ?? false;
+  const toggle = useMutation({
+    mutationFn: (granted: boolean) => setElderConsent(patient.id, "research", granted),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["consents", patient.id] }),
+  });
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-3 font-medium">
+        <input
+          type="checkbox"
+          className="size-5 accent-brand"
+          checked={on}
+          disabled={!consents.isSuccess || toggle.isPending}
+          onChange={(e) => toggle.mutate(e.target.checked)}
+        />
+        Research (optional, separate consent)
+      </label>
+      <p className="text-ink-muted">{RESEARCH_TEXT}</p>
+      {toggle.isSuccess && <p className="text-calm">{on ? "Thank you. Research use is on." : "Research use is off. Later exports leave you out."}</p>}
+    </div>
+  );
+}
+
 function Devices({ patient }: { patient: Patient }) {
   const queryClient = useQueryClient();
   const key = ["devices", patient.id];
@@ -232,6 +265,7 @@ export function PrivacyPanel({ patient }: { patient: Patient }) {
     <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4">
       <ElderPhoto patient={patient} />
       <PhotosConsent patient={patient} />
+      <ResearchConsent patient={patient} />
       <Devices patient={patient} />
       <Shares patient={patient} />
     </div>
