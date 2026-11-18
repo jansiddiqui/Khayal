@@ -94,6 +94,31 @@ describe("signed out", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(copy.pair.failed);
   });
 
+  it("a pairing link fills the code in: one big Start (pair-entry)", async () => {
+    api.pairDevice.mockResolvedValue({ access_token: "paired", token_type: "bearer", user: kamala });
+    renderWithProviders(<App />, { route: "/pair?code=482913" });
+    expect(await screen.findByText(copy.pair.fromLinkIntro)).toBeInTheDocument();
+    expect(screen.getByText("482913")).toBeInTheDocument();
+    expect(screen.queryByLabelText(copy.pair.codeLabel)).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: copy.pair.submit }));
+    expect(await screen.findByText(copy.pair.ready("Kamala"))).toBeInTheDocument();
+    expect(api.pairDevice).toHaveBeenCalledWith("482913");
+  });
+
+  it("an expired link code gets the usual kind message and the box back", async () => {
+    api.pairDevice.mockRejectedValue(Object.assign(new Error("400"), { isAxiosError: true, response: { status: 400 } }));
+    renderWithProviders(<App />, { route: "/pair?code=482913" });
+    fireEvent.click(await screen.findByRole("button", { name: copy.pair.submit }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(copy.pair.failed);
+    expect(screen.getByLabelText(copy.pair.codeLabel)).toHaveValue("482913");
+  });
+
+  it("a link without a proper code shows the usual box", async () => {
+    renderWithProviders(<App />, { route: "/pair?code=12ab" });
+    expect(await screen.findByLabelText(copy.pair.codeLabel)).toHaveValue("");
+  });
+
   it("signs a patient in and lands on patient Home", async () => {
     api.login.mockResolvedValue({ access_token: "t", token_type: "bearer", user: kamala });
     renderWithProviders(<App />, { route: "/login" });

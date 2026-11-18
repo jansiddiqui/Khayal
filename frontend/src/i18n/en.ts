@@ -629,6 +629,9 @@ export const en = {
     tooMany: "Let's wait a few minutes, then try a new code.",
     unavailable: "We could not reach Khayal just now. Please try again in a moment.",
     caregiverLink: "Family member or doctor? Sign in with email",
+    /** Opened from the family's link or QR code: the code is already filled in. */
+    fromLinkIntro: "Your family sent this code. Just tap Start.",
+    fromLinkCode: "Your code",
   },
   login: {
     title: "Welcome to Khayal",

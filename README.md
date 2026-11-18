@@ -355,6 +355,13 @@ Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back 
   - Needs the photos opt-in (and the voice opt-in for voice notes); withdrawing deletes them.
 - **Migration:** 0015 (`mood_checkins`, `memory_entries`). Back up `data/khayal.db`, then run `alembic upgrade head`.
 
+## Pairing a phone (pair-entry)
+
+- Landing page: "Pair a phone" in the header (every width) and "I have a code" in the hero, both to `/pair`.
+- Caregiver elder page → Settings → Pair a device: the 6-digit code, a QR code and a link (`/pair?code=…&lang=…`) to copy or, on a phone, send on WhatsApp.
+- The link fills the code in (one big Start) and shows the pairing page in the elder's language. Same one-time code: 10 minutes, one use, same rate limits.
+- New dependency: `qrcode-generator` (MIT, no dependencies). Screenshots: `docs/pair-entry/screens/`.
+
 ## Caregiver screens in Hindi (Round 2 batch 5b)
 
 - Each caregiver picks **English or हिन्दी** for their own screens in **Account → Language for your screens**. It is separate from each elder's app language, which is set on the elder's page.

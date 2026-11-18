@@ -3,23 +3,28 @@ import { motion } from "motion/react";
 import type { User } from "../api/client";
 import { calm, DURATION, useLessMotion } from "../ui/motion";
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { errorStatus } from "../api/client";
 import { useAppConfig } from "../api/useAppConfig";
 import { homePathFor, useAuth } from "../auth/AuthContext";
 import { BigButton } from "../components/BigButton";
 import { copy } from "../copy";
+import { codeFromLink } from "../pairLink";
 
 /**
  * The patient's start page when the device is not signed in (CLAUDE.md section 4): the
  * caregiver shows a 6-digit code on their patient page; it is typed here once and the
  * device stays signed in for 90 days. No email or password to remember.
+ * pair-entry: a link or QR code from the family (/pair?code=123456) fills the code in, so there is
+ * one big Start. If that code has run out, the usual kind message and the box come back.
  */
 export function PairDevice() {
   const { state, pair } = useAuth();
   const config = useAppConfig();
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const { search } = useLocation();
+  const linkCode = codeFromLink(search);
+  const [code, setCode] = useState(linkCode);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paired, setPaired] = useState<User | null>(null);
@@ -67,11 +72,25 @@ export function PairDevice() {
         <Smartphone aria-hidden="true" className="size-10 shrink-0" />
         {p.title}
       </h1>
+      {linkCode && !error ? (
+        <form onSubmit={onSubmit} className="flex flex-col gap-6">
+          <p className="text-2xl">{p.fromLinkIntro}</p>
+          <p className="flex flex-col gap-2 text-xl font-semibold">
+            {p.fromLinkCode}
+            <output dir="ltr" className="rounded-2xl border-4 border-line bg-sunken px-4 py-3 text-center font-mono text-5xl tracking-[0.3em]">
+              {linkCode}
+            </output>
+          </p>
+          <BigButton type="submit" label={submitting ? p.submitting : p.submit} icon={<Smartphone />} busy={submitting} />
+        </form>
+      ) : (
+      <>
       <p className="text-2xl">{p.intro}</p>
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
         <label className="flex flex-col gap-2 text-xl font-semibold">
           {p.codeLabel}
           <input
+            dir="ltr"
             aria-describedby="code-typed"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -92,6 +111,8 @@ export function PairDevice() {
         )}
         <BigButton type="submit" label={submitting ? p.submitting : p.submit} icon={<Smartphone />} busy={submitting} />
       </form>
+      </>
+      )}
       <Link to="/login" className="text-xl text-brand-dark underline">
         {p.caregiverLink}
       </Link>
