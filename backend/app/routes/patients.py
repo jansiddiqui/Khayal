@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from app.services import activity
+from app.services.game_names import GAME_NAMES
 from app.deps import CurrentCaregiver, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import Role, User
 from app.presenters import patient_out
@@ -71,21 +73,33 @@ def update_patient(
     patient_id: int, body: PatientUpdateIn, caregiver: CurrentCaregiver, db: DbSession, now: Now
 ) -> PatientOut:
     patient = _elder(db, caregiver, patient_id)
-    if "city" in body.model_fields_set:
+    changes: list[str] = []
+    if "city" in body.model_fields_set and (body.city or None) != patient.city:
         patient.city = body.city or None
+        changes.append(f"City set to {patient.city}" if patient.city else "City removed")
     if "core_games" in body.model_fields_set:
+        before = core_games.core_games(patient)
         patient.core_games = [g.value for g in body.core_games] if body.core_games else None
+        if core_games.core_games(patient) != before:
+            changes.append("Core games changed to " + ", ".join(GAME_NAMES[g] for g in core_games.core_games(patient)))
         # Pins must stay inside the core set; pins that left it return to automatic.
         if today_games.pinned_games(patient) is None:
             patient.pinned_games = None
     if "festivals" in body.model_fields_set:
         chosen = sorted(set(body.festivals or []))
+        if (chosen or None) != patient.festivals:
+            changes.append(f"Festival question: {len(chosen)} festivals ticked" if chosen else "Festival question turned off")
         patient.festivals = chosen or None
     if "pinned_games" in body.model_fields_set:
         pins = body.pinned_games
         if pins and not set(pins) <= set(core_games.core_games(patient)):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pinned games must be in the core set.")
-        patient.pinned_games = [g.value for g in pins] if pins else None
+        new_pins = [g.value for g in pins] if pins else None
+        if new_pins != patient.pinned_games:
+            changes.append("Pinned " + " and ".join(GAME_NAMES[g] for g in pins) if pins else "Today's games back to automatic")
+        patient.pinned_games = new_pins
+    for change in changes:
+        activity.record(db, patient.id, caregiver, "settings", change, now)
     db.commit()
     if body.voice_task_enabled is not None:
         # Turning the voice task off is withdrawing the voice consent: recordings are deleted.

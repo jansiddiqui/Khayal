@@ -15,6 +15,7 @@ vi.mock("../api/client", async (importOriginal) => {
     getTodayReminders: vi.fn(),
     getTodaysGames: vi.fn(),
     listPatients: vi.fn(),
+    getGlance: vi.fn(),
     listSessions: vi.fn(),
     listAlerts: vi.fn(),
     getTrend: vi.fn(),
@@ -78,10 +79,10 @@ describe("caregiver states", () => {
   });
 
   it("a failed load offers Try again", async () => {
-    api.listPatients.mockRejectedValueOnce(new Error("offline")).mockResolvedValue([]);
+    api.getGlance.mockRejectedValueOnce(new Error("offline")).mockResolvedValue([]);
     renderWithProviders(<App />, { route: "/caregiver" });
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    await waitFor(() => expect(api.listPatients).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.getGlance).toHaveBeenCalledTimes(2));
     expect(await screen.findByText(/Nobody here yet/)).toBeInTheDocument();
   });
 });

@@ -19,6 +19,7 @@ vi.mock("./api/client", async (importOriginal) => {
     register: vi.fn(),
     pairDevice: vi.fn(),
     listPatients: vi.fn(),
+    getGlance: vi.fn(),
     addElder: vi.fn(),
     checkInvite: vi.fn(),
     listSessions: vi.fn(),
@@ -223,9 +224,13 @@ describe("caregiver", () => {
 
   it("lists the people they look after and adds one with consent (no email)", async () => {
     const rahim: Patient = { id: 3, name: "Rahim Khan", photos_enabled: false, has_photo: false, city: "Pune", pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null };
-    const kamala = { id: 2, name: "Kamala Devi", photos_enabled: false, has_photo: false, city: null, pinned_games: null, core_games: ["memory_match", "sequence_recall", "word_recall", "reaction_tap"] as GameType[], core_is_default: true, voice_task_enabled: false, voice_consent_at: null, cognitive_index: null, cognitive_status: "insufficient" as const };
-    api.listPatients.mockResolvedValueOnce([kamala]);
-    api.listPatients.mockResolvedValue([kamala, { ...rahim, cognitive_index: null, cognitive_status: "insufficient" as const }]);
+    const glance = (id: number, name: string): apiClient.Glance => ({
+  patient_id: id, name, cognitive_status: "insufficient", games_done: 0, games_total: 3,
+  medicines: { taken: 0, missed: 0, unsure: 0, to_come: 0 }, alerts_open: 0, last_active_at: null,
+  next_action: { kind: "pair", text: `Pair ${name.split(" ")[0]}'s phone or tablet` },
+});
+    api.getGlance.mockResolvedValueOnce([glance(2, "Kamala Devi")]);
+    api.getGlance.mockResolvedValue([glance(2, "Kamala Devi"), glance(3, "Rahim Khan")]);
     api.addElder.mockResolvedValue(rahim);
 
     renderWithProviders(<App />, { route: "/caregiver" });
@@ -244,7 +249,7 @@ describe("caregiver", () => {
     fireEvent.click(add);
 
     expect(await screen.findByText(/Added Rahim Khan\./)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("cell", { name: "Rahim Khan" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Rahim Khan" })).toBeInTheDocument());
     expect(api.addElder.mock.calls[0]?.[0]).toEqual({
       name: "Rahim Khan",
       city: "Pune",

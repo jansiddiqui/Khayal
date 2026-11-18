@@ -1,5 +1,7 @@
 from fastapi import APIRouter, status
 
+from app.services import activity
+from app.services.game_names import GAME_NAMES
 from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import GameType
 from app.schemas import (
@@ -44,6 +46,7 @@ def tutorial_seen(game_type: GameType, patient: CurrentPatient, db: DbSession, n
 def show_tutorial_again(patient_id: int, game_type: GameType, caregiver: CurrentCaregiver, db: DbSession) -> None:
     """"Show the tutorial again": the next time the patient opens this game."""
     ensure_patient_access(db, caregiver, patient_id)
+    activity.record(db, patient_id, caregiver, "settings", f"Tutorial will show again: {GAME_NAMES[game_type]}")
     tutorials.reset(db, patient_id, game_type)
 
 

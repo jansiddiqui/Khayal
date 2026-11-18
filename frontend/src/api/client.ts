@@ -970,3 +970,120 @@ export async function fetchAudioBlob(url: string): Promise<Blob> {
   const { data } = await api.get<Blob>(url, { responseType: "blob" });
   return data;
 }
+
+// --- caregiver views (Round 2 batch 2) ----------------------------------------------------
+
+export type Tone = "good" | "neutral" | "attention";
+export type NextActionKind = "check_dose" | "missed_dose" | "alerts" | "pair" | "add_reminders" | "inactive" | "all_good";
+
+export interface Glance {
+  patient_id: number;
+  name: string;
+  cognitive_status: IndexStatus;
+  games_done: number;
+  games_total: number;
+  medicines: { taken: number; missed: number; unsure: number; to_come: number };
+  alerts_open: number;
+  last_active_at: string | null;
+  next_action: { kind: NextActionKind; text: string };
+}
+
+export interface Insight {
+  key: string;
+  tone: Tone;
+  text: string;
+  detail: string;
+}
+
+export interface DoseWeek {
+  taken: number;
+  taken_late: number;
+  missed: number;
+  unsure: number;
+}
+
+export interface WeekStats {
+  start: string;
+  end: string;
+  days_played: number;
+  sessions: number;
+  completed: number;
+  accuracy: number | null;
+  doses: DoseWeek;
+  reminders_done: number;
+  reminders_total: number;
+  alerts: number;
+  recordings: number;
+}
+
+export interface Weekly {
+  this_week: WeekStats;
+  last_week: WeekStats;
+}
+
+export type TimelineKind = "session" | "reminder" | "alert" | "recording" | "settings";
+
+export interface TimelineEvent {
+  at: string;
+  kind: TimelineKind;
+  title: string;
+  detail: string;
+  tone: Tone;
+  game_type: GameType | null;
+}
+
+export interface ReportGame {
+  game_type: GameType;
+  sessions: number;
+  first_half: number | null;
+  second_half: number | null;
+  z: number | null;
+  status: IndexStatus;
+  sessions_to_baseline: number;
+  points: { day: string; composite: number }[];
+}
+
+export interface DoctorReport {
+  patient_id: number;
+  name: string;
+  start: string;
+  end: string;
+  days: number;
+  generated_at: string;
+  cognitive_index: number | null;
+  cognitive_status: IndexStatus;
+  games: ReportGame[];
+  doses: DoseWeek;
+  reminders_done: number;
+  reminders_total: number;
+  alerts: Alert[];
+  recordings: number;
+  days_played: number;
+}
+
+export async function getGlance(): Promise<Glance[]> {
+  const { data } = await api.get<Glance[]>("/caregiver/glance");
+  return data;
+}
+
+export async function getInsights(patientId: number): Promise<Insight[]> {
+  const { data } = await api.get<Insight[]>(`/patients/${patientId}/insights`);
+  return data;
+}
+
+export async function getWeekly(patientId: number): Promise<Weekly> {
+  const { data } = await api.get<Weekly>(`/patients/${patientId}/weekly`);
+  return data;
+}
+
+export async function getTimeline(patientId: number, days: number, kinds: readonly TimelineKind[]): Promise<TimelineEvent[]> {
+  const params = new URLSearchParams({ days: String(days) });
+  for (const k of kinds) params.append("kinds", k);
+  const { data } = await api.get<TimelineEvent[]>(`/patients/${patientId}/timeline?${params.toString()}`);
+  return data;
+}
+
+export async function getReport(patientId: number, days: number): Promise<DoctorReport> {
+  const { data } = await api.get<DoctorReport>(`/patients/${patientId}/report`, { params: { days } });
+  return data;
+}

@@ -3,6 +3,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
+from app.services import activity
 from app.deps import CurrentCaregiver, CurrentPatient, CurrentUser, DbSession, Now, ensure_patient_access
 from app.models import MarkedBy, Reminder, ReminderRepeat, ReminderStatus, Role, User
 from app.schemas import AdherenceOut, ReminderIn, ReminderLogIn, ReminderOut, TodayReminderOut
@@ -100,6 +101,8 @@ def create_reminder(patient_id: int, body: ReminderIn, caregiver: CurrentCaregiv
     ensure_patient_access(db, caregiver, patient_id)
     reminder = Reminder(patient_id=patient_id, created_at=now, **_fields(body, now))
     db.add(reminder)
+    activity.record(db, patient_id, caregiver, "reminder",
+                    f"Reminder added: {reminder.title} at {activity.clock_text(reminder.time_of_day)}", now)
     db.commit()
     return _out(db, reminder, local(now).date())
 
@@ -112,6 +115,8 @@ def update_reminder(
     reminder = _reminder_of(db, patient_id, reminder_id)
     for field, value in _fields(body, now, reminder).items():
         setattr(reminder, field, value)
+    activity.record(db, patient_id, caregiver, "reminder",
+                    f"Reminder changed: {reminder.title} at {activity.clock_text(reminder.time_of_day)}", now)
     db.commit()
     return _out(db, reminder, local(now).date())
 
@@ -119,7 +124,9 @@ def update_reminder(
 @router.delete("/patients/{patient_id}/reminders/{reminder_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_reminder(patient_id: int, reminder_id: int, caregiver: CurrentCaregiver, db: DbSession) -> Response:
     ensure_patient_access(db, caregiver, patient_id)
-    db.delete(_reminder_of(db, patient_id, reminder_id))
+    reminder = _reminder_of(db, patient_id, reminder_id)
+    activity.record(db, patient_id, caregiver, "reminder", f"Reminder removed: {reminder.title}")
+    db.delete(reminder)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

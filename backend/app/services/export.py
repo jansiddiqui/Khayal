@@ -18,6 +18,7 @@ from app.models import (
     DeviceSession,
     FamilyMember,
     GameSession,
+    PatientEvent,
     PlayerLevel,
     Reminder,
     ReminderLog,
@@ -78,6 +79,7 @@ def build(db: Session, user: User, now: datetime) -> bytes:
                 "family": [_row(m) for m in members],
                 "voice_recordings": [_row(s) for s in samples],
                 "devices": [_row(d) for d in db.scalars(select(DeviceSession).where(DeviceSession.patient_id == elder.id))],
+                "settings_changes": [_row(e) for e in db.scalars(select(PatientEvent).where(PatientEvent.patient_id == elder.id))],
             }
             data["elders"].append(entry)
             for m in members:

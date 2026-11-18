@@ -123,6 +123,7 @@ The caregiver UI can be a normal dense dashboard.
 - **ReminderLog**: reminder_id, date, status (`done` | `missed`)
 - **FamilyMember**: id, patient_id, name, relation, photo_paths (JSON list), note
 - **SpeechSample**: id, patient_id, audio_path, content_type, recorded_at, duration_ms, transcript (nullable), risk_score (nullable), model_version
+- **PatientEvent** (Round 2 batch 2): id, patient_id, actor_id (nullable), at, kind (`settings` | `reminder` | `family`), summary. Settings changes for the caregiver timeline.
 - **Alert**: id, patient_id, type (`decline` | `missed_reminders` | `speech_risk`), message, severity (`info` | `warning` | `critical`), created_at, acknowledged
 
 ## 6. Core logic (implement exactly)
@@ -263,6 +264,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 
 **File uploads (decided):** photos and audio are sent as the raw request body, one file per request, with the file's own `Content-Type` (e.g. `image/jpeg`, `audio/webm`). No multipart forms, so no `python-multipart` dependency.
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
+- `GET /caregiver/glance`, `GET /patients/{id}/insights`, `GET /patients/{id}/weekly`, `GET /patients/{id}/timeline?days=&kinds=`, `GET /patients/{id}/report?days=` (caregiver views, Round 2 batch 2)
 
 Every route checks the role and the care link. A patient can only see their own data; a caregiver can only see linked patients.
 
@@ -344,6 +346,48 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
    - a per-elder timeline that can be filtered;
    - a weekly summary card;
    - a print-optimised doctor report (browser "print to PDF", no new dependency).
+   - **Built** (decided in batch 2; screenshots and a sample PDF in `docs/caregiver/screens/`):
+     - **Dashboard:** one "Today at a glance" card per elder (`GET /caregiver/glance`), in one column on a phone and two on wider screens. Each card shows:
+       - the status word;
+       - games done today out of today's 3;
+       - today's medicines (taken / not sure / missed / to come);
+       - alerts that need a look;
+       - when they were last active;
+       - the ONE next action.
+     - **Next-action order** (`services/caregiver_views.next_action`):
+       1. a medicine dose they weren't sure about;
+       2. a missed medicine dose today;
+       3. new alerts;
+       4. no paired device;
+       5. no reminders yet;
+       6. no game for 3 days;
+       7. otherwise "Nothing needs you today", which links to the weekly card.
+     - **Card order:** a dose to check, a missed dose or alerts come first, then Declining, Watch, Stable, Learning. The dashboard shows no z-scores.
+     - **Insights** (`GET /patients/{id}/insights`): plain sentences at the top of the elder page, each with its numbers on tap ("Numbers").
+       - Activity: days played out of the last 7.
+       - Medicine doses this week: not sure, missed, or all taken.
+       - Games grouped as memory, thinking and everyday, or About Today, using the shared scale: "steady this month" (z ≥ −0.5), "a little lower" (Watch), "lower" (Declining).
+       - "Still learning their normal" for games without a baseline.
+       - Order: needs attention first, then good news, then the rest. The summary card no longer shows the index number; the charts still do.
+     - **Weekly card** "This week": the last 7 days (today included) against the 7 before, in numbers and words. It covers:
+       - days with a game, games finished and rounds right;
+       - medicine doses taken, and doses missed or not sure;
+       - reminders done, alerts and recordings.
+     - **Timeline** (`GET /patients/{id}/timeline?days=&kinds=`): a closed section on the elder page with day headings.
+       - Filter chips: games, reminders, alerts, recordings, settings changes. Periods: 7, 14, 30 or 90 days.
+       - Settings changes come from a new `PatientEvent` table (migration 0013): city, core games, pins, festivals, reminders added/changed/removed, family members added/removed, tutorial reset.
+       - Consents and device pairing/sign-out come from their own tables.
+       - A reminder log written on another day is shown at the reminder's own time.
+     - **Doctor report** (`/caregiver/patients/:id/report`, `GET /patients/{id}/report?days=30|90`): A4 print CSS, and "Download PDF" opens the browser print window (no library). It contains:
+       - elder name, period and date made;
+       - overall status with the index;
+       - per tracked game: sessions, score in the first half → second half, status with z, and a sparkline from 0;
+       - medicine doses (and all reminders), alerts in the period, voice recordings;
+       - family notes;
+       - the "not a medical device / not a diagnosis" statement.
+       - Notes are typed on the page and printed, not saved. The demo banner is hidden in print. The sample is 2 pages.
+     - Mood joins the report and the timeline in batch 4.
+     - "Export my data" includes the settings changes.
 3. **Admin**:
    - pilot overview (active families, sessions per day, invite funnel, retention);
    - system health (uptime, last cron tick, DB size vs 1 GB, days since the last full backup);
