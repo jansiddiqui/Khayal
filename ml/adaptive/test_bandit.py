@@ -169,6 +169,7 @@ def test_evaluate_writes_report(tmp_path: Path) -> None:
                    "--out", str(tmp_path), "--no-plots"])
     md = (tmp_path / "adaptive_eval.md").read_text(encoding="utf-8")
     assert "## Does adaptive difficulty hide decline?" in md
+    assert "## Interpretation" in md and "level-independent ability estimate" in md
     assert "LinUCB" in md and "Rule engine" in md
     csv = (tmp_path / "adaptive_eval.csv").read_text(encoding="utf-8")
     assert csv.startswith("engine,metric,group,value")
