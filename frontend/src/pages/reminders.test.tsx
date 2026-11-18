@@ -27,7 +27,7 @@ vi.mock("../api/client", async (importOriginal) => {
     updateReminder: vi.fn(),
     deleteReminder: vi.fn(),
     listAlerts: vi.fn(),
-    acknowledgeAlert: vi.fn(),
+    acknowledgeAlerts: vi.fn(),
     listRecordings: vi.fn(),
     getTodaysGames: vi.fn(),
   };
@@ -497,7 +497,7 @@ describe("caregiver reminders and alerts", () => {
       acknowledged: false,
     };
     api.listAlerts.mockResolvedValueOnce([alert]).mockResolvedValue([{ ...alert, acknowledged: true }]);
-    api.acknowledgeAlert.mockResolvedValue({ ...alert, acknowledged: true });
+    api.acknowledgeAlerts.mockResolvedValue(1);
     api.listSessions.mockResolvedValue([]);
     renderWithProviders(<App />, { route: "/caregiver/patients/2" });
 
@@ -508,8 +508,37 @@ describe("caregiver reminders and alerts", () => {
     // The summary card at the top repeats the latest new alert.
     expect(within(screen.getByRole("region", { name: "Summary" })).getByText(alert.message)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
-    await waitFor(() => expect(api.acknowledgeAlert.mock.calls[0]?.[0]).toBe(3));
+    await waitFor(() => expect(api.acknowledgeAlerts).toHaveBeenCalledWith(2, [3]));
     expect(await screen.findByText("Acknowledged (1)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Reminders" })).toHaveAttribute("href", "/caregiver/patients/2/reminders");
+  });
+
+  it("groups repeated decline alerts into one card and acknowledges all", async () => {
+    const decline = (id: number, day: number, z: string): Alert => ({
+      id,
+      patient_id: 2,
+      type: "decline",
+      message: `Word Recall average dropped from 0.62 to 0.41 over the last 5 sessions (z = ${z}).`,
+      severity: id === 12 ? "critical" : "warning",
+      created_at: `2026-11-${String(day).padStart(2, "0")}T06:00:00Z`,
+      acknowledged: false,
+    });
+    const other: Alert = { ...decline(20, 5, "-1.6"), message: "Memory Match average dropped from 0.5 to 0.3 over the last 5 sessions (z = -1.6)." };
+    api.listAlerts.mockResolvedValue([decline(12, 15, "-2.7"), decline(11, 8, "-1.9"), other, decline(10, 1, "-1.6")]);
+    api.acknowledgeAlerts.mockResolvedValue(4);
+    api.listSessions.mockResolvedValue([]);
+    renderWithProviders(<App />, { route: "/caregiver/patients/2" });
+
+    const panel = within(await screen.findByRole("region", { name: "Alerts (4 new)" }));
+    // Three Word Recall alerts become one card: the worst severity, a count, the latest wording.
+    const wordRecall = panel.getByText(/z = -2\.7/).closest("li")!.parentElement!.closest("li")!;
+    expect(wordRecall).toHaveTextContent("critical");
+    expect(wordRecall).toHaveTextContent("3 alerts, 1 Nov – 15 Nov");
+    expect(panel.queryByText(/z = -1\.9/)).toBeNull();
+    expect(within(wordRecall).getByRole("button", { name: "Acknowledge 3" })).toBeInTheDocument();
+    expect(panel.getByText(/Memory Match average dropped/)).toBeInTheDocument();
+
+    fireEvent.click(panel.getByRole("button", { name: "Acknowledge all" }));
+    await waitFor(() => expect(api.acknowledgeAlerts).toHaveBeenCalledWith(2, undefined));
   });
 });

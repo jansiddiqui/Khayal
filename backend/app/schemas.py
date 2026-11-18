@@ -492,6 +492,15 @@ class ReminderLogIn(BaseModel):
     status: Literal["done", "unsure"] = "done"
 
 
+class AlertsAckIn(BaseModel):
+    # None = every new alert for the patient ("Acknowledge all").
+    ids: Annotated[list[int], Field(min_length=1, max_length=500)] | None = None
+
+
+class AlertsAckOut(BaseModel):
+    acknowledged: int
+
+
 class AlertOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
