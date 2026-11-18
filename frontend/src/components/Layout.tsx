@@ -1,4 +1,5 @@
 import { House, Settings, Volume2, VolumeX } from "lucide-react";
+import { useReportVoice } from "../readAloud/useReportVoice";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
@@ -42,6 +43,7 @@ const topBarButton =
  */
 export function Layout({ title, spokenIntro, spoken, compact = false, snug = false, children }: LayoutProps) {
   const { enabled, toggle, speak } = useReadAloud();
+  useReportVoice();
   const { cue } = useFeedback();
   const less = useLessMotion();
   const { pathname } = useLocation();
@@ -63,8 +65,8 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
   const onHome = pathname === PATIENT_HOME;
 
   return (
-    <div className={`mx-auto flex max-w-3xl flex-col px-4 py-4 sm:px-8 ${compact ? "h-dvh" : "min-h-screen"}`}>
-      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-1.5 sm:flex sm:gap-4" aria-label="Top bar">
+    <div data-patient-layout className={`mx-auto flex max-w-3xl flex-col px-4 py-4 sm:px-8 ${compact ? "h-dvh" : "min-h-screen"}`}>
+      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-1.5 sm:flex sm:gap-4" aria-label={copy.a11y.topBar}>
         <Link
           to={PATIENT_HOME}
           className={topBarButton}
@@ -97,7 +99,7 @@ export function Layout({ title, spokenIntro, spoken, compact = false, snug = fal
             <VolumeX aria-hidden="true" className="size-6 shrink-0 sm:size-7" />
           )}
           {/* Two short lines on a phone ("Read aloud:" / "Off"), one line on wider screens. */}
-          <span className="flex flex-col sm:flex-row sm:gap-[0.3em]">
+          <span className="flex flex-wrap justify-center gap-x-[0.3em]">
             <span>{copy.nav.readAloud}</span> <span>{enabled ? copy.nav.on : copy.nav.off}</span>
           </span>
         </button>

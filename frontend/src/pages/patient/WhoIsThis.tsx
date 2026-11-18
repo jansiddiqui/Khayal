@@ -55,7 +55,7 @@ export function WhoIsThis() {
           </div>
         </QuestionRow>
         <div className="mt-auto">
-          <BigButton label={w.back} icon={<ArrowLeft />} onClick={back} />
+          <BigButton label={w.back} icon={<ArrowLeft className="flip-rtl" />} onClick={back} />
         </div>
       </Layout>
     );
@@ -96,8 +96,8 @@ export function WhoIsThis() {
                   cue("tap");
                   show(tile);
                 }}
-                aria-label={`${tile.member.name}, ${tile.member.relation}`}
-                className={`flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left shadow-lift hover:border-brand-dark ${pressable}`}
+                aria-label={w.thisIs(tile.member.name, tile.member.relation)}
+                className={`flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-start shadow-lift hover:border-brand-dark ${pressable}`}
               >
                 <AuthedImage src={tile.photo.url} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>

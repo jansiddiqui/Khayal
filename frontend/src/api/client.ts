@@ -114,6 +114,8 @@ export interface User {
   voice_task_enabled: boolean;
   /** When the voice task was turned on; null while it is off. */
   voice_consent_at: string | null;
+  /** Patients only: the app language a caregiver chose ("en", "hi", "ur"; Round 2 batch 5). */
+  language?: string;
   /** Public demo only: when this account and its data are deleted. */
   demo_expires_at?: string | null;
   /** Patients only: family photos (and the elder's own photo) are opted in. */
@@ -143,6 +145,22 @@ export interface Patient {
   voice_consent_at: string | null;
   photos_enabled: boolean;
   has_photo: boolean;
+  /** The elder's app language and what read-aloud found on their device (Round 2 batch 5). */
+  language?: string;
+  voice_check?: VoiceCheck | null;
+}
+
+export interface VoiceCheck {
+  lang: string;
+  voice: string | null;
+  /** The language the chosen voice speaks; "none" = this device can't read the language aloud. */
+  using: "en" | "hi" | "ur" | "none";
+  checked_at: string;
+}
+
+/** The elder's device reports which read-aloud voice it found (Round 2 batch 5). */
+export async function reportVoiceCheck(check: Omit<VoiceCheck, "checked_at">): Promise<void> {
+  await api.post("/me/voice-check", check);
 }
 
 /** Caregiver sign-up: with an invite link or a family share link (admins need none). */
@@ -690,6 +708,8 @@ export interface PatientChanges {
   core_games?: GameType[] | null;
   festivals?: string[] | null;
   voice_task_enabled?: boolean;
+  /** The elder's app language (Round 2 batch 5). */
+  language?: "en" | "hi" | "ur";
 }
 
 export async function updatePatient(patientId: number, changes: PatientChanges): Promise<Patient> {

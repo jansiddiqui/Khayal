@@ -355,6 +355,18 @@ Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back 
   - Needs the photos opt-in (and the voice opt-in for voice notes); withdrawing deletes them.
 - **Migration:** 0015 (`mood_checkins`, `memory_entries`). Back up `data/khayal.db`, then run `alembic upgrade head`.
 
+## Hindi and Urdu (Round 2 batch 5)
+
+- **Choosing the language:** on the elder's page, open Settings → Language and pick English, हिन्दी or اردو. Their phone switches the next time the app comes to the front.
+- **What changes:** every patient screen, read aloud and the games' words. Urdu is right to left in Noto Nastaliq Urdu.
+- **Read aloud:**
+  - The phone uses a Hindi or Urdu voice when it has one.
+  - With no Urdu voice it reads the same words in Hindi.
+  - The family sees what the phone found under Settings → Language.
+- **Translations:** drafts, being checked by a native speaker. Review file: `docs/i18n/review.md`; regenerate it with `npm run i18n:review` (from `frontend/`).
+- **Migration:** 0016 (`users.language`, `users.voice_check`). Back up `data/khayal.db`, then run `alembic upgrade head`.
+- **Family screens:** they stay English for now; Hindi for them is batch 5b.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

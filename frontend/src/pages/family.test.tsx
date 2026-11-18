@@ -153,14 +153,14 @@ describe("patient Who is this?", () => {
     api.listFamily.mockResolvedValue([rahul, meena, noPhoto]);
     renderWithProviders(<App />, { route: "/patient/who-is-this" });
     const tiles = await screen.findAllByRole("button", { name: /, / });
-    expect(tiles.map((t) => t.getAttribute("aria-label"))).toEqual(["Rahul, Grandson", "Rahul, Grandson", "Meena, Daughter"]);
+    expect(tiles.map((t) => t.getAttribute("aria-label"))).toEqual(["This is Rahul, your grandson.", "This is Rahul, your grandson.", "This is Meena, your daughter."]);
     expect(screen.queryByText("Sita")).toBeNull();
   });
 
   it("opens a photo big, reads who it is aloud, and goes back", async () => {
     api.listFamily.mockResolvedValue([rahul, meena]);
     renderWithProviders(<App />, { route: "/patient/who-is-this" });
-    fireEvent.click((await screen.findAllByRole("button", { name: "Rahul, Grandson" }))[0]!);
+    fireEvent.click((await screen.findAllByRole("button", { name: "This is Rahul, your grandson." }))[0]!);
 
     expect(screen.getByRole("heading", { name: "Rahul" })).toBeInTheDocument();
     expect(screen.getByText("This is Rahul, your grandson.")).toBeInTheDocument();

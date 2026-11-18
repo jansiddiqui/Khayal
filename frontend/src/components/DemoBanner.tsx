@@ -16,7 +16,7 @@ export function DemoBanner() {
   const { config, waking } = useAppConfigState();
   if (waking) {
     return (
-      <div role="status" className={`demo-banner ${bar} border-brand bg-brand-soft`}>
+      <div role="status" dir="ltr" lang="en" className={`demo-banner ${bar} border-brand bg-brand-soft`}>
         <Hourglass aria-hidden="true" className="size-5 shrink-0" />
         <span>{copy.demo.waking}</span>
       </div>
@@ -24,7 +24,7 @@ export function DemoBanner() {
   }
   if (config?.demo_mode !== true) return null;
   return (
-    <div role="note" className={`demo-banner ${bar} border-accent bg-accent-soft`}>
+    <div role="note" dir="ltr" lang="en" className={`demo-banner ${bar} border-accent bg-accent-soft`}>
       <Info aria-hidden="true" className="size-5 shrink-0" />
       <span>{copy.demo.banner}</span>
     </div>

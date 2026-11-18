@@ -22,6 +22,8 @@ from app.schemas import (
 from app.services import auth, care, consent, core_games, decline, devices, elders, family, invites, pairing, today_games
 from app.uploads import blocking, content_type, read_body
 
+LANGUAGE_NAMES = {"en": "English", "hi": "Hindi", "ur": "Urdu"}
+
 router = APIRouter(tags=["patients"])
 
 PHOTO_TYPES = {"image/jpeg", "image/png"}
@@ -98,6 +100,11 @@ def update_patient(
         if new_pins != patient.pinned_games:
             changes.append("Pinned " + " and ".join(GAME_NAMES[g] for g in pins) if pins else "Today's games back to automatic")
         patient.pinned_games = new_pins
+    if body.language is not None and body.language != patient.language:
+        patient.language = body.language
+        # The device checks its voices again for the new language.
+        patient.voice_check = None
+        changes.append(f"App language set to {LANGUAGE_NAMES[body.language]}")
     for change in changes:
         activity.record(db, patient.id, caregiver, "settings", change, now)
     db.commit()
