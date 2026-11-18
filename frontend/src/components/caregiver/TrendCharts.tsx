@@ -10,7 +10,8 @@ import {
   YAxis,
 } from "recharts";
 import { ChevronRight } from "lucide-react";
-import type { GameTrend, IndexStatus, Trend } from "../../api/client";
+import type { GameTrend, GameType, IndexStatus, Trend } from "../../api/client";
+import { dateTimeText, LOCALE, serverText, t } from "../../t";
 import { formatGameZ, formatZ, STATUS_SCALE_TEXT, StatusBadge, statusDifference } from "./Status";
 
 // One series hue (the brand teal), neutral reference marks, recessive grid/axes; all from theme.css.
@@ -21,21 +22,10 @@ const GRID = "var(--color-line)";
 const AXIS = { fontSize: 12, fill: "var(--color-ink-soft)" };
 const BAND_Z = 1.5;
 
-const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+const shortDate = (t: number) => new Date(t).toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
 
-export const GAME_NAMES = {
-  memory_match: "Memory Match",
-  sequence_recall: "Sequence Recall",
-  word_recall: "Word Recall",
-  daily_orientation: "About Today",
-  reaction_tap: "Reaction Tap",
-  word_recall_delayed: "Delayed Word Recall",
-  object_location: "Paired Associates (object location)",
-  spatial_span: "Spatial Span",
-  money_handling: "Money Handling",
-  clock_setting: "Clock Setting",
-  colour_trails: "Colour Trails",
-} as const;
+/** Caregiver game names in the caregiver's language (src/i18n/caregiver/sections/common.ts). */
+export const GAME_NAMES: Record<GameType, string> = t.common.games;
 
 /** Rolling mean of the last `n` values at each point (the same 5-session average alerts use). */
 /**
@@ -79,10 +69,10 @@ export function sessionTicks(times: readonly number[]): number[] {
 }
 
 /** "Session 12 · 9 Nov 2026, 4:30 pm" for the tooltip. */
-export function sessionLabel(n: number, t: number | undefined): string {
-  if (t === undefined) return `Session ${n}`;
-  const when = new Date(t).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
-  return `Session ${n} · ${when}`;
+export function sessionLabel(n: number, at: number | undefined): string {
+  if (at === undefined) return t.elderPanels.charts.session(n);
+  const when = dateTimeText(new Date(at), true);
+  return `${t.elderPanels.charts.session(n)} · ${when}`;
 }
 
 export function GameTrendChart({
@@ -108,7 +98,7 @@ export function GameTrendChart({
       id={trendChartId(trend.game_type)}
       tabIndex={-1}
       open={opensByDefault(trend)}
-      aria-label={`${name} trend`}
+      aria-label={t.elderPanels.charts.trend(name)}
       className={
         "group/card scroll-mt-24 rounded-lg border bg-surface transition-shadow duration-300 " +
         (highlighted ? "border-accent-strong shadow-[0_0_0_4px_var(--color-accent)]" : "border-line")
@@ -124,14 +114,14 @@ export function GameTrendChart({
           <StatusBadge status={trend.trend_status} scope="This game" />
         </span>
       </summary>
-      <figure className="px-4 pb-4" aria-label={`${name} chart`}>
-      <p className="text-sm text-ink-soft">{trend.explanation}</p>
+      <figure className="px-4 pb-4" aria-label={t.elderPanels.charts.chart(name)}>
+      <p className="text-sm text-ink-soft">{serverText(trend.explanation, trend.explanation_i18n)}</p>
       {statusDifference(trend.trend_status, overall) && (
         <p className="mt-1 text-sm text-ink-muted">{statusDifference(trend.trend_status, overall)}</p>
       )}
       <div className="mb-2" />
       {data.length < 2 ? (
-        <p className="py-8 text-center text-sm text-ink-muted">Not enough completed sessions to draw a trend.</p>
+        <p className="py-8 text-center text-sm text-ink-muted">{t.elderPanels.charts.notEnough}</p>
       ) : (
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
@@ -146,12 +136,12 @@ export function GameTrendChart({
                   <ReferenceArea y1={Math.max(0, mean - BAND_Z * std)} y2={mean + BAND_Z * std} fill={BAND} fillOpacity={0.8}
                     stroke="none" ifOverflow="extendDomain" />
                   <ReferenceLine y={mean} stroke={REFERENCE} strokeDasharray="6 4" strokeWidth={1.5}
-                    label={{ value: `baseline ${mean.toFixed(2)}`, position: "insideTopRight", fontSize: 11, fill: REFERENCE }} />
+                    label={{ value: t.elderPanels.charts.baseline(mean.toFixed(2)), position: "insideTopRight", fontSize: 11, fill: REFERENCE }} />
                 </>
               )}
               <Tooltip
                 labelFormatter={(x) => sessionLabel(Number(x), data[Number(x) - 1]?.t)}
-                formatter={(value, key) => [Number(value).toFixed(2), key === "average" ? "5-session average" : "This session"]}
+                formatter={(value, key) => [Number(value).toFixed(2), key === "average" ? t.elderPanels.charts.average : t.elderPanels.charts.thisSession]}
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
               {/* Each session as a faint dot; the bold line is the 5-session average the alerts use. */}
@@ -176,9 +166,9 @@ export function IndexChart({ trend }: { trend: Trend }) {
   const hi = Math.ceil(Math.max(1, ...values));
 
   return (
-    <figure className="rounded-lg border border-line bg-surface p-4" aria-label="Overall cognitive index trend">
+    <figure className="rounded-lg border border-line bg-surface p-4" aria-label={t.elderPanels.charts.indexAria}>
       <figcaption className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-semibold">Overall cognitive index</span>
+        <span className="font-semibold">{t.elderPanels.charts.indexTitle}</span>
         <span className="flex items-center gap-3">
           <span className="text-2xl font-semibold">
             {trend.cognitive_index === null ? "—" : formatZ(trend.cognitive_index)}
@@ -187,10 +177,10 @@ export function IndexChart({ trend }: { trend: Trend }) {
         </span>
       </figcaption>
       <p className="mb-2 text-sm text-ink-muted">
-        Mean of the latest z-score across games with a baseline. One scale for each game and overall: {STATUS_SCALE_TEXT}
+        {t.elderPanels.charts.indexIntro(STATUS_SCALE_TEXT)}
       </p>
       {data.length < 2 ? (
-        <p className="py-8 text-center text-sm text-ink-muted">The index appears once a game has 15 completed sessions.</p>
+        <p className="py-8 text-center text-sm text-ink-muted">{t.elderPanels.charts.indexNotYet}</p>
       ) : (
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
@@ -201,12 +191,12 @@ export function IndexChart({ trend }: { trend: Trend }) {
               <YAxis domain={[lo, hi]} tick={AXIS} tickLine={false} axisLine={false} width={44} allowDecimals={false} />
               <ReferenceLine y={0} stroke={GRID} strokeWidth={1.5} />
               <ReferenceLine y={-0.5} stroke={REFERENCE} strokeDasharray="3 3"
-                label={{ value: "Watch", position: "insideBottomRight", fontSize: 11, fill: REFERENCE }} />
+                label={{ value: t.common.status.watch, position: "insideBottomRight", fontSize: 11, fill: REFERENCE }} />
               <ReferenceLine y={-1.5} stroke={REFERENCE} strokeDasharray="6 4"
-                label={{ value: "Declining", position: "insideBottomRight", fontSize: 11, fill: REFERENCE }} />
+                label={{ value: t.common.status.declining, position: "insideBottomRight", fontSize: 11, fill: REFERENCE }} />
               <Tooltip
-                labelFormatter={(t) => new Date(Number(t)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                formatter={(value) => [formatZ(Number(value)), "Index"]}
+                labelFormatter={(t) => new Date(Number(t)).toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" })}
+                formatter={(value) => [formatZ(Number(value)), t.elderPanels.charts.index]}
                 cursor={{ stroke: REFERENCE, strokeWidth: 1 }}
               />
               <Line type="monotone" dataKey="index" stroke={SERIES} strokeWidth={2} dot={false}

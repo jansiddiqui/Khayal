@@ -529,9 +529,845 @@ short note). Re-running the script keeps the status cells. Text in `{curly brack
 | `voiceTask.tryAgain` | Try again | फिर से करें | <span dir="rtl">پھر سے کریں</span> | draft | draft |
 | `voiceTask.notOn` | This activity is not turned on yet. Your family member can turn it on. | यह अभी चालू नहीं है। आपके परिवार वाले इसे चालू कर सकते हैं। | <span dir="rtl">یہ ابھی چالو نہیں ہے۔ آپ کے گھر والے اسے چالو کر سکتے ہیں۔</span> | draft | draft |
 
+# Hindi caregiver screens: review
+
+**Status: draft — needs native-speaker review.** Round 2 batch 5b. Everyday spoken Hindi for family members
+(loanwords families use stay: रिमाइंडर, अलर्ट, सेशन, फ़ोटो); the style and glossary are at the top of
+`frontend/src/i18n/caregiver/sections/common.ts`. Change the text in that folder, then set the status here.
+Account (apart from its language choice), admin and sign-in stay English for now.
+
+## Caregiver: Header and words used everywhere
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.common.appName` | Khayal | ख़याल | draft |
+| `cg.common.layout.brand` | Khayal · Caregiver | ख़याल · परिवार | draft |
+| `cg.common.layout.skip` | Skip to content | सीधे पेज पर जाएँ | draft |
+| `cg.common.layout.mainNav` | Main | मुख्य | draft |
+| `cg.common.layout.dashboard` | Dashboard | डैशबोर्ड | draft |
+| `cg.common.layout.account` | Account | खाता | draft |
+| `cg.common.layout.admin` | Admin | एडमिन | draft |
+| `cg.common.layout.signOut` | Sign out | साइन आउट | draft |
+| `cg.common.actions.save` | Save | सेव करें | draft |
+| `cg.common.actions.saving` | Saving… | सेव हो रहा है… | draft |
+| `cg.common.actions.saved` | Saved. | सेव हो गया। | draft |
+| `cg.common.actions.cancel` | Cancel | रद्द करें | draft |
+| `cg.common.actions.delete` | Delete | हटाएँ | draft |
+| `cg.common.actions.remove` | Remove | हटाएँ | draft |
+| `cg.common.actions.edit` | Edit | बदलें | draft |
+| `cg.common.actions.add` | Add | जोड़ें | draft |
+| `cg.common.actions.close` | Close | बंद करें | draft |
+| `cg.common.actions.back` | Back | वापस | draft |
+| `cg.common.actions.retry` | Try again | फिर से कोशिश करें | draft |
+| `cg.common.actions.undo` | Undo | वापस लें | draft |
+| `cg.common.actions.undone` | Undone. It's back. | वापस ले लिया। सब पहले जैसा है। | draft |
+| `cg.common.actions.closeMessage` | Close message | संदेश बंद करें | draft |
+| `cg.common.actions.yes` | Yes | हाँ | draft |
+| `cg.common.actions.no` | No | नहीं | draft |
+| `cg.common.actions.loading` | Loading… | लोड हो रहा है… | draft |
+| `cg.common.actions.show` | Show | दिखाएँ | draft |
+| `cg.common.actions.hide` | Hide | छिपाएँ | draft |
+| `cg.common.errors.loadFailed` | This didn't load. Check the connection and try again. | यह खुल नहीं पाया। इंटरनेट देखकर फिर से कोशिश करें। | draft |
+| `cg.common.errors.saveFailed` | That didn't save. Please try again. | यह सेव नहीं हुआ। फिर से कोशिश करें। | draft |
+| `cg.common.status.stable` | Stable | स्थिर | draft |
+| `cg.common.status.watch` | Watch | नज़र रखें | draft |
+| `cg.common.status.declining` | Declining | गिरावट | draft |
+| `cg.common.status.insufficient` | Learning | अभी सीख रहे हैं | draft |
+| `cg.common.status.thisGame` | This game: {word} | यह खेल: {word} | draft |
+| `cg.common.status.overall` | Overall: {word} | कुल मिलाकर: {word} | draft |
+| `cg.common.severity.info` | Info | जानकारी | draft |
+| `cg.common.severity.warning` | Warning | चेतावनी | draft |
+| `cg.common.severity.critical` | Critical | गंभीर | draft |
+| `cg.common.games.memory_match` | Memory Match | जोड़ी मिलान | draft |
+| `cg.common.games.sequence_recall` | Sequence Recall | रंगों का क्रम | draft |
+| `cg.common.games.word_recall` | Word Recall | शब्द याद करना | draft |
+| `cg.common.games.daily_orientation` | About Today | आज के बारे में | draft |
+| `cg.common.games.reaction_tap` | Reaction Tap | हरा होने पर दबाना | draft |
+| `cg.common.games.word_recall_delayed` | Delayed Word Recall | शब्द बाद में याद करना | draft |
+| `cg.common.games.object_location` | Paired Associates (object location) | चीज़ की जगह याद करना | draft |
+| `cg.common.games.spatial_span` | Spatial Span | खानों का क्रम | draft |
+| `cg.common.games.money_handling` | Money Handling | पैसों का हिसाब | draft |
+| `cg.common.games.clock_setting` | Clock Setting | घड़ी मिलाना | draft |
+| `cg.common.games.colour_trails` | Colour Trails | क्रम से जोड़ना | draft |
+| `cg.common.relations.Son` | Son | बेटा | draft |
+| `cg.common.relations.Daughter` | Daughter | बेटी | draft |
+| `cg.common.relations.Grandson` | Grandson | पोता | draft |
+| `cg.common.relations.Granddaughter` | Granddaughter | पोती | draft |
+| `cg.common.relations.Wife` | Wife | पत्नी | draft |
+| `cg.common.relations.Husband` | Husband | पति | draft |
+| `cg.common.relations.Friend` | Friend | दोस्त | draft |
+| `cg.common.relations.Other` | Other | अन्य | draft |
+| `cg.common.reminderTypes.medicine` | Medicine | दवाई | draft |
+| `cg.common.reminderTypes.meal` | Meal | खाना | draft |
+| `cg.common.reminderTypes.appointment` | Appointment | अपॉइंटमेंट | draft |
+| `cg.common.reminderTypes.other` | Other | अन्य | draft |
+| `cg.common.mood.good` | Good | अच्छा | draft |
+| `cg.common.mood.okay` | Okay | ठीक-ठाक | draft |
+| `cg.common.mood.not_so_good` | Not so good | ज़्यादा अच्छा नहीं | draft |
+| `cg.common.mood.skipped` | Skipped | छोड़ दिया | draft |
+| `cg.common.consents.photos` | Family photos | परिवार की फ़ोटो | draft |
+| `cg.common.consents.voice` | Voice task | आवाज़ वाला काम | draft |
+| `cg.common.consents.elder_on_behalf` | Using Khayal | ख़याल का इस्तेमाल | draft |
+| `cg.common.consents.research` | Research | रिसर्च | draft |
+| `cg.common.languages.en` | English | English | draft |
+| `cg.common.languages.hi` | हिन्दी | हिन्दी | draft |
+| `cg.common.languages.ur` | اردو | اردو | draft |
+| `cg.common.list` | {A}, {B} and {C} | {A}, {B} और {C} | draft |
+| `cg.common.clock` | 1:05 PM | दोपहर 1:05 | draft |
+
+## Caregiver: Dashboard, adding an elder, today at a glance, feedback
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.dashboard.page.title` | Dashboard | डैशबोर्ड | draft |
+| `cg.dashboard.page.glanceTitle` | Today at a glance | आज एक नज़र में | draft |
+| `cg.dashboard.page.addAnother` | Add another person | एक और व्यक्ति जोड़ें | draft |
+| `cg.dashboard.page.loadingPeople` | Loading the people you look after | जिनकी आप देखभाल करते हैं, उनकी जानकारी लोड हो रही है | draft |
+| `cg.dashboard.page.loadFailed` | Could not load the people you look after. | जिनकी आप देखभाल करते हैं, उनकी जानकारी नहीं खुल पाई। | draft |
+| `cg.dashboard.page.emptyTitle` | Nobody here yet | अभी यहाँ कोई नहीं है | draft |
+| `cg.dashboard.page.emptyBody` | Add the person you look after with the form. Then pair their phone with a 6-digit code. | फ़ॉर्म से उन्हें जोड़ें जिनकी आप देखभाल करते हैं। फिर 6 अंकों के कोड से उनका फ़ोन जोड़ें। | draft |
+| `cg.dashboard.page.statusHelp` | Overall status compares recent games with each person's own normal: Stable, Watch or Declining (Learning until there are enough games). The numbers are on their page. | कुल स्थिति हाल के खेलों की तुलना हर व्यक्ति के अपने सामान्य से करती है: स्थिर, नज़र रखें या गिरावट (जब तक काफ़ी खेल न हो जाएँ, तब तक "अभी सीख रहे हैं")। पूरे आँकड़े उनके पेज पर हैं। | draft |
+| `cg.dashboard.page.close` | Close | बंद करें | draft |
+| `cg.dashboard.addElder.title` | Add the person you look after | जिनकी आप देखभाल करते हैं, उन्हें जोड़ें | draft |
+| `cg.dashboard.addElder.intro` | No email is needed for them. Their phone or tablet signs in with a 6-digit code you make on their page. | उनके लिए ईमेल की ज़रूरत नहीं है। उनका फ़ोन या टैबलेट 6 अंकों के कोड से साइन इन होता है, जो आप उनके पेज पर बनाते हैं। | draft |
+| `cg.dashboard.addElder.nameLabel` | Their name | उनका नाम | draft |
+| `cg.dashboard.addElder.nameError` | Please write their name, as the family calls them. | उनका नाम लिखें, जैसे परिवार उन्हें बुलाता है। | draft |
+| `cg.dashboard.addElder.cityLabel` | City (for the daily “About Today” game) | शहर (रोज़ के खेल “आज के बारे में” के लिए) | draft |
+| `cg.dashboard.addElder.cityHint` | Optional. Used for the question “Which city are you in?”. | ज़रूरी नहीं। सवाल “आप किस शहर में हैं?” के लिए। | draft |
+| `cg.dashboard.addElder.consentLegend` | Consent | सहमति | draft |
+| `cg.dashboard.addElder.guardian` | I am a family member or the legal guardian of this person. | मैं इनके परिवार का सदस्य या क़ानूनी अभिभावक हूँ। | draft |
+| `cg.dashboard.addElder.basisLabel` | On what basis | किस आधार पर | draft |
+| `cg.dashboard.addElder.agreed` | {firstName} agreed to use Khayal. | {firstName} ख़याल इस्तेमाल करने के लिए राज़ी हैं। | draft |
+| `cg.dashboard.addElder.legal` | I am legally authorised to decide for them (for example a guardian appointed under Indian law). | मुझे क़ानूनी तौर पर उनके लिए फ़ैसले लेने का अधिकार है (जैसे भारतीय क़ानून के तहत नियुक्त अभिभावक)। | draft |
+| `cg.dashboard.addElder.optionalLegend` | Optional (you can change these later) | ज़रूरी नहीं (इन्हें बाद में बदल सकते हैं) | draft |
+| `cg.dashboard.addElder.photos` | Family photos, for “Who is this?” (stored privately; only linked family can see them). | परिवार की फ़ोटो, “ये कौन हैं?” के लिए (निजी रखी जाती हैं; सिर्फ़ जुड़ा हुआ परिवार देख सकता है)। | draft |
+| `cg.dashboard.addElder.photoOfThem` | A photo of them (optional) | उनकी एक फ़ोटो (ज़रूरी नहीं) | draft |
+| `cg.dashboard.addElder.voice` | Weekly voice task: a short recording of them describing a picture. | हफ़्ते का आवाज़ वाला काम: एक तस्वीर के बारे में बोलते हुए उनकी छोटी रिकॉर्डिंग। | draft |
+| `cg.dashboard.addElder.privacyBefore` | By adding them you agree to the  | उन्हें जोड़कर आप उनकी ओर से  | draft |
+| `cg.dashboard.addElder.privacyLink` | privacy policy | प्राइवेसी पॉलिसी | draft |
+| `cg.dashboard.addElder.privacyAfter` |  on their behalf. |  से सहमत होते हैं। | draft |
+| `cg.dashboard.addElder.add` | Add | जोड़ें | draft |
+| `cg.dashboard.addElder.consentMissing` | Please confirm the consent above (both parts) before adding them. | जोड़ने से पहले ऊपर की सहमति (दोनों हिस्से) पक्की करें। | draft |
+| `cg.dashboard.addElder.addFailed` | Could not add them. Try again. | उन्हें जोड़ा नहीं जा सका। फिर से कोशिश करें। | draft |
+| `cg.dashboard.addElder.added` | Added {name}. | {name} को जोड़ दिया। | draft |
+| `cg.dashboard.addElder.addedToast` | Added {name}. Next, pair their phone on their page. | {name} को जोड़ दिया। अब उनके पेज पर उनका फ़ोन जोड़ें। | draft |
+| `cg.dashboard.addElder.pairDevice` | Pair their device | उनका फ़ोन जोड़ें | draft |
+| `cg.dashboard.glance.gamesLabel` | Games today | आज के खेल | draft |
+| `cg.dashboard.glance.noGames` | No games today | आज कोई खेल नहीं | draft |
+| `cg.dashboard.glance.gamesDone` | 1 of 5 games done today | आज 5 में से 1 खेल हो गए | draft |
+| `cg.dashboard.glance.medicinesLabel` | Medicines today | आज की दवाई | draft |
+| `cg.dashboard.glance.medicines` | Medicines: {summary} | दवाई: {summary} | draft |
+| `cg.dashboard.glance.taken` | 2 taken | 2 ली | draft |
+| `cg.dashboard.glance.notSure` | 2 not sure | 2 पक्का नहीं | draft |
+| `cg.dashboard.glance.missed` | 2 missed | 2 छूटी | draft |
+| `cg.dashboard.glance.toCome` | 2 to come | 2 बाक़ी | draft |
+| `cg.dashboard.glance.noneToday` | None today | आज कोई नहीं | draft |
+| `cg.dashboard.glance.alertsLabel` | Alerts | अलर्ट | draft |
+| `cg.dashboard.glance.noAlerts` | No alerts need you | कोई अलर्ट आपका इंतज़ार नहीं कर रहा | draft |
+| `cg.dashboard.glance.alertsOpen` | 2 alerts need a look | 2 अलर्ट देखने हैं | draft |
+| `cg.dashboard.glance.next` | Next:  | आगे:  | draft |
+| `cg.dashboard.feedback.button` | Send feedback | राय भेजें | draft |
+| `cg.dashboard.feedback.title` | Send feedback | राय भेजें | draft |
+| `cg.dashboard.feedback.thanks` | Thank you. The Khayal team reads every message. | शुक्रिया। ख़याल की टीम हर संदेश पढ़ती है। | draft |
+| `cg.dashboard.feedback.kindLegend` | What is it about? | यह किस बारे में है? | draft |
+| `cg.dashboard.feedback.kinds.hard` | Something was hard | कुछ मुश्किल लगा | draft |
+| `cg.dashboard.feedback.kinds.liked` | I liked this | यह अच्छा लगा | draft |
+| `cg.dashboard.feedback.kinds.other` | Something else | कुछ और | draft |
+| `cg.dashboard.feedback.message` | Your message | आपका संदेश | draft |
+| `cg.dashboard.feedback.privacy` | Please leave out health details. We see your name and email so we can reply. | सेहत की जानकारी न लिखें। जवाब देने के लिए हमें आपका नाम और ईमेल दिखता है। | draft |
+| `cg.dashboard.feedback.tooMany` | We have several messages from you; please try again later. | आपके कई संदेश आ चुके हैं; थोड़ी देर बाद फिर से कोशिश करें। | draft |
+| `cg.dashboard.feedback.failed` | Could not send. Try again. | भेजा नहीं जा सका। फिर से कोशिश करें। | draft |
+| `cg.dashboard.feedback.close` | Close | बंद करें | draft |
+| `cg.dashboard.feedback.cancel` | Cancel | रद्द करें | draft |
+| `cg.dashboard.feedback.send` | Send | भेजें | draft |
+
+## Caregiver: Elder page: summary, alerts, status, mood strip
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.elderPage.disclaimer` | Khayal is not a medical device and does not diagnose. It helps families notice changes early and talk to a doctor. | ख़याल कोई मेडिकल उपकरण नहीं है और बीमारी की जाँच नहीं करता। यह परिवारों को बदलाव जल्दी पहचानने और डॉक्टर से बात करने में मदद करता है। | draft |
+| `cg.elderPage.status.scale` | Stable at −0.5 or above, Watch below −0.5, Declining below −1.5. | −0.5 या उससे ऊपर स्थिर, −0.5 से नीचे नज़र रखें, −1.5 से नीचे गिरावट। | draft |
+| `cg.elderPage.status.overallLabel` | Overall: | कुल मिलाकर: | draft |
+| `cg.elderPage.status.thisGameLabel` | This game: | यह खेल: | draft |
+| `cg.elderPage.status.steadier` | This game is steadier than the overall status ({overall}), which averages all games. | यह खेल कुल स्थिति ({overall}) से बेहतर चल रहा है; कुल स्थिति सब खेलों का औसत है। | draft |
+| `cg.elderPage.status.lower` | This game is lower than the overall status ({overall}), which averages all games. | यह खेल कुल स्थिति ({overall}) से नीचे है; कुल स्थिति सब खेलों का औसत है। | draft |
+| `cg.elderPage.live.justNow` | just now | अभी-अभी | draft |
+| `cg.elderPage.live.minAgo` | 10 min ago | 10 मिनट पहले | draft |
+| `cg.elderPage.live.hoursAgo` | 11 hours ago | 11 घंटे पहले | draft |
+| `cg.elderPage.live.updating` | Updating… | अपडेट हो रहा है… | draft |
+| `cg.elderPage.live.updated` | Updated {ago} | अपडेट: {ago} | draft |
+| `cg.elderPage.live.refresh` | Refresh | फिर से लोड करें | draft |
+| `cg.elderPage.live.notUsedYet` | Not used yet | अभी इस्तेमाल नहीं हुआ | draft |
+| `cg.elderPage.live.activeToday` | Active today, {time} | आज इस्तेमाल किया, {time} | draft |
+| `cg.elderPage.live.lastYesterday` | Last active yesterday | आख़िरी बार कल इस्तेमाल किया | draft |
+| `cg.elderPage.live.lastDaysAgo` | Last active {days} days ago | आख़िरी बार {days} दिन पहले इस्तेमाल किया | draft |
+| `cg.elderPage.mood.notAsked` | Not asked (no visit) | पूछा नहीं गया (ऐप नहीं खोला) | draft |
+| `cg.elderPage.mood.title` | Mood, last 30 days | मन, पिछले 30 दिन | draft |
+| `cg.elderPage.mood.counts` | {good} good · {okay} okay · {notSoGood} not so good · {skipped} skipped | {good} अच्छा · {okay} ठीक-ठाक · {notSoGood} ज़्यादा अच्छा नहीं · {skipped} छोड़ दिया | draft |
+| `cg.elderPage.mood.today` | Today | आज | draft |
+| `cg.elderPage.mood.note` | Answered on Home once a day, if they like. Mood doesn't change any alert. | होम पर दिन में एक बार, अगर वे चाहें। मन के जवाब से कोई अलर्ट नहीं बदलता। | draft |
+| `cg.elderPage.city.label` | Home city (used in Daily Orientation) | घर का शहर (आज के बारे में वाले खेल में) | draft |
+| `cg.elderPage.city.placeholder` | e.g. Pune | जैसे पुणे | draft |
+| `cg.elderPage.city.save` | Save city | शहर सेव करें | draft |
+| `cg.elderPage.city.failed` | Could not save the city. | शहर सेव नहीं हो पाया। | draft |
+| `cg.elderPage.city.none` | No city set: Daily Orientation asks for the year instead. | कोई शहर नहीं चुना: आज के बारे में वाला खेल शहर की जगह साल पूछता है। | draft |
+| `cg.elderPage.alerts.title` | Alerts | अलर्ट | draft |
+| `cg.elderPage.alerts.severity.info` | info | जानकारी | draft |
+| `cg.elderPage.alerts.severity.warning` | warning | चेतावनी | draft |
+| `cg.elderPage.alerts.severity.critical` | critical | गंभीर | draft |
+| `cg.elderPage.alerts.titleNew` | Alerts (2 new) | अलर्ट (2 नए) | draft |
+| `cg.elderPage.alerts.ackAll` | Acknowledge all | सब देख लिए | draft |
+| `cg.elderPage.alerts.loading` | Loading alerts | अलर्ट लोड हो रहे हैं | draft |
+| `cg.elderPage.alerts.loadFailed` | Could not load alerts. | अलर्ट लोड नहीं हो पाए। | draft |
+| `cg.elderPage.alerts.none` | No new alerts. A decline alert is sent only when a game stays below −1.5 for 3 sessions in a row, so a game can show “Declining” for a session or two before an alert comes. | कोई नया अलर्ट नहीं। गिरावट का अलर्ट तभी आता है जब कोई खेल लगातार 3 सेशन −1.5 से नीचे रहे, इसलिए अलर्ट आने से पहले कोई खेल एक-दो सेशन “गिरावट” दिखा सकता है। | draft |
+| `cg.elderPage.alerts.types.decline` | Decline | गिरावट | draft |
+| `cg.elderPage.alerts.types.missed_reminders` | Missed reminders | छूटे हुए रिमाइंडर | draft |
+| `cg.elderPage.alerts.types.speech_risk` | Speech | बोलचाल | draft |
+| `cg.elderPage.alerts.types.reminder_unsure` | Not sure about a reminder | रिमाइंडर के बारे में पक्का नहीं | draft |
+| `cg.elderPage.alerts.repeated` | 2 alerts, {from} – {to} | 2 अलर्ट, {from} – {to} | draft |
+| `cg.elderPage.alerts.latest` | Latest: | सबसे नया: | draft |
+| `cg.elderPage.alerts.seeChart` | See {game} chart | {game} का चार्ट देखें | draft |
+| `cg.elderPage.alerts.ack` | Acknowledge | देख लिया | draft |
+| `cg.elderPage.alerts.ackN` | Acknowledge 2 | 2 देख लिए | draft |
+| `cg.elderPage.alerts.showNewest` | Show newest only | सिर्फ़ नए दिखाएँ | draft |
+| `cg.elderPage.alerts.showMore` | Show 2 more | 2 और दिखाएँ | draft |
+| `cg.elderPage.alerts.acknowledged` | Acknowledged (2) | देखे हुए (2) | draft |
+| `cg.elderPage.alerts.acked` | 2 alerts acknowledged. | 2 अलर्ट देख लिए। | draft |
+| `cg.elderPage.pins.title` | Pin games | खेल तय करें | draft |
+| `cg.elderPage.pins.pinnedNow` | Pinned: About Today, {a}, {b}. | तय किए हुए: आज के बारे में, {a}, {b}। | draft |
+| `cg.elderPage.pins.automatic` | Automatic: About Today plus the two core games played least recently. | अपने-आप: आज के बारे में, और वे दो मुख्य खेल जो सबसे पहले खेले गए थे। | draft |
+| `cg.elderPage.pins.slot2` | Slot 2 | दूसरी जगह | draft |
+| `cg.elderPage.pins.slot3` | Slot 3 | तीसरी जगह | draft |
+| `cg.elderPage.pins.pin` | Pin these games | ये खेल तय करें | draft |
+| `cg.elderPage.pins.unpin` | Unpin (automatic) | हटाएँ (अपने-आप) | draft |
+| `cg.elderPage.pins.choose` | Choose games to pin | तय करने के लिए खेल चुनें | draft |
+| `cg.elderPage.pins.different` | Choose two different games. | दो अलग-अलग खेल चुनें। | draft |
+| `cg.elderPage.pins.failed` | Could not save the pinned games. | तय किए खेल सेव नहीं हो पाए। | draft |
+| `cg.elderPage.pins.savedPins` | Pinned: {a} and {b}. | तय किए: {a} और {b}। | draft |
+| `cg.elderPage.pins.savedAuto` | Games are automatic again. | खेल फिर से अपने-आप चुने जाएँगे। | draft |
+| `cg.elderPage.signals.heading` | Last {days} days · for context, no alerts | पिछले {days} दिन · सिर्फ़ जानकारी के लिए, कोई अलर्ट नहीं | draft |
+| `cg.elderPage.signals.stoppedEarly` | Stopped early | बीच में छोड़े | draft |
+| `cg.elderPage.signals.ofSessions` | of 2 sessions | 2 सेशन में से | draft |
+| `cg.elderPage.signals.hints` | Hints used | मदद ली | draft |
+| `cg.elderPage.signals.ofRounds` | of rounds played | खेले गए राउंड में से | draft |
+| `cg.elderPage.signals.adherence` | Reminder adherence | रिमाइंडर पूरे किए | draft |
+| `cg.elderPage.signals.adherenceNote` | marked by the patient (1 done, {byCaregiver} by caregiver, {missed} missed) | ख़ुद उन्होंने किए (1 हो गए, {byCaregiver} परिवार ने किए, {missed} छूटे) | draft |
+| `cg.elderPage.page.patient` | Patient | बुज़ुर्ग | draft |
+| `cg.elderPage.page.loadPatientsFailed` | Could not load your patients. | आपके बुज़ुर्गों की जानकारी लोड नहीं हो पाई। | draft |
+| `cg.elderPage.page.notFound` | Patient not found | बुज़ुर्ग नहीं मिले | draft |
+| `cg.elderPage.page.notLinked` | This patient is not linked to your account. | ये बुज़ुर्ग आपके खाते से जुड़े नहीं हैं। | draft |
+| `cg.elderPage.page.allPatients` | All patients | सभी बुज़ुर्ग | draft |
+| `cg.elderPage.page.reminders` | Reminders | रिमाइंडर | draft |
+| `cg.elderPage.page.familyPhotos` | Family photos | परिवार की फ़ोटो | draft |
+| `cg.elderPage.page.memoryBook` | Memory book | यादों की किताब | draft |
+| `cg.elderPage.page.pairDevice` | Pair a device | फ़ोन जोड़ें | draft |
+| `cg.elderPage.page.doctorReport` | Doctor report | डॉक्टर के लिए रिपोर्ट | draft |
+| `cg.elderPage.page.inPlainWords` | In plain words | आसान शब्दों में | draft |
+| `cg.elderPage.page.loadingInsights` | Loading insights | जानकारी लोड हो रही है | draft |
+| `cg.elderPage.page.insightsFailed` | Could not load the insights. | जानकारी लोड नहीं हो पाई। | draft |
+| `cg.elderPage.page.thisWeek` | This week | यह हफ़्ता | draft |
+| `cg.elderPage.page.loadingWeekly` | Loading the weekly summary | हफ़्ते का सार लोड हो रहा है | draft |
+| `cg.elderPage.page.weeklyFailed` | Could not load the weekly summary. | हफ़्ते का सार लोड नहीं हो पाया। | draft |
+| `cg.elderPage.page.overallTrend` | Overall trend and signals | कुल रुझान और संकेत | draft |
+| `cg.elderPage.page.loadingTrends` | Loading trends | रुझान लोड हो रहे हैं | draft |
+| `cg.elderPage.page.trendsFailed` | Could not load the trends. | रुझान लोड नहीं हो पाए। | draft |
+| `cg.elderPage.page.signalsFailed` | Could not load the 14-day signals. | 14 दिन के संकेत लोड नहीं हो पाए। | draft |
+| `cg.elderPage.page.games` | Games | खेल | draft |
+| `cg.elderPage.page.gamesHintNone` | No game needs attention; Declining games open by themselves. | किसी खेल पर ध्यान देने की ज़रूरत नहीं; गिरावट वाले खेल अपने-आप खुल जाते हैं। | draft |
+| `cg.elderPage.page.gamesHint` | 2 games need attention; Declining charts are open. | 2 खेल पर ध्यान देने की ज़रूरत है; गिरावट वाले चार्ट खुले हैं। | draft |
+| `cg.elderPage.page.chartHelp` | Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations). Across: sessions in order, dated at each day's first session (hover a dot for its date and time). | मोटी लाइन: पिछले 5 सेशन का औसत, अलर्ट इसी से बनते हैं। बिंदु: एक-एक सेशन। डैश वाली लाइन और रंगी पट्टी: इनकी आम सीमा (सेशन 6–15, ±1.5 स्टैंडर्ड डेविएशन)। नीचे: सेशन क्रम से, हर दिन के पहले सेशन पर तारीख़ (तारीख़ और समय के लिए किसी बिंदु पर माउस रखें)। | draft |
+| `cg.elderPage.page.moreGames` | More games | और खेल | draft |
+| `cg.elderPage.page.moreGamesHelp` | Played outside the core set. Each has its own chart, but they don't count for alerts or the overall status. | मुख्य खेलों के बाहर खेले गए। हर खेल का अपना चार्ट है, पर ये अलर्ट या कुल स्थिति में नहीं गिने जाते। | draft |
+| `cg.elderPage.page.timeline` | Timeline | घटनाक्रम | draft |
+| `cg.elderPage.page.timelineHint` | Games, reminders, alerts, recordings and settings changes, day by day | खेल, रिमाइंडर, अलर्ट, रिकॉर्डिंग और सेटिंग्स में बदलाव, दिन-ब-दिन | draft |
+| `cg.elderPage.page.loadingSessions` | Loading sessions | सेशन लोड हो रहे हैं | draft |
+| `cg.elderPage.page.sessionsFailed` | Could not load sessions for this patient. | इनके सेशन लोड नहीं हो पाए। | draft |
+| `cg.elderPage.page.levelsAndHistory` | Levels and session history | लेवल और सेशन का इतिहास | draft |
+| `cg.elderPage.page.sessionsCount` | 2 sessions | 2 सेशन | draft |
+| `cg.elderPage.page.level` | Level 2 / 10 | लेवल 2 / 10 | draft |
+| `cg.elderPage.page.notPlayedStart` | Not played yet (starting level) | अभी नहीं खेला (शुरुआती लेवल) | draft |
+| `cg.elderPage.page.sessionHistory` | Session history | सेशन का इतिहास | draft |
+| `cg.elderPage.page.noGames` | No games played yet. | अभी कोई खेल नहीं खेला। | draft |
+| `cg.elderPage.page.showLatest` | Show latest only | सिर्फ़ नए दिखाएँ | draft |
+| `cg.elderPage.page.showAll` | Show all 2 sessions | सभी 2 सेशन दिखाएँ | draft |
+| `cg.elderPage.page.voice` | Voice recordings | आवाज़ की रिकॉर्डिंग | draft |
+| `cg.elderPage.page.voiceOn` | Weekly picture description · on | हफ़्ते में एक तस्वीर के बारे में बोलना · चालू | draft |
+| `cg.elderPage.page.voiceOff` | Weekly picture description · off | हफ़्ते में एक तस्वीर के बारे में बोलना · बंद | draft |
+| `cg.elderPage.page.privacy` | Privacy, devices and family | प्राइवेसी, फ़ोन और परिवार | draft |
+| `cg.elderPage.page.privacyHint` | Photo, photo and research consents, signed-in devices, share links | फ़ोटो, आवाज़ और रिसर्च की सहमति, जुड़े हुए फ़ोन, शेयर लिंक | draft |
+| `cg.elderPage.page.settings` | Settings | सेटिंग्स | draft |
+| `cg.elderPage.page.settingsHint` | Pair a device, language, home city, core games, pinned games, hidden games, festivals, tutorials | फ़ोन जोड़ें, भाषा, घर का शहर, मुख्य खेल, तय किए खेल, छिपाए खेल, त्योहार, खेल सिखाना | draft |
+| `cg.elderPage.table.date` | Date | तारीख़ | draft |
+| `cg.elderPage.table.game` | Game | खेल | draft |
+| `cg.elderPage.table.status` | Status | स्थिति | draft |
+| `cg.elderPage.table.level` | Level | लेवल | draft |
+| `cg.elderPage.table.correct` | Correct | सही | draft |
+| `cg.elderPage.table.reaction` | Avg reaction | औसत प्रतिक्रिया | draft |
+| `cg.elderPage.table.hints` | Hints | मदद | draft |
+| `cg.elderPage.table.completed` | Completed | पूरा किया | draft |
+| `cg.elderPage.table.stoppedEarly` | Stopped early ({played}/5 rounds) | बीच में छोड़ा (5 में से {played} राउंड) | draft |
+| `cg.elderPage.table.seconds` | {s} s | {s} सेकंड | draft |
+| `cg.elderPage.summary.label` | Summary | सार | draft |
+| `cg.elderPage.summary.overall` | Overall | कुल मिलाकर | draft |
+| `cg.elderPage.summary.notAvailable` | Not available | उपलब्ध नहीं | draft |
+| `cg.elderPage.summary.latestAlert` | Latest alert | सबसे नया अलर्ट | draft |
+| `cg.elderPage.summary.noNewAlerts` | No new alerts | कोई नया अलर्ट नहीं | draft |
+| `cg.elderPage.summary.remindersDone` | Reminders done by the patient | ख़ुद पूरे किए रिमाइंडर | draft |
+| `cg.elderPage.summary.lastDays` | last 2 days | पिछले 2 दिन | draft |
+| `cg.elderPage.summary.lastPlayed` | Last played | आख़िरी खेल | draft |
+| `cg.elderPage.summary.notPlayed` | Not played yet | अभी नहीं खेला | draft |
+
+## Caregiver: Elder page: charts, insights, timeline, weekly card, settings, privacy, pairing
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.elderPanels.insights.toneGood` | Good | अच्छा | draft |
+| `cg.elderPanels.insights.toneNeutral` | Note | जानकारी | draft |
+| `cg.elderPanels.insights.toneAttention` | Needs a look | एक नज़र देखें | draft |
+| `cg.elderPanels.insights.empty` | Nothing to say yet. Insights appear once there is a week of use. | अभी बताने को कुछ नहीं है। एक हफ़्ते के इस्तेमाल के बाद यहाँ बातें दिखेंगी। | draft |
+| `cg.elderPanels.insights.numbers` | Numbers | आँकड़े | draft |
+| `cg.elderPanels.insights.hide` | Hide | छिपाएँ | draft |
+| `cg.elderPanels.weekly.daysWithGame` | Days with a game | जिन दिनों खेल खेला | draft |
+| `cg.elderPanels.weekly.gamesFinished` | Games finished | पूरे किए खेल | draft |
+| `cg.elderPanels.weekly.roundsRight` | Rounds right (finished games) | सही राउंड (पूरे किए खेलों में) | draft |
+| `cg.elderPanels.weekly.dosesTaken` | Medicine doses taken | दवाई की ली गई खुराक | draft |
+| `cg.elderPanels.weekly.dosesMissed` | Doses missed or not sure | छूटी या पक्की नहीं खुराक | draft |
+| `cg.elderPanels.weekly.remindersDone` | Reminders done | पूरे हुए रिमाइंडर | draft |
+| `cg.elderPanels.weekly.alerts` | Alerts | अलर्ट | draft |
+| `cg.elderPanels.weekly.recordings` | Voice recordings | आवाज़ की रिकॉर्डिंग | draft |
+| `cg.elderPanels.weekly.daysGood` | Days feeling good | मन अच्छा रहा (दिन) | draft |
+| `cg.elderPanels.weekly.daysNotSoGood` | Days feeling not so good | मन ज़्यादा अच्छा नहीं रहा (दिन) | draft |
+| `cg.elderPanels.weekly.same` | same as the week before | पिछले हफ़्ते जितना | draft |
+| `cg.elderPanels.weekly.pointsChange` | 2 points higher than the week before | पिछले हफ़्ते से 2 पॉइंट ज़्यादा | draft |
+| `cg.elderPanels.weekly.countChange` | 2 more than the week before | पिछले हफ़्ते से 2 ज़्यादा | draft |
+| `cg.elderPanels.weekly.intro` | {thisWeek}, compared with {weekBefore}. Rounds right also depends on the level, so a lower share can simply mean harder games. | {thisWeek}, {weekBefore} के मुक़ाबले। सही राउंड लेवल पर भी निर्भर करते हैं, इसलिए कम हिस्से का मतलब बस कठिन खेल भी हो सकता है। | draft |
+| `cg.elderPanels.timeline.games` | Games | खेल | draft |
+| `cg.elderPanels.timeline.reminders` | Reminders | रिमाइंडर | draft |
+| `cg.elderPanels.timeline.alerts` | Alerts | अलर्ट | draft |
+| `cg.elderPanels.timeline.recordings` | Recordings | रिकॉर्डिंग | draft |
+| `cg.elderPanels.timeline.mood` | Mood | मन | draft |
+| `cg.elderPanels.timeline.settings` | Settings changes | सेटिंग्स में बदलाव | draft |
+| `cg.elderPanels.timeline.show` | Show | दिखाएँ | draft |
+| `cg.elderPanels.timeline.period` | Period | समय | draft |
+| `cg.elderPanels.timeline.lastDays` | Last {days} days | पिछले {days} दिन | draft |
+| `cg.elderPanels.timeline.chooseKind` | Choose at least one kind of event to show. | दिखाने के लिए कम से कम एक तरह की घटना चुनें। | draft |
+| `cg.elderPanels.timeline.loading` | Loading the timeline | घटनाक्रम लोड हो रहा है | draft |
+| `cg.elderPanels.timeline.loadFailed` | Could not load the timeline. | घटनाक्रम खुल नहीं पाया। | draft |
+| `cg.elderPanels.timeline.empty` | Nothing in the last {days} days for these filters. | इन फ़िल्टर के साथ पिछले {days} दिनों में कुछ नहीं हुआ। | draft |
+| `cg.elderPanels.timeline.label` | Timeline | घटनाक्रम | draft |
+| `cg.elderPanels.charts.session` | Session 2 | सेशन 2 | draft |
+| `cg.elderPanels.charts.trend` | {game} trend | {game} का रुझान | draft |
+| `cg.elderPanels.charts.chart` | {game} chart | {game} का चार्ट | draft |
+| `cg.elderPanels.charts.notEnough` | Not enough completed sessions to draw a trend. | रुझान दिखाने के लिए अभी पूरे किए सेशन काफ़ी नहीं हैं। | draft |
+| `cg.elderPanels.charts.baseline` | baseline {mean} | सामान्य स्तर {mean} | draft |
+| `cg.elderPanels.charts.average` | 5-session average | 5 सेशन का औसत | draft |
+| `cg.elderPanels.charts.thisSession` | This session | यह सेशन | draft |
+| `cg.elderPanels.charts.indexAria` | Overall cognitive index trend | कुल संज्ञानात्मक सूचकांक का रुझान | draft |
+| `cg.elderPanels.charts.indexTitle` | Overall cognitive index | कुल संज्ञानात्मक सूचकांक | draft |
+| `cg.elderPanels.charts.indexIntro` | Mean of the latest z-score across games with a baseline. One scale for each game and overall: {scale} | जिन खेलों का सामान्य स्तर बन चुका है, उनके सबसे नए z-स्कोर का औसत। हर खेल और कुल के लिए एक ही पैमाना: {scale} | draft |
+| `cg.elderPanels.charts.indexNotYet` | The index appears once a game has 15 completed sessions. | किसी खेल के 15 सेशन पूरे होने पर सूचकांक दिखेगा। | draft |
+| `cg.elderPanels.charts.index` | Index | सूचकांक | draft |
+| `cg.elderPanels.voice.enabled` | Voice task enabled (separate consent) | आवाज़ वाला काम चालू (अलग सहमति) | draft |
+| `cg.elderPanels.voice.turnOffAria` | Turn off the voice task | आवाज़ वाला काम बंद करें | draft |
+| `cg.elderPanels.voice.turnOffNone` | Turning this off withdraws the consent for {name}. There are no recordings to delete. | इसे बंद करने से {name} की सहमति वापस हो जाएगी। हटाने के लिए कोई रिकॉर्डिंग नहीं है। | draft |
+| `cg.elderPanels.voice.turnOffSome` | Turning this off withdraws the consent and deletes all {count} recordings for {name}. This cannot be undone. | इसे बंद करने से सहमति वापस हो जाएगी और {name} की सारी {count} रिकॉर्डिंग हट जाएँगी। यह वापस नहीं हो सकता। | draft |
+| `cg.elderPanels.voice.turnOffDelete` | Turn off and delete | बंद करें और हटाएँ | draft |
+| `cg.elderPanels.voice.keepOn` | Keep it on | चालू रहने दें | draft |
+| `cg.elderPanels.voice.onSince` | Turned on {when}. Once a week, {name} is asked to describe a picture out loud; it replaces the third game that day. | {when} को चालू किया। हफ़्ते में एक बार {name} से एक तस्वीर के बारे में बोलकर बताने को कहा जाता है; उस दिन यह तीसरे खेल की जगह आता है। | draft |
+| `cg.elderPanels.voice.off` | Off. When turned on, {name} is asked once a week to describe a picture out loud, and the recording is kept here. | बंद है। चालू करने पर {name} से हफ़्ते में एक बार एक तस्वीर के बारे में बोलकर बताने को कहा जाएगा, और रिकॉर्डिंग यहाँ रहेगी। | draft |
+| `cg.elderPanels.voice.toggleFailed` | Could not change the voice task setting. | आवाज़ वाले काम की सेटिंग नहीं बदल पाई। | draft |
+| `cg.elderPanels.voice.loading` | Loading recordings… | रिकॉर्डिंग लोड हो रही हैं… | draft |
+| `cg.elderPanels.voice.loadFailed` | Could not load the recordings. | रिकॉर्डिंग खुल नहीं पाईं। | draft |
+| `cg.elderPanels.voice.none` | No recordings yet. | अभी कोई रिकॉर्डिंग नहीं है। | draft |
+| `cg.elderPanels.voice.list` | Recordings | रिकॉर्डिंग | draft |
+| `cg.elderPanels.voice.length` | Length {duration} | लंबाई {duration} | draft |
+| `cg.elderPanels.voice.analysisSoon` | Analysis coming soon | जाँच जल्द आएगी | draft |
+| `cg.elderPanels.voice.recordingFrom` | Recording from {when} | {when} की रिकॉर्डिंग | draft |
+| `cg.elderPanels.voice.playFailed` | Could not load the recording. | रिकॉर्डिंग खुल नहीं पाई। | draft |
+| `cg.elderPanels.voice.loadingShort` | Loading… | लोड हो रहा है… | draft |
+| `cg.elderPanels.voice.play` | Play | सुनें | draft |
+| `cg.elderPanels.pair.paired` | {name}'s device is paired and signed in. | {name} का फ़ोन जुड़ गया है और साइन इन है। | draft |
+| `cg.elderPanels.pair.title` | Pair a device | फ़ोन जोड़ें | draft |
+| `cg.elderPanels.pair.intro` | Sign in {name}'s own phone or tablet without a password. Open Khayal on that device, then type the code shown here. The device stays signed in for 90 days. | बिना पासवर्ड के {name} का अपना फ़ोन या टैबलेट साइन इन करें। उस फ़ोन पर ख़याल खोलें, फिर यहाँ दिखा कोड डालें। फ़ोन 90 दिन तक साइन इन रहेगा। | draft |
+| `cg.elderPanels.pair.pairedNow` | Paired just now. {name}'s device is signed in. | अभी जुड़ गया। {name} का फ़ोन साइन इन है। | draft |
+| `cg.elderPanels.pair.code` | Pairing code | जोड़ने का कोड | draft |
+| `cg.elderPanels.pair.validUntil` | Valid until {time}, one use only. Waiting for the device… | {time} तक चलेगा, सिर्फ़ एक बार। फ़ोन का इंतज़ार है… | draft |
+| `cg.elderPanels.pair.failed` | Could not create a code. Please try again. | कोड नहीं बन पाया। फिर से कोशिश करें। | draft |
+| `cg.elderPanels.pair.newCode` | New code | नया कोड | draft |
+| `cg.elderPanels.pair.showCode` | Show pairing code | जोड़ने का कोड दिखाएँ | draft |
+| `cg.elderPanels.privacy.copied` | Copied | कॉपी हो गया | draft |
+| `cg.elderPanels.privacy.copy` | Copy | कॉपी करें | draft |
+| `cg.elderPanels.privacy.sendYourself` | Send it yourself by WhatsApp or email. It works once, and is shown only now. | इसे ख़ुद WhatsApp या ईमेल से भेजें। यह एक ही बार चलता है, और सिर्फ़ अभी दिख रहा है। | draft |
+| `cg.elderPanels.privacy.photoOf` | Photo of {name} | {name} की फ़ोटो | draft |
+| `cg.elderPanels.privacy.changePhoto` | Change photo | फ़ोटो बदलें | draft |
+| `cg.elderPanels.privacy.addPhoto` | Add a photo | फ़ोटो जोड़ें | draft |
+| `cg.elderPanels.privacy.removePhoto` | Remove photo | फ़ोटो हटाएँ | draft |
+| `cg.elderPanels.privacy.turnOnPhotos` | Turn on photos below to add one. | फ़ोटो जोड़ने के लिए नीचे फ़ोटो चालू करें। | draft |
+| `cg.elderPanels.privacy.uploadFailed` | Could not upload the photo. | फ़ोटो अपलोड नहीं हो पाई। | draft |
+| `cg.elderPanels.privacy.photos` | Family photos (separate consent) | परिवार की फ़ोटो (अलग सहमति) | draft |
+| `cg.elderPanels.privacy.photosIntro` | Photos of family members for “Who is this?”, and a photo of {name}. Only the people linked to {name} can see them. | “ये कौन हैं?” के लिए परिवार वालों की फ़ोटो, और {name} की एक फ़ोटो। इन्हें सिर्फ़ {name} से जुड़े लोग देख सकते हैं। | draft |
+| `cg.elderPanels.privacy.photosOffAria` | Turn off photos | फ़ोटो बंद करें | draft |
+| `cg.elderPanels.privacy.photosOff` | Turning photos off withdraws the consent and deletes every family photo and the photo of {name}. Names and relations stay. This cannot be undone. | फ़ोटो बंद करने से सहमति वापस हो जाएगी और परिवार की हर फ़ोटो और {name} की फ़ोटो हट जाएगी। नाम और रिश्ते रहेंगे। यह वापस नहीं हो सकता। | draft |
+| `cg.elderPanels.privacy.turnOffDelete` | Turn off and delete | बंद करें और हटाएँ | draft |
+| `cg.elderPanels.privacy.keepPhotos` | Keep photos | फ़ोटो रहने दें | draft |
+| `cg.elderPanels.privacy.deletedPhotos` | Deleted 2 photo(s). | 2 फ़ोटो हटाई गईं। | draft |
+| `cg.elderPanels.privacy.research` | Research (optional, separate consent) | रिसर्च (अपनी मर्ज़ी से, अलग सहमति) | draft |
+| `cg.elderPanels.privacy.researchText` | Use my family's anonymised data for research: game results and reminder ticks, under a random ID, with no names, photos, recordings or cities. You can withdraw at any time; exports made before you withdraw can't be called back. | मेरे परिवार का बिना पहचान वाला डेटा रिसर्च में इस्तेमाल करें: खेलों के नतीजे और रिमाइंडर के टिक, एक अनजान ID के साथ, बिना नाम, फ़ोटो, रिकॉर्डिंग या शहर के। आप कभी भी सहमति वापस ले सकते हैं; वापस लेने से पहले निकाले गए डेटा को वापस नहीं बुलाया जा सकता। | draft |
+| `cg.elderPanels.privacy.researchOn` | Thank you. Research use is on. | शुक्रिया। रिसर्च में इस्तेमाल चालू है। | draft |
+| `cg.elderPanels.privacy.researchOff` | Research use is off. Later exports leave you out. | रिसर्च में इस्तेमाल बंद है। आगे के डेटा में आप शामिल नहीं होंगे। | draft |
+| `cg.elderPanels.privacy.devices` | Signed-in devices | साइन इन किए फ़ोन | draft |
+| `cg.elderPanels.privacy.loadingDevices` | Loading devices… | फ़ोन लोड हो रहे हैं… | draft |
+| `cg.elderPanels.privacy.devicesFailed` | Could not load the devices. | फ़ोन की सूची खुल नहीं पाई। | draft |
+| `cg.elderPanels.privacy.noDevice` | No device is signed in yet. Make a 6-digit code under “Pair a device”. | अभी कोई फ़ोन साइन इन नहीं है। “फ़ोन जोड़ें” में 6 अंकों का कोड बनाएँ। | draft |
+| `cg.elderPanels.privacy.device` | Device | फ़ोन | draft |
+| `cg.elderPanels.privacy.pairedSeen` |  · paired {paired} · last seen {seen} |  · जोड़ा {paired} · आख़िरी बार {seen} | draft |
+| `cg.elderPanels.privacy.revoke` | Revoke | हटाएँ | draft |
+| `cg.elderPanels.privacy.signOutAll` | Sign out all devices | सारे फ़ोन साइन आउट करें | draft |
+| `cg.elderPanels.privacy.allSignedOut` | Every device of {name} is signed out. | {name} के सारे फ़ोन साइन आउट हो गए। | draft |
+| `cg.elderPanels.privacy.shareStates.open` | Waiting | इंतज़ार में | draft |
+| `cg.elderPanels.privacy.shareStates.used` | Joined | जुड़ गए | draft |
+| `cg.elderPanels.privacy.shareStates.revoked` | Revoked | हटाया गया | draft |
+| `cg.elderPanels.privacy.shareStates.expired` | Expired | समय ख़त्म | draft |
+| `cg.elderPanels.privacy.share` | Share with family | परिवार के साथ साझा करें | draft |
+| `cg.elderPanels.privacy.shareIntro` | Invite another family member to look after {name} with you. The link works once and for 14 days; if they have no account yet, it lets them create one. | परिवार के किसी और सदस्य को अपने साथ {name} का ख़याल रखने के लिए बुलाएँ। लिंक एक बार और 14 दिन तक चलता है; अगर उनका खाता नहीं है, तो इससे वे खाता बना सकते हैं। | draft |
+| `cg.elderPanels.privacy.createShare` | Create a share link | साझा करने का लिंक बनाएँ | draft |
+| `cg.elderPanels.privacy.shareLinkFor` | Share link for {name} | {name} के लिए साझा करने का लिंक | draft |
+| `cg.elderPanels.privacy.made` | Made {day} ·  | {day} को बना ·  | draft |
+| `cg.elderPanels.privacy.until` |  · until {day} |  · {day} तक | draft |
+| `cg.elderPanels.language.names.en` | English | English | draft |
+| `cg.elderPanels.language.names.hi` | Hindi | Hindi | draft |
+| `cg.elderPanels.language.names.ur` | Urdu | Urdu | draft |
+| `cg.elderPanels.language.options.en` | English | English | draft |
+| `cg.elderPanels.language.options.hi` | हिन्दी (Hindi) | हिन्दी (Hindi) | draft |
+| `cg.elderPanels.language.options.ur` | اردو (Urdu) | اردو (Urdu) | draft |
+| `cg.elderPanels.language.title` | Language of {name}'s app | {name} के ऐप की भाषा | draft |
+| `cg.elderPanels.language.label` | Language | भाषा | draft |
+| `cg.elderPanels.language.save` | Save | सेव करें | draft |
+| `cg.elderPanels.language.intro` | Screens, read aloud and the games' words. Their phone switches the next time the app comes to the front. Hindi and Urdu are drafts still being checked by a native speaker. | स्क्रीन, पढ़कर सुनाना और खेलों के शब्द। ऐप अगली बार सामने आने पर उनका फ़ोन बदल जाएगा। हिन्दी और उर्दू अभी ड्राफ़्ट हैं, जिन्हें कोई मूल भाषी जाँच रहा है। | draft |
+| `cg.elderPanels.language.saveFailed` | Could not save the language. Try again. | भाषा सेव नहीं हुई। फिर से कोशिश करें। | draft |
+| `cg.elderPanels.language.notChecked` | {name}'s phone checks its read-aloud voices the next time the app opens. | ऐप अगली बार खुलने पर {name} का फ़ोन पढ़कर सुनाने वाली आवाज़ें जाँचेगा। | draft |
+| `cg.elderPanels.language.noVoice` | {name}'s phone has no {lang} voice, so Read aloud stays silent. To add one: on Android, Settings → Text-to-speech → Google → install {install}; on Windows, Settings → Time & language → Speech → add {add}. | {name} के फ़ोन में undefined आवाज़ नहीं है, इसलिए पढ़कर सुनाना चुप रहता है। आवाज़ जोड़ने के लिए: Android पर Settings → Text-to-speech → Google → {install} इंस्टॉल करें; Windows पर Settings → Time & language → Speech → {add} जोड़ें। | draft |
+| `cg.elderPanels.language.urduOrHindi` | Urdu or Hindi | Urdu या Hindi | draft |
+| `cg.elderPanels.language.urduWithHindi` | {name}'s phone has no Urdu voice, so Urdu is read aloud with a Hindi voice{voice}: the same spoken words. The screen stays in Urdu. | {name} के फ़ोन में उर्दू आवाज़ नहीं है, इसलिए उर्दू हिन्दी आवाज़{voice} में पढ़ी जाती है: बोले गए शब्द वही रहते हैं। स्क्रीन उर्दू में ही रहती है। | draft |
+| `cg.elderPanels.language.uses` | Read aloud uses a {lang} voice on {name}'s phone{voice}. | {name} के फ़ोन पर पढ़कर सुनाने के लिए undefined आवाज़{voice} है। | draft |
+| `cg.elderPanels.games.domains.word_recall` | Verbal memory | शब्दों की याददाश्त | draft |
+| `cg.elderPanels.games.domains.memory_match` | Visuospatial memory | देखी चीज़ों की याददाश्त | draft |
+| `cg.elderPanels.games.domains.sequence_recall` | Working memory: order | क्रम याद रखना | draft |
+| `cg.elderPanels.games.domains.reaction_tap` | Speed and attention | फुर्ती और ध्यान | draft |
+| `cg.elderPanels.games.domains.object_location` | Visuospatial memory: where things are | चीज़ें कहाँ रखी हैं, यह याद रखना | draft |
+| `cg.elderPanels.games.domains.spatial_span` | Visuospatial working memory | जगहों का क्रम याद रखना | draft |
+| `cg.elderPanels.games.domains.money_handling` | Everyday function: money | रोज़ के काम: पैसे | draft |
+| `cg.elderPanels.games.domains.clock_setting` | Visuospatial and time | जगह की समझ और समय | draft |
+| `cg.elderPanels.games.domains.colour_trails` | Attention and task switching | ध्यान और एक काम से दूसरे पर जाना | draft |
+| `cg.elderPanels.games.coreSaved` | Core games saved. | मुख्य खेल सेव हो गए। | draft |
+| `cg.elderPanels.games.coreDefault` | Core games are back to the default set. | मुख्य खेल फिर से पहले वाले सेट पर हैं। | draft |
+| `cg.elderPanels.games.sameDomain` | Two of these test the same thing. | इनमें से दो एक ही चीज़ जाँचते हैं। | draft |
+| `cg.elderPanels.games.coreTitle` | Core games | मुख्य खेल | draft |
+| `cg.elderPanels.games.coreIntro` | These 4 games take turns in today's games and count for decline alerts and the overall status. Other games stay available under "More games" and get their own chart, but never raise alerts. Changing a game starts its baseline from the beginning (about 15 sessions). | ये 4 खेल बारी-बारी से आज के खेलों में आते हैं और गिरावट के अलर्ट और कुल स्थिति में गिने जाते हैं। बाक़ी खेल "और खेल" में मिलते रहते हैं और उनका अपना चार्ट बनता है, पर उनसे कभी अलर्ट नहीं आता। कोई खेल बदलने पर उसका सामान्य स्तर शुरू से बनता है (लगभग 15 सेशन)। | draft |
+| `cg.elderPanels.games.defaultSet` | The default set. | पहले से तय सेट। | draft |
+| `cg.elderPanels.games.chosenByCaregiver` | Chosen by a caregiver. | परिवार ने चुना। | draft |
+| `cg.elderPanels.games.changeCore` | Change core games | मुख्य खेल बदलें | draft |
+| `cg.elderPanels.games.gameN` | Game 2 | खेल 2 | draft |
+| `cg.elderPanels.games.chooseDifferent` | Choose 4 different games. | 4 अलग-अलग खेल चुनें। | draft |
+| `cg.elderPanels.games.mixAllowed` | That's allowed; a mix of domains tracks more of the mind. | ऐसा चल सकता है; अलग-अलग तरह के खेल दिमाग़ के ज़्यादा हिस्से देखते हैं। | draft |
+| `cg.elderPanels.games.saveCore` | Save core games | मुख्य खेल सेव करें | draft |
+| `cg.elderPanels.games.useDefault` | Use the default set | पहले से तय सेट लें | draft |
+| `cg.elderPanels.games.cancel` | Cancel | रद्द करें | draft |
+| `cg.elderPanels.games.coreFailed` | Could not save the core games. | मुख्य खेल सेव नहीं हुए। | draft |
+| `cg.elderPanels.games.tutorialToast` | The {game} tutorial will show the next time it's opened. | {game} का तरीका अगली बार खेल खुलने पर फिर दिखेगा। | draft |
+| `cg.elderPanels.games.tutorialTitle` | Game tutorials | खेलों का तरीका | draft |
+| `cg.elderPanels.games.tutorialIntro` | Each game shows a short spoken demo and a practice round the first time it's opened. | हर खेल पहली बार खुलने पर बोलकर छोटा सा तरीका दिखाता है और एक अभ्यास राउंड कराता है। | draft |
+| `cg.elderPanels.games.game` | Game | खेल | draft |
+| `cg.elderPanels.games.tutorialAgain` | Show the tutorial again | तरीका फिर से दिखाएँ | draft |
+| `cg.elderPanels.games.tutorialFailed` | Could not save that just now. | अभी यह सेव नहीं हुआ। | draft |
+| `cg.elderPanels.games.festivalsSaved` | Festivals saved. | त्योहार सेव हो गए। | draft |
+| `cg.elderPanels.games.festivalsOff` | The festival question is off. | त्योहार वाला सवाल बंद है। | draft |
+| `cg.elderPanels.games.festivalsTitle` | Festivals this family celebrates | यह परिवार कौन-से त्योहार मनाता है | draft |
+| `cg.elderPanels.games.festivalsIntro` | In the 30 days before a festival you tick, About Today asks "Which festival comes next?". It is off until you tick at least one. This question is our own and is not a validated test item. | आपके टिक किए त्योहार से पहले के 30 दिनों में "आज के बारे में" पूछता है "अगला त्योहार कौन-सा है?"। जब तक आप कम से कम एक टिक न करें, यह बंद रहता है। यह सवाल हमारा अपना है, कोई जाँचा-परखा टेस्ट नहीं। | draft |
+| `cg.elderPanels.games.saveFestivals` | Save festivals | त्योहार सेव करें | draft |
+| `cg.elderPanels.games.festivalsFailed` | Could not save the festivals. | त्योहार सेव नहीं हुए। | draft |
+| `cg.elderPanels.games.hiddenToast` | 2 games are hidden from More games. | 2 खेल "और खेल" से छिपे हैं। | draft |
+| `cg.elderPanels.games.hiddenTitle` | Hide these games | ये खेल छिपाएँ | draft |
+| `cg.elderPanels.games.hiddenIntro` | Games outside the core set come round in “More games”, 3 a day, each at least once every 3 days. Tick a game to hide it there and in “See other games”. Core games can't be hidden: change the core set first. | मुख्य खेलों के अलावा बाक़ी खेल “और खेल” में बारी-बारी से आते हैं, रोज़ 3, हर खेल हर 3 दिन में कम से कम एक बार। किसी खेल को वहाँ और “दूसरे खेल देखें” में छिपाने के लिए टिक करें। मुख्य खेल यहाँ नहीं छिपते: पहले मुख्य खेल बदलें। | draft |
+| `cg.elderPanels.games.saveHidden` | Save hidden games | छिपे खेल सेव करें | draft |
+| `cg.elderPanels.games.hiddenFailed` | Could not save the hidden games. | छिपे खेल सेव नहीं हुए। | draft |
+
+## Caregiver: Reminders
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.reminders.weekdays[0]` | Mon | सोम | draft |
+| `cg.reminders.weekdays[1]` | Tue | मंगल | draft |
+| `cg.reminders.weekdays[2]` | Wed | बुध | draft |
+| `cg.reminders.weekdays[3]` | Thu | गुरु | draft |
+| `cg.reminders.weekdays[4]` | Fri | शुक्र | draft |
+| `cg.reminders.weekdays[5]` | Sat | शनि | draft |
+| `cg.reminders.weekdays[6]` | Sun | रवि | draft |
+| `cg.reminders.months[0]` | Jan | जन॰ | draft |
+| `cg.reminders.months[1]` | Feb | फ़र॰ | draft |
+| `cg.reminders.months[2]` | Mar | मार्च | draft |
+| `cg.reminders.months[3]` | Apr | अप्रैल | draft |
+| `cg.reminders.months[4]` | May | मई | draft |
+| `cg.reminders.months[5]` | Jun | जून | draft |
+| `cg.reminders.months[6]` | Jul | जुलाई | draft |
+| `cg.reminders.months[7]` | Aug | अग॰ | draft |
+| `cg.reminders.months[8]` | Sep | सित॰ | draft |
+| `cg.reminders.months[9]` | Oct | अक्टू॰ | draft |
+| `cg.reminders.months[10]` | Nov | नव॰ | draft |
+| `cg.reminders.months[11]` | Dec | दिस॰ | draft |
+| `cg.reminders.dayLabel` | {weekday} {day} {month} | {weekday}, {day} {month} | draft |
+| `cg.reminders.shortDay` | {day} {month} | {day} {month} | draft |
+| `cg.reminders.types.medicine` | Medicine | दवाई | draft |
+| `cg.reminders.types.meal` | Meal | खाना | draft |
+| `cg.reminders.types.appointment` | Appointment | अपॉइंटमेंट | draft |
+| `cg.reminders.types.other` | Reminder | रिमाइंडर | draft |
+| `cg.reminders.schedule.once` | Once · {date} · {time} | एक बार · {date} · {time} | draft |
+| `cg.reminders.schedule.noDate` | no date | तारीख़ नहीं | draft |
+| `cg.reminders.schedule.everyDay` | Every day | रोज़ | draft |
+| `cg.reminders.schedule.dayList` | (example could not be made) | (example could not be made) | draft |
+| `cg.reminders.schedule.from` | from {date} | {date} से | draft |
+| `cg.reminders.schedule.until` | until {date} | {date} तक | draft |
+| `cg.reminders.problems.chooseTime` | Choose a time. | समय चुनें। | draft |
+| `cg.reminders.problems.chooseDate` | Choose a date. | तारीख़ चुनें। | draft |
+| `cg.reminders.problems.passed` | That time has already passed. Choose a later date or time. | यह समय निकल चुका है। आगे की तारीख़ या समय चुनें। | draft |
+| `cg.reminders.problems.chooseDay` | Choose at least one day. | कम से कम एक दिन चुनें। | draft |
+| `cg.reminders.problems.chooseStart` | Choose when it starts. | चुनें कि यह कब शुरू हो। | draft |
+| `cg.reminders.problems.endBeforeStart` | It can't end before it starts. | यह शुरू होने से पहले ख़त्म नहीं हो सकता। | draft |
+| `cg.reminders.today.byCaregiver` |  (by caregiver) |  (परिवार ने किया) | draft |
+| `cg.reminders.today.doneLate` | Done, confirmed later at {time}{by} | हो गया, बाद में {time} पर बताया{by} | draft |
+| `cg.reminders.today.done` | Done{by} | हो गया{by} | draft |
+| `cg.reminders.today.unsure` | Not sure (family told) | पक्का नहीं (परिवार को बताया) | draft |
+| `cg.reminders.today.missed` | Missed | छूट गया | draft |
+| `cg.reminders.today.notAnswered` | Not answered yet | अभी जवाब नहीं आया | draft |
+| `cg.reminders.today.pending` | Pending | बाक़ी है | draft |
+| `cg.reminders.lateWindows.standard` | 1 hour (standard) | 1 घंटा (सामान्य) | draft |
+| `cg.reminders.lateWindows.hours` | 2 hours | 2 घंटे | draft |
+| `cg.reminders.adherence.loading` | Loading adherence | समय पर लेने का हिसाब लोड हो रहा है | draft |
+| `cg.reminders.adherence.heading` | Adherence, last {days} days | समय पर हुए, पिछले {days} दिन | draft |
+| `cg.reminders.adherence.confirmedLater` | 2 confirmed later | 2 बाद में बताए | draft |
+| `cg.reminders.adherence.notSure` | 2 not sure | 2 पक्का नहीं | draft |
+| `cg.reminders.adherence.counts` | {byPatient} done by {name} · {byCaregiver} done by caregiver · {missed} missed | {byPatient} {name} ने किए · {byCaregiver} परिवार ने किए · {missed} छूटे | draft |
+| `cg.reminders.adherence.note` | Only reminders the patient marked done themself count toward the rate; "confirmed later" counts, and shows that it wasn't on time. | प्रतिशत में सिर्फ़ वही रिमाइंडर गिने जाते हैं जिन्हें बुज़ुर्ग ने ख़ुद “हो गया” किया; “बाद में बताया” भी गिना जाता है, और दिखता है कि वह समय पर नहीं था। | draft |
+| `cg.reminders.repeats.once` | Just once | सिर्फ़ एक बार | draft |
+| `cg.reminders.repeats.daily` | Every day | रोज़ | draft |
+| `cg.reminders.repeats.weekly_days` | On some days | कुछ दिनों पर | draft |
+| `cg.reminders.form.title` | Title | नाम | draft |
+| `cg.reminders.form.titleError` | Give it a short name, e.g. “Blood pressure tablet”. | छोटा-सा नाम दें, जैसे “बीपी की गोली”। | draft |
+| `cg.reminders.form.type` | Type | किस तरह का | draft |
+| `cg.reminders.form.repeats` | Repeats | कितनी बार | draft |
+| `cg.reminders.form.date` | Date | तारीख़ | draft |
+| `cg.reminders.form.time` | Time | समय | draft |
+| `cg.reminders.form.starts` | Starts | कब से | draft |
+| `cg.reminders.form.active` | Active | चालू | draft |
+| `cg.reminders.form.days` | Days | दिन | draft |
+| `cg.reminders.form.ends` | Ends | कब तक | draft |
+| `cg.reminders.form.untilStopped` | Until I stop it | जब तक मैं बंद न करूँ | draft |
+| `cg.reminders.form.endsOn` | Ends on | इस दिन तक | draft |
+| `cg.reminders.form.endsOnDate` | Ends on date | आख़िरी तारीख़ | draft |
+| `cg.reminders.form.lateWindow` | Safe late window | देर से लेने का सुरक्षित समय | draft |
+| `cg.reminders.form.lateWindowHint` | How long after its time the reminder may still say “It's time for this”. After that it only asks whether it is done, and never suggests taking it. Ask the doctor if unsure: Khayal gives no medical advice. | समय निकलने के बाद कितनी देर तक रिमाइंडर “अब इसका समय है” कह सकता है। उसके बाद वह सिर्फ़ पूछता है कि हो गया या नहीं, और लेने को कभी नहीं कहता। पक्का न हो तो डॉक्टर से पूछें: ख़याल कोई डॉक्टरी सलाह नहीं देता। | draft |
+| `cg.reminders.toasts.saveFailed` | Could not save the change. {detail} | बदलाव सेव नहीं हुआ। {detail} | draft |
+| `cg.reminders.toasts.tryAgain` | Try again. | फिर से कोशिश करें। | draft |
+| `cg.reminders.toasts.added` | Reminder added: {title}, {schedule}. | रिमाइंडर जुड़ गया: {title}, {schedule}। | draft |
+| `cg.reminders.toasts.saved` | Saved: {title}. | सेव हो गया: {title}। | draft |
+| `cg.reminders.toasts.resumed` | Resumed: {title}. | फिर से चालू: {title}। | draft |
+| `cg.reminders.toasts.paused` | Paused: {title}. It won't be shown until you resume it. | रोका गया: {title}। जब तक आप इसे फिर चालू नहीं करते, यह नहीं दिखेगा। | draft |
+| `cg.reminders.toasts.deleted` | Reminder deleted: {title}. | रिमाइंडर हटाया गया: {title}। | draft |
+| `cg.reminders.toasts.deleteFailed` | Could not delete “{title}”. It is back in the list. | “{title}” हटाया नहीं जा सका। यह सूची में वापस है। | draft |
+| `cg.reminders.row.edit` | Edit | बदलें | draft |
+| `cg.reminders.row.editLabel` | Edit {title} | {title} बदलें | draft |
+| `cg.reminders.row.pause` | Pause | रोकें | draft |
+| `cg.reminders.row.resume` | Resume | फिर चालू करें | draft |
+| `cg.reminders.row.pauseLabel` | Pause {title} | {title} रोकें | draft |
+| `cg.reminders.row.resumeLabel` | Resume {title} | {title} फिर चालू करें | draft |
+| `cg.reminders.row.delete` | Delete | हटाएँ | draft |
+| `cg.reminders.row.deleteLabel` | Delete {title} | {title} हटाएँ | draft |
+| `cg.reminders.row.paused` |  (paused) |  (रुका हुआ) | draft |
+| `cg.reminders.page.title` | Reminders · {name} | रिमाइंडर · {name} | draft |
+| `cg.reminders.page.back` | Back to patient | बुज़ुर्ग के पेज पर वापस | draft |
+| `cg.reminders.page.patientFallback` | patient | बुज़ुर्ग | draft |
+| `cg.reminders.page.heading` | Reminders | रिमाइंडर | draft |
+| `cg.reminders.page.add` | Add a reminder | रिमाइंडर जोड़ें | draft |
+| `cg.reminders.page.addSubmit` | Add reminder | रिमाइंडर जोड़ें | draft |
+| `cg.reminders.page.saveChanges` | Save changes | बदलाव सेव करें | draft |
+| `cg.reminders.page.loading` | Loading reminders | रिमाइंडर लोड हो रहे हैं | draft |
+| `cg.reminders.page.loadFailed` | Could not load reminders. | रिमाइंडर लोड नहीं हो पाए। | draft |
+| `cg.reminders.page.emptyTitle` | No reminders yet | अभी कोई रिमाइंडर नहीं | draft |
+| `cg.reminders.page.addFirst` | Add the first reminder | पहला रिमाइंडर जोड़ें | draft |
+| `cg.reminders.page.emptyBody` | Medicine, meals or an appointment. {name} sees them on Today's reminders. | दवाई, खाना या कोई अपॉइंटमेंट। {name} इन्हें “आज के रिमाइंडर” में देखेंगे। | draft |
+| `cg.reminders.page.columns.title` | Title | नाम | draft |
+| `cg.reminders.page.columns.type` | Type | किस तरह का | draft |
+| `cg.reminders.page.columns.when` | When | कब | draft |
+| `cg.reminders.page.columns.today` | Today | आज | draft |
+| `cg.reminders.page.columns.actions` | Actions | क्या करें | draft |
+| `cg.reminders.page.pastHeading` | Past reminders | पुराने रिमाइंडर | draft |
+| `cg.reminders.page.pastNote` | Their day or end date has passed. They are kept with their done and missed history until you delete them. | इनका दिन या आख़िरी तारीख़ निकल चुकी है। जब तक आप इन्हें हटाते नहीं, ये अपने हुए और छूटे के हिसाब के साथ रखे रहते हैं। | draft |
+
+## Caregiver: Family photos
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.family.title` | Family photos · {elder} | परिवार की फ़ोटो · {elder} | draft |
+| `cg.family.backToPatient` | Back to patient | बुज़ुर्ग के पेज पर वापस | draft |
+| `cg.family.privateNote` | These photos are private: they are only shown to this patient and their linked caregivers. | ये फ़ोटो निजी हैं: ये सिर्फ़ इन बुज़ुर्ग को और इनसे जुड़े परिवार वालों को दिखती हैं। | draft |
+| `cg.family.thePatient` | the patient | बुज़ुर्ग | draft |
+| `cg.family.photosOff` | Family photos are off for {first}. Turn them on to add photos for “Who is this?”. This records your consent; turning them off later deletes every photo. | {first} के लिए परिवार की फ़ोटो बंद हैं। “ये कौन हैं?” के लिए फ़ोटो जोड़नी हों तो इन्हें चालू करें। इससे आपकी सहमति दर्ज होती है; बाद में बंद करने पर सारी फ़ोटो हट जाती हैं। | draft |
+| `cg.family.turnOnPhotos` | Turn on family photos | परिवार की फ़ोटो चालू करें | draft |
+| `cg.family.photosOnToast` | Family photos are on for {first}. | {first} के लिए परिवार की फ़ोटो चालू हो गईं। | draft |
+| `cg.family.photosOnFailed` | Could not turn on family photos. Try again. | परिवार की फ़ोटो चालू नहीं हो पाईं। फिर से कोशिश करें। | draft |
+| `cg.family.addAPerson` | Add a person | किसी को जोड़ें | draft |
+| `cg.family.addPeopleHint` | Add the people {first} sees often, each with a photo. | उन लोगों को जोड़ें जिनसे {first} अक्सर मिलते हैं, हर एक की फ़ोटो के साथ। | draft |
+| `cg.family.loadingFamily` | Loading family | परिवार की सूची लोड हो रही है | draft |
+| `cg.family.loadFailed` | Could not load the family list. | परिवार की सूची खुल नहीं पाई। | draft |
+| `cg.family.emptyTitle` | No one added yet | अभी किसी को नहीं जोड़ा गया | draft |
+| `cg.family.emptyBody` | Add the people {first} sees often, with a photo each. They appear in “Who is this?” and in the daily “About Today” game once three people have photos. | उन लोगों को जोड़ें जिनसे {first} अक्सर मिलते हैं, हर एक की एक फ़ोटो के साथ। ये “ये कौन हैं?” में दिखते हैं, और तीन लोगों की फ़ोटो हो जाने पर रोज़ के “आज के बारे में” खेल में भी। | draft |
+| `cg.family.form.name` | Name | नाम | draft |
+| `cg.family.form.nameError` | Write their name, as the patient knows them. | वह नाम लिखें जिससे बुज़ुर्ग इन्हें जानते हैं। | draft |
+| `cg.family.form.relation` | Relation | रिश्ता | draft |
+| `cg.family.form.relationCustom` | Relation (your words) | रिश्ता (अपने शब्दों में) | draft |
+| `cg.family.form.relationPlaceholder` | e.g. Neighbour | जैसे पड़ोसी | draft |
+| `cg.family.form.note` | Note (optional, read aloud to the patient) | नोट (ज़रूरी नहीं, बुज़ुर्ग को पढ़कर सुनाया जाता है) | draft |
+| `cg.family.form.notePlaceholder` | e.g. Lives in Pune, visits on Sundays. | जैसे पुणे में रहते हैं, रविवार को मिलने आते हैं। | draft |
+| `cg.family.form.saveChanges` | Save changes | बदलाव सेव करें | draft |
+| `cg.family.form.addPerson` | Add person | जोड़ें | draft |
+| `cg.family.form.photosOptional` | Photos (optional) | फ़ोटो (ज़रूरी नहीं) | draft |
+| `cg.family.form.choosePhotos` | Choose photos | फ़ोटो चुनें | draft |
+| `cg.family.form.queueNote` | Up to {max} · JPG or PNG · or drop them here | {max} तक · JPG या PNG · या यहाँ छोड़ें | draft |
+| `cg.family.form.photosToAdd` | Photos to add | जोड़ी जाने वाली फ़ोटो | draft |
+| `cg.family.form.removeFile` | Remove {fileName} | {fileName} हटाएँ | draft |
+| `cg.family.photos.onlyJpgPng` | Only JPG and PNG photos are allowed. | सिर्फ़ JPG और PNG फ़ोटो ही चल सकती हैं। | draft |
+| `cg.family.photos.tooBig` | Photos must be 5 MB or smaller. | हर फ़ोटो 5 MB या उससे छोटी होनी चाहिए। | draft |
+| `cg.family.photos.fileIssue` | {fileName}: {issue} | {fileName}: {issue} | draft |
+| `cg.family.photos.alreadyFull` | This person already has {max} photos. | इनकी पहले से {max} फ़ोटो हैं। | draft |
+| `cg.family.photos.onlyFit` | Only 2 more photos fit ({max} per person), so the first 2 are added. | सिर्फ़ 2 और फ़ोटो आ सकती हैं (हर व्यक्ति की {max}), इसलिए पहली 2 जोड़ी जा रही हैं। | draft |
+| `cg.family.photos.uploadingLabel` | Uploading photo {index} of 5 | 5 में से फ़ोटो {index} अपलोड हो रही है | draft |
+| `cg.family.photos.uploadingProgress` | Uploading {index} of 5 · {percent}% | अपलोड हो रही है {index}/5 · {percent}% | draft |
+| `cg.family.photos.preparing` | Preparing… | तैयार हो रही है… | draft |
+| `cg.family.photos.photosOf` | Photos of {name} | {name} की फ़ोटो | draft |
+| `cg.family.photos.dropHere` | Drop the photos here | फ़ोटो यहाँ छोड़ें | draft |
+| `cg.family.photos.uploadFailed` | Could not upload {fileName}. {reason} | {fileName} अपलोड नहीं हो पाई। {reason} | draft |
+| `cg.family.photos.saved` | 2 photos saved. | 2 फ़ोटो सेव हो गईं। | draft |
+| `cg.family.photos.removed` | Photo {index} of {name} removed. | {name} की फ़ोटो {index} हटा दी गई। | draft |
+| `cg.family.photos.removeFailed` | Could not remove the photo. It is back. | फ़ोटो हटाई नहीं जा सकी। वह वापस आ गई है। | draft |
+| `cg.family.photos.alt` | {name}, photo {index} | {name}, फ़ोटो {index} | draft |
+| `cg.family.photos.removeLabel` | Remove {name} photo {index} | {name} की फ़ोटो {index} हटाएँ | draft |
+| `cg.family.photos.addHint` | Add a photo so {elder} can see {name} in “Who is this?”. | फ़ोटो जोड़ें, ताकि {elder} “ये कौन हैं?” में {name} को देख सकें। | draft |
+| `cg.family.photos.uploading` | Uploading… | अपलोड हो रही है… | draft |
+| `cg.family.photos.addPhotos` | Add photos | फ़ोटो जोड़ें | draft |
+| `cg.family.photos.note` | {count} / {max} photos · JPG or PNG, up to 5 MB each · or drop them here | {count} / {max} फ़ोटो · JPG या PNG, हर एक 5 MB तक · या यहाँ छोड़ें | draft |
+| `cg.family.member.edit` | Edit {name} | {name} को बदलें | draft |
+| `cg.family.member.delete` | Delete {name} | {name} को हटाएँ | draft |
+| `cg.family.member.saveFailed` | Could not save the change to {name}. Try again. | {name} का बदलाव सेव नहीं हुआ। फिर से कोशिश करें। | draft |
+| `cg.family.member.saved` | Saved: {name}. | सेव हो गया: {name}। | draft |
+| `cg.family.member.added` | {name} added with {photos} photos. | {name} {photos} फ़ोटो के साथ जुड़ गए। | draft |
+| `cg.family.member.addFailed` | Could not add the person. Try again. | यह व्यक्ति नहीं जुड़ पाया। फिर से कोशिश करें। | draft |
+| `cg.family.member.deleted` | {name} deleted, with {photos} photos. | {name} हटा दिए गए, {photos} फ़ोटो के साथ। | draft |
+| `cg.family.member.deleteFailed` | Could not delete {name}. They are back in the list. | {name} को हटाया नहीं जा सका। वे फिर से सूची में हैं। | draft |
+| `cg.family.ui.loading` | Loading | लोड हो रहा है | draft |
+
+## Caregiver: Memory book
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.memoryBook.recorder.blocked` | The microphone is blocked. Allow it in the browser and try again. | माइक्रोफ़ोन बंद है। ब्राउज़र में इसकी इजाज़त दें और फिर से कोशिश करें। | draft |
+| `cg.memoryBook.recorder.stop` | Stop | रोकें | draft |
+| `cg.memoryBook.recorder.record` | Record a voice note | आवाज़ में संदेश रिकॉर्ड करें | draft |
+| `cg.memoryBook.recorder.recording` | Recording | रिकॉर्ड हो रहा है | draft |
+| `cg.memoryBook.player.label` | Family voice note | परिवार का आवाज़ वाला संदेश | draft |
+| `cg.memoryBook.player.play` | Play voice note ({length}) | आवाज़ वाला संदेश सुनें ({length}) | draft |
+| `cg.memoryBook.form.heading` | A new memory | एक नई याद | draft |
+| `cg.memoryBook.form.title` | Title | नाम | draft |
+| `cg.memoryBook.form.titleHint` | For example: “Our wedding, Lucknow 1972”. | जैसे: “हमारी शादी, लखनऊ 1972”। | draft |
+| `cg.memoryBook.form.storyOptional` | The story (optional) | कहानी (चाहें तो) | draft |
+| `cg.memoryBook.form.storyHint` | A few warm sentences, read aloud to {name} when there is no voice note. | कुछ प्यार भरी बातें। जब आवाज़ वाला संदेश न हो, तब ये {name} को पढ़कर सुनाई जाती हैं। | draft |
+| `cg.memoryBook.form.photos` | Photos (1 to {max}) | फ़ोटो (1 से {max}) | draft |
+| `cg.memoryBook.form.chosen` | 2 chosen | 2 चुनी गईं | draft |
+| `cg.memoryBook.form.voice` | Your voice telling the story (optional) | आपकी आवाज़ में कहानी (चाहें तो) | draft |
+| `cg.memoryBook.form.voiceReady` | Voice note ready ({length}) | आवाज़ वाला संदेश तैयार है ({length}) | draft |
+| `cg.memoryBook.form.remove` | Remove | हटाएँ | draft |
+| `cg.memoryBook.form.voiceNeedsOptIn` | Voice notes need the voice opt-in on {name}'s page. | आवाज़ वाले संदेश के लिए {name} के पेज पर आवाज़ की अनुमति चालू करें। | draft |
+| `cg.memoryBook.form.saveFailed` | Could not save the memory. Try again. | याद सेव नहीं हुई। फिर से कोशिश करें। | draft |
+| `cg.memoryBook.form.save` | Save memory | याद सेव करें | draft |
+| `cg.memoryBook.form.cancel` | Cancel | रद्द करें | draft |
+| `cg.memoryBook.card.story` | The story | कहानी | draft |
+| `cg.memoryBook.card.save` | Save | सेव करें | draft |
+| `cg.memoryBook.card.cancel` | Cancel | रद्द करें | draft |
+| `cg.memoryBook.card.noStory` | No story yet. | अभी कोई कहानी नहीं। | draft |
+| `cg.memoryBook.card.edit` | Edit | बदलें | draft |
+| `cg.memoryBook.card.photos` | Photos | फ़ोटो | draft |
+| `cg.memoryBook.card.photoAlt` | Photo {i} of {title} | {title} की फ़ोटो {i} | draft |
+| `cg.memoryBook.card.removePhoto` | Remove photo {i} | फ़ोटो {i} हटाएँ | draft |
+| `cg.memoryBook.card.adding` | Adding… | जुड़ रही है… | draft |
+| `cg.memoryBook.card.addPhoto` | Add photo | फ़ोटो जोड़ें | draft |
+| `cg.memoryBook.card.needsPhoto` | Add a photo: {name} sees a memory only once it has one. | एक फ़ोटो जोड़ें: {name} को याद तभी दिखती है जब उसमें फ़ोटो हो। | draft |
+| `cg.memoryBook.card.removeVoice` | Remove voice note | आवाज़ वाला संदेश हटाएँ | draft |
+| `cg.memoryBook.card.savingVoice` | Saving the voice note… | आवाज़ वाला संदेश सेव हो रहा है… | draft |
+| `cg.memoryBook.card.deleteDialog` | Delete this memory | यह याद हटाएँ | draft |
+| `cg.memoryBook.card.deleteWarning` | This deletes the memory with its photos and voice note. It cannot be undone. | इससे यह याद अपनी फ़ोटो और आवाज़ वाले संदेश के साथ हट जाएगी। यह वापस नहीं आएगी। | draft |
+| `cg.memoryBook.card.deleteConfirm` | Delete memory | याद हटाएँ | draft |
+| `cg.memoryBook.card.keep` | Keep it | रहने दें | draft |
+| `cg.memoryBook.card.delete` | Delete memory… | याद हटाएँ… | draft |
+| `cg.memoryBook.card.failed` | That didn't work. Try again. | यह नहीं हो पाया। फिर से कोशिश करें। | draft |
+| `cg.memoryBook.page.title` | Memory book · {name} | यादों की किताब · {name} | draft |
+| `cg.memoryBook.page.back` | Back to their page | उनके पेज पर वापस | draft |
+| `cg.memoryBook.page.personFailed` | Could not load this person. | इनकी जानकारी लोड नहीं हो पाई। | draft |
+| `cg.memoryBook.page.needsPhotos` | The memory book uses photos, so it needs the family photos opt-in for {name}. | यादों की किताब में फ़ोटो होती हैं, इसलिए इसके लिए {name} की परिवार की फ़ोटो वाली अनुमति चाहिए। | draft |
+| `cg.memoryBook.page.turnOnPhotos` | Turn on family photos | परिवार की फ़ोटो चालू करें | draft |
+| `cg.memoryBook.page.intro` | Old photos with a short story, for {name} to look through under “Who is this?” → Memories. The story is read aloud, or your recorded voice is played. Only the people linked to {name} can see them. | पुरानी फ़ोटो और छोटी-सी कहानी, जिन्हें {name} “ये कौन हैं?” → यादें में देख सकते हैं। कहानी पढ़कर सुनाई जाती है, या आपकी रिकॉर्ड की हुई आवाज़ चलती है। इन्हें सिर्फ़ {name} से जुड़े लोग देख सकते हैं। | draft |
+| `cg.memoryBook.page.add` | Add a memory | याद जोड़ें | draft |
+| `cg.memoryBook.page.loadFailed` | Could not load the memory book. | यादों की किताब लोड नहीं हो पाई। | draft |
+| `cg.memoryBook.page.emptyTitle` | No memories yet | अभी कोई याद नहीं | draft |
+| `cg.memoryBook.page.emptyBody` | Start with one favourite photo and a few sentences about it. | एक पसंदीदा फ़ोटो और उसके बारे में कुछ बातों से शुरू करें। | draft |
+
+## Caregiver: Doctor report
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.report.statement` | Khayal is not a medical device and this is not a diagnosis. The scores come from brain games and reminders on a phone or tablet, compared with this person's own earlier scores, not with other people. Please read them alongside your own clinical assessment. | ख़याल कोई मेडिकल उपकरण नहीं है और यह कोई डायग्नोसिस नहीं है। ये स्कोर फ़ोन या टैबलेट पर दिमाग़ी खेलों और रिमाइंडर से आते हैं, और इनकी तुलना इसी व्यक्ति के अपने पहले के स्कोर से होती है, दूसरे लोगों से नहीं। कृपया इन्हें अपनी क्लिनिकल जाँच के साथ पढ़ें। | draft |
+| `cg.report.sparkline` | 2 session scores | 2 सेशन के स्कोर | draft |
+| `cg.report.learning` | Learning | अभी सीख रहे हैं | draft |
+| `cg.report.toBaseline` | 2 sessions to baseline | बेसलाइन में 2 सेशन बाक़ी | draft |
+| `cg.report.kicker` | Khayal · summary for the doctor | ख़याल · डॉक्टर के लिए सारांश | draft |
+| `cg.report.period` | {start} – {end} ({days} days) · made {made} | {start} – {end} ({days} दिन) · {made} को बनी | draft |
+| `cg.report.overallTitle` | Overall | कुल मिलाकर | draft |
+| `cg.report.overallStatus` | Overall status:  | कुल स्थिति:  | draft |
+| `cg.report.index` |  (index {z}) |  (इंडेक्स {z}) | draft |
+| `cg.report.played` | . Played on {played} of {days} days. | । {days} में से {played} दिन खेले। | draft |
+| `cg.report.overallHelp` | Each game is compared with this person's own normal (finished sessions 6–15). z is the average of the last 5 sessions against that normal: Stable at −0.5 or above, Watch below −0.5, Declining below −1.5. | हर खेल की तुलना इसी व्यक्ति के अपने सामान्य से होती है (पूरे हुए सेशन 6–15)। z पिछले 5 सेशन के औसत की उस सामान्य से तुलना है: −0.5 या ऊपर स्थिर, −0.5 से नीचे नज़र रखें, −1.5 से नीचे गिरावट। | draft |
+| `cg.report.gamesTitle` | Core games | मुख्य खेल | draft |
+| `cg.report.colGame` | Game | खेल | draft |
+| `cg.report.colSessions` | Sessions | सेशन | draft |
+| `cg.report.colScore` | Score, 1st → 2nd half | स्कोर, पहला → दूसरा आधा | draft |
+| `cg.report.colStatus` | Status now | अभी की स्थिति | draft |
+| `cg.report.colSpark` | Sessions in the period | इस अवधि के सेशन | draft |
+| `cg.report.scoreHelp` | Score = accuracy × level / 10 × reaction-time ratio, per finished session. | स्कोर = सही जवाब का अनुपात × लेवल / 10 × रिएक्शन-टाइम अनुपात, हर पूरे सेशन के लिए। | draft |
+| `cg.report.adherenceTitle` | Medicines and reminders | दवाई और रिमाइंडर | draft |
+| `cg.report.noMedicines` | No medicine reminders in this period. | इस अवधि में दवाई का कोई रिमाइंडर नहीं था। | draft |
+| `cg.report.doses` | Medicine doses: {taken} of 5 taken | दवाई की खुराक: 5 में से {taken} ली | draft |
+| `cg.report.confirmedLater` |  (2 confirmed later) |  (2 बाद में पक्की की) | draft |
+| `cg.report.dosesRest` | , {missed} missed, {unsure} not sure. | , {missed} छूटी, {unsure} पक्का नहीं। | draft |
+| `cg.report.allReminders` | All reminders: 1 of 5 done. Taken doses are as marked on the phone by the person or the family. | सभी रिमाइंडर: 5 में से 1 हो गए। ली गई खुराक वैसी ही है जैसी फ़ोन पर व्यक्ति या परिवार ने दर्ज की। | draft |
+| `cg.report.alertsTitle` | Alerts in this period | इस अवधि के अलर्ट | draft |
+| `cg.report.none` | None. | कोई नहीं। | draft |
+| `cg.report.moodTitle` | Mood | मन | draft |
+| `cg.report.moodNone` | The daily mood question was not answered in this period. | इस अवधि में रोज़ के मन वाले सवाल का जवाब नहीं दिया गया। | draft |
+| `cg.report.moodCounts` | Answers to “How are you feeling today?” (optional, once a day): {good} good, {okay} okay, {notSoGood} not so good, {skipped} skipped, on {answered} of {days} days. | “आज आप कैसा महसूस कर रहे हैं?” के जवाब (ज़रूरी नहीं, दिन में एक बार): {good} अच्छा, {okay} ठीक-ठाक, {notSoGood} ज़्यादा अच्छा नहीं, {skipped} छोड़ा, {days} में से {answered} दिन। | draft |
+| `cg.report.moodRun` |  The longest run of “not so good” days was 2. |  लगातार सबसे ज़्यादा “ज़्यादा अच्छा नहीं” वाले दिन: 2। | draft |
+| `cg.report.voiceTitle` | Voice task | आवाज़ वाला काम | draft |
+| `cg.report.recordings` | 2 recordings of the weekly picture description. Not analysed yet. | हफ़्ते की तस्वीर के बारे में बोलने की 2 रिकॉर्डिंग। अभी जाँची नहीं गई। | draft |
+| `cg.report.notesTitle` | Notes from the family | परिवार के नोट | draft |
+| `cg.report.back` | Back to their page | उनके पेज पर वापस | draft |
+| `cg.report.periodLabel` | Period | अवधि | draft |
+| `cg.report.lastDays` | Last 2 days | पिछले 2 दिन | draft |
+| `cg.report.download` | Download PDF | PDF डाउनलोड करें | draft |
+| `cg.report.downloadHelp` | “Download PDF” opens your browser's print window: choose “Save as PDF”. | “PDF डाउनलोड करें” से ब्राउज़र की प्रिंट विंडो खुलती है: उसमें “Save as PDF” चुनें। | draft |
+| `cg.report.notesLabel` | Notes for the doctor (printed with the report, not saved) | डॉक्टर के लिए नोट (रिपोर्ट के साथ छपेंगे, सेव नहीं होंगे) | draft |
+| `cg.report.notesPlaceholder` | For example: sleeping less this month; new tablet started on 3 November. | जैसे: इस महीने नींद कम हुई; 3 नवंबर से नई गोली शुरू हुई। | draft |
+| `cg.report.loading` | Loading the report | रिपोर्ट लोड हो रही है | draft |
+| `cg.report.loadFailed` | Could not make the report. | रिपोर्ट नहीं बन पाई। | draft |
+
+## Caregiver: Account: screen language
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.account.language.title` | Language for your screens | आपकी स्क्रीन की भाषा | draft |
+| `cg.account.language.hint` | Dashboard, elder pages, reminders, family photos, the memory book and the doctor report. Each elder's own app language is set on their page, under Settings → Language. | डैशबोर्ड, बुज़ुर्ग के पेज, रिमाइंडर, परिवार की फ़ोटो, यादों की किताब और डॉक्टर के लिए रिपोर्ट। हर बुज़ुर्ग के ऐप की भाषा उनके पेज पर, सेटिंग्स → भाषा में चुनी जाती है। | draft |
+| `cg.account.language.legend` | Language | भाषा | draft |
+| `cg.account.language.save` | Save language | भाषा सेव करें | draft |
+| `cg.account.language.changing` | Switching… | बदल रहे हैं… | draft |
+| `cg.account.language.failed` | That didn't save. Please try again. | यह सेव नहीं हुआ। फिर से कोशिश करें। | draft |
+
+## Caregiver: Written by the server (next actions, insights, timeline, alerts)
+
+| key | English | Hindi | Hindi status |
+|---|---|---|---|
+| `cg.server.next.check_dose` | Check the {time} {title} with {name} | {name} से {time} वाली {title} के बारे में पूछ लें | draft |
+| `cg.server.next.missed_dose.one` | {n} medicine dose missed today: check with {name} | आज दवाई की {n} खुराक छूट गई: {name} से पूछ लें | draft |
+| `cg.server.next.missed_dose.other` | {n} medicine doses missed today: check with {name} | आज दवाई की {n} खुराकें छूट गईं: {name} से पूछ लें | draft |
+| `cg.server.next.alerts.one` | Look at {n} new alert | {n} नया अलर्ट देखें | draft |
+| `cg.server.next.alerts.other` | Look at {n} new alerts | {n} नए अलर्ट देखें | draft |
+| `cg.server.next.pair` | Pair {name}'s phone or tablet | {name} का फ़ोन या टैबलेट जोड़ें | draft |
+| `cg.server.next.add_reminders` | Add {name}'s medicines and meals as reminders | {name} की दवाइयाँ और खाना रिमाइंडर में जोड़ें | draft |
+| `cg.server.next.inactive` | {name} hasn't played since {day}. A gentle word may help. | {name} ने {day} के बाद से कोई खेल नहीं खेला। प्यार से एक बार बात कर लें। | draft |
+| `cg.server.next.all_good` | Nothing needs you today | आज आपके लिए कुछ करने को नहीं है | draft |
+| `cg.server.insight.steady.memory` | Memory games steady this month | याददाश्त वाले खेल इस महीने स्थिर रहे | draft |
+| `cg.server.insight.steady.thinking` | Thinking and everyday games steady this month | सोच-समझ और रोज़मर्रा वाले खेल इस महीने स्थिर रहे | draft |
+| `cg.server.insight.steady.orientation` | About Today steady this month | 'आज के बारे में' इस महीने स्थिर रहा | draft |
+| `cg.server.insight.lower.memory` | Memory games lower this month | याददाश्त वाले खेल इस महीने कम रहे | draft |
+| `cg.server.insight.lower.thinking` | Thinking and everyday games lower this month | सोच-समझ और रोज़मर्रा वाले खेल इस महीने कम रहे | draft |
+| `cg.server.insight.lower.orientation` | About Today lower this month | 'आज के बारे में' इस महीने कम रहा | draft |
+| `cg.server.insight.little_lower.memory` | Memory games a little lower this month | याददाश्त वाले खेल इस महीने थोड़े कम रहे | draft |
+| `cg.server.insight.little_lower.thinking` | Thinking and everyday games a little lower this month | सोच-समझ और रोज़मर्रा वाले खेल इस महीने थोड़े कम रहे | draft |
+| `cg.server.insight.little_lower.orientation` | About Today a little lower this month | 'आज के बारे में' इस महीने थोड़ा कम रहा | draft |
+| `cg.server.insight.game_lower` | {game} lower this month | {game} इस महीने कम रहा | draft |
+| `cg.server.insight.game_little_lower` | {game} a little lower this month | {game} इस महीने थोड़ा कम रहा | draft |
+| `cg.server.insight.z_item` | {game}: z = {z}{sep} | {game}: z = {z}{sep} | draft |
+| `cg.server.insight.z_item_score` | {game}: z = {z}, recent average {score}{sep} | {game}: z = {z}, हाल का औसत {score}{sep} | draft |
+| `cg.server.insight.z_note` | z compares the last 5 sessions with their own normal; below −0.5 is Watch, below −1.5 Declining. | z पिछले 5 सेशन को उनके अपने सामान्य से मिलाता है; −0.5 से नीचे 'नज़र रखें', −1.5 से नीचे 'गिरावट'। | draft |
+| `cg.server.insight.learning.one` | Still learning {name}'s normal for {n} game | {n} खेल में {name} का सामान्य अभी समझ रहे हैं | draft |
+| `cg.server.insight.learning.other` | Still learning {name}'s normal for {n} games | {n} खेलों में {name} का सामान्य अभी समझ रहे हैं | draft |
+| `cg.server.insight.learning_intro` | Each game needs 15 finished sessions before it is compared: | तुलना से पहले हर खेल के 15 पूरे सेशन चाहिए: | draft |
+| `cg.server.insight.learning_item` | {game} {sessions}/{needed} sessions{sep} | {game} {sessions}/{needed} सेशन{sep} | draft |
+| `cg.server.insight.doses_detail` | Last 7 days, medicine reminders only: taken {taken}, missed {missed}, not sure {unsure}. | पिछले 7 दिन, सिर्फ़ दवाई के रिमाइंडर: ली {taken}, छूटी {missed}, पक्का नहीं {unsure}। | draft |
+| `cg.server.insight.doses_detail_late` | Last 7 days, medicine reminders only: taken {taken} ({late} confirmed later), missed {missed}, not sure {unsure}. | पिछले 7 दिन, सिर्फ़ दवाई के रिमाइंडर: ली {taken} ({late} बाद में पक्की हुई), छूटी {missed}, पक्का नहीं {unsure}। | draft |
+| `cg.server.insight.doses_unsure.one` | {n} dose unsure this week | इस हफ़्ते {n} खुराक के बारे में पक्का नहीं | draft |
+| `cg.server.insight.doses_unsure.other` | {n} doses unsure this week | इस हफ़्ते {n} खुराकों के बारे में पक्का नहीं | draft |
+| `cg.server.insight.doses_missed.one` | {n} dose missed this week | इस हफ़्ते {n} खुराक छूटी | draft |
+| `cg.server.insight.doses_missed.other` | {n} doses missed this week | इस हफ़्ते {n} खुराकें छूटीं | draft |
+| `cg.server.insight.doses_taken.one` | All {n} dose taken this week | इस हफ़्ते की {n} खुराक ली गई | draft |
+| `cg.server.insight.doses_taken.other` | All {n} doses taken this week | इस हफ़्ते की सभी {n} खुराकें ली गईं | draft |
+| `cg.server.insight.played` | Played on {n} of the last 7 days | पिछले 7 में से {n} दिन खेला | draft |
+| `cg.server.insight.not_played` | {name} didn't play this week | {name} ने इस हफ़्ते नहीं खेला | draft |
+| `cg.server.insight.played_days` | Days with at least one game: {days}. | जिन दिनों कम से कम एक खेल हुआ: {days}। | draft |
+| `cg.server.insight.played_none` | Days with at least one game: none. | जिन दिनों कम से कम एक खेल हुआ: कोई नहीं। | draft |
+| `cg.server.tl.stopped` | {game}: stopped early | {game}: बीच में रोका | draft |
+| `cg.server.tl.stopped_detail` | {right} of {played} right before stopping | रोकने से पहले {played} में से {right} सही | draft |
+| `cg.server.tl.session` | {game}: {right} of {played} right | {game}: {played} में से {right} सही | draft |
+| `cg.server.tl.level` | Level {level} | लेवल {level} | draft |
+| `cg.server.tl.level_change` | Level {level}, level {level} → {level_end} | लेवल {level}, लेवल {level} → {level_end} | draft |
+| `cg.server.tl.reminder_done` | {title} ({time}): done | {title} ({time}): हो गया | draft |
+| `cg.server.tl.reminder_late` | {title} ({time}): confirmed later | {title} ({time}): बाद में पक्का हुआ | draft |
+| `cg.server.tl.reminder_done_family` | {title} ({time}): done (marked by family) | {title} ({time}): हो गया (परिवार ने निशान लगाया) | draft |
+| `cg.server.tl.reminder_late_family` | {title} ({time}): confirmed later (marked by family) | {title} ({time}): बाद में पक्का हुआ (परिवार ने निशान लगाया) | draft |
+| `cg.server.tl.reminder_unsure` | {title} ({time}): not sure | {title} ({time}): पक्का नहीं | draft |
+| `cg.server.tl.reminder_unsure_detail` | They were asked to check with family. | उनसे परिवार से पूछने को कहा गया। | draft |
+| `cg.server.tl.reminder_missed` | {title} ({time}): missed | {title} ({time}): छूट गया | draft |
+| `cg.server.tl.alert` | Alert ({severity}) | अलर्ट ({severity}) | draft |
+| `cg.server.tl.recording` | Voice task recorded | आवाज़ वाला काम रिकॉर्ड हुआ | draft |
+| `cg.server.tl.recording_detail` | Length {length} | लंबाई {length} | draft |
+| `cg.server.tl.consent_given` | Consent given: {consent} | सहमति दी: {consent} | draft |
+| `cg.server.tl.consent_withdrawn` | Consent withdrawn: {consent} | सहमति वापस ली: {consent} | draft |
+| `cg.server.tl.device_paired` | Device paired | फ़ोन जोड़ा गया | draft |
+| `cg.server.tl.device_signed_out` | Device signed out | फ़ोन से साइन आउट किया गया | draft |
+| `cg.server.tl.mood_skipped` | Mood question skipped | मन वाला सवाल छोड़ दिया | draft |
+| `cg.server.tl.mood` | Feeling: {mood} | मन: {mood} | draft |
+| `cg.server.event.family_added` | Family member added: {name} ({relation}) | परिवार में जोड़ा: {name} ({relation}) | draft |
+| `cg.server.event.family_removed` | Family member removed: {name} ({relation}) | परिवार से हटाया: {name} ({relation}) | draft |
+| `cg.server.event.tutorial` | Tutorial will show again: {game} | सिखाने वाला डेमो फिर दिखेगा: {game} | draft |
+| `cg.server.event.memory_added` | Memory added: {title} | याद जोड़ी: {title} | draft |
+| `cg.server.event.memory_removed` | Memory removed: {title} | याद हटाई: {title} | draft |
+| `cg.server.event.reminder_added` | Reminder added: {title} at {time} | रिमाइंडर जोड़ा: {title}, {time} | draft |
+| `cg.server.event.reminder_changed` | Reminder changed: {title} at {time} | रिमाइंडर बदला: {title}, {time} | draft |
+| `cg.server.event.reminder_removed` | Reminder removed: {title} | रिमाइंडर हटाया: {title} | draft |
+| `cg.server.event.city` | City set to {city} | शहर: {city} | draft |
+| `cg.server.event.city_removed` | City removed | शहर हटाया | draft |
+| `cg.server.event.core_games` | Core games changed to {games} | मुख्य खेल बदले: {games} | draft |
+| `cg.server.event.festivals` | Festival question: {n} festivals ticked | त्योहार वाला सवाल: {n} त्योहार चुने | draft |
+| `cg.server.event.festivals_off` | Festival question turned off | त्योहार वाला सवाल बंद किया | draft |
+| `cg.server.event.pinned` | Pinned {game} and {game2} | तय किए: {game} और {game2} | draft |
+| `cg.server.event.pins_off` | Today's games back to automatic | आज के खेल फिर से अपने-आप | draft |
+| `cg.server.event.hidden` | Hidden from More games: {games} | 'और खेल' से छिपाए: {games} | draft |
+| `cg.server.event.hidden_none` | Hidden from More games: none | 'और खेल' से छिपाए: कोई नहीं | draft |
+| `cg.server.event.language` | App language set to {language} | ऐप की भाषा: {language} | draft |
+| `cg.server.alert.missed` | {name} missed {n} reminders in the last 48 hours. | पिछले 48 घंटों में {name} के {n} रिमाइंडर छूट गए। | draft |
+| `cg.server.alert.unsure` | {name} wasn't sure about the {time} reminder "{title}". Please check with them. | {name} को {time} वाले रिमाइंडर "{title}" के बारे में पक्का नहीं था। उनसे एक बार पूछ लें। | draft |
+| `cg.server.decline.dropped` | {game} average dropped from {base} to {recent} over the last {window} sessions (z {z}). | {game} का औसत पिछले {window} सेशन में {base} से घटकर {recent} हो गया (z {z})। | draft |
+| `cg.server.decline.steady` | {game} average is {recent} over the last {window} sessions, against a baseline of {base} (z {z}). | {game} का औसत पिछले {window} सेशन में {recent} है, जबकि उनका सामान्य {base} है (z {z})। | draft |
+| `cg.server.decline.learning` | Learning this patient's normal ({sessions}/{needed} sessions) | इनका सामान्य अभी समझ रहे हैं ({sessions}/{needed} सेशन) | draft |
+
 ## English on purpose
 
 Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing
-screen, and the others are for family members (caregiver Hindi is batch 5b). Keys: `demo.*`, `pair.*`, `login.*`, `register.*`.
+screen, and the others are for family members. Keys: `demo.*`, `pair.*`, `login.*`, `register.*`.
 
-426 strings to review.
+426 patient strings and 779 caregiver strings to review.

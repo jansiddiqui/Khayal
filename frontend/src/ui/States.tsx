@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "./Button";
+import { t } from "../t";
 
 /**
  * A friendly empty state with one clear next action (caregiver screens). The icon is drawn from
@@ -40,7 +41,7 @@ export function ErrorState({ message, onRetry, retrying = false }: { message: st
     <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-danger">
       <span>{message}</span>
       <Button size="sm" variant="secondary" icon={<RotateCcw />} loading={retrying} onClick={onRetry}>
-        Try again
+        {t.common.actions.retry}
       </Button>
     </div>
   );

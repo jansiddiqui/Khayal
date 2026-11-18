@@ -25,6 +25,9 @@ import { TextInput } from "../../ui/Field";
 import { Skeleton } from "../../ui/Skeleton";
 import { EmptyState } from "../../ui/States";
 import { useRecorder, type Recording } from "../../voice/useRecorder";
+import { t } from "../../t";
+
+const w = t.memoryBook;
 
 const MAX_PHOTOS = 5;
 const VOICE_LIMIT_MS = 5 * 60 * 1000;
@@ -39,22 +42,22 @@ function VoiceNoteRecorder({ onRecorded }: { onRecorded: (r: Recording) => void 
       rec.reset();
     }
   }, [rec, onRecorded]);
-  if (rec.state.kind === "denied") return <p className="text-danger">The microphone is blocked. Allow it in the browser and try again.</p>;
+  if (rec.state.kind === "denied") return <p className="text-danger">{w.recorder.blocked}</p>;
   const recording = rec.state.kind === "recording" || rec.state.kind === "starting";
   return (
     <div className="flex items-center gap-3">
       {recording ? (
         <Button size="sm" icon={<Square />} onClick={rec.stop}>
-          Stop
+          {w.recorder.stop}
         </Button>
       ) : (
         <Button size="sm" icon={<Mic />} onClick={() => void rec.start()}>
-          Record a voice note
+          {w.recorder.record}
         </Button>
       )}
       {recording && (
         <span className="flex items-center gap-2 text-ink-soft" aria-live="polite">
-          Recording
+          {w.recorder.recording}
           <span className="h-2 w-24 rounded-full bg-sunken" aria-hidden="true">
             <span className="block h-2 rounded-full bg-brand" style={{ width: `${Math.round(rec.level * 100)}%` }} />
           </span>
@@ -70,10 +73,10 @@ function VoicePlayer({ url, ms }: { url: string; ms: number | null }) {
   useEffect(() => () => {
     if (src) URL.revokeObjectURL(src);
   }, [src]);
-  if (src) return <audio controls autoPlay src={src} className="h-9 max-w-full" aria-label="Family voice note" />;
+  if (src) return <audio controls autoPlay src={src} className="h-9 max-w-full" aria-label={w.player.label} />;
   return (
     <Button size="sm" variant="quiet" icon={<Play />} loading={load.isPending} onClick={() => load.mutate()}>
-      Play voice note{ms ? ` (${length(ms)})` : ""}
+      {w.player.play(ms ? length(ms) : null)}
     </Button>
   );
 }
@@ -103,32 +106,32 @@ function NewMemory({ patient, onDone }: { patient: Patient; onDone: () => void }
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4" aria-labelledby="new-memory-title">
       <h2 id="new-memory-title" className="text-lg font-semibold">
-        A new memory
+        {w.form.heading}
       </h2>
-      <TextInput label="Title" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} hint="For example: “Our wedding, Lucknow 1972”." />
+      <TextInput label={w.form.title} required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} hint={w.form.titleHint} />
       <label className="flex flex-col gap-1">
-        <span className="font-medium">The story (optional)</span>
+        <span className="font-medium">{w.form.storyOptional}</span>
         <textarea rows={4} maxLength={2000} value={story} onChange={(e) => setStory(e.target.value)} className="rounded-md border border-line-strong p-2" />
-        <span className="text-sm text-ink-muted">A few warm sentences, read aloud to {patient.name} when there is no voice note.</span>
+        <span className="text-sm text-ink-muted">{w.form.storyHint(patient.name)}</span>
       </label>
       <label className="flex flex-col gap-1">
-        <span className="font-medium">Photos (1 to {MAX_PHOTOS})</span>
+        <span className="font-medium">{w.form.photos(MAX_PHOTOS)}</span>
         <input
           type="file"
           accept="image/jpeg,image/png"
           multiple
           onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
         />
-        {photos.length > 0 && <span className="text-sm text-ink-muted">{photos.length} chosen</span>}
+        {photos.length > 0 && <span className="text-sm text-ink-muted">{w.form.chosen(photos.length)}</span>}
       </label>
       {patient.voice_task_enabled ? (
         <div className="flex flex-col gap-1">
-          <span className="font-medium">Your voice telling the story (optional)</span>
+          <span className="font-medium">{w.form.voice}</span>
           {voice ? (
             <span className="flex items-center gap-3">
-              Voice note ready ({length(voice.durationMs)})
+              {w.form.voiceReady(length(voice.durationMs))}
               <Button size="sm" variant="quiet" icon={<X />} onClick={() => setVoice(null)}>
-                Remove
+                {w.form.remove}
               </Button>
             </span>
           ) : (
@@ -136,19 +139,19 @@ function NewMemory({ patient, onDone }: { patient: Patient; onDone: () => void }
           )}
         </div>
       ) : (
-        <p className="text-sm text-ink-muted">Voice notes need the voice opt-in on {patient.name}'s page.</p>
+        <p className="text-sm text-ink-muted">{w.form.voiceNeedsOptIn(patient.name)}</p>
       )}
       {save.isError && (
         <p role="alert" className="text-danger">
-          {errorDetail(save.error) ?? "Could not save the memory. Try again."}
+          {errorDetail(save.error) ?? w.form.saveFailed}
         </p>
       )}
       <div className="flex gap-2">
         <Button type="submit" variant="primary" loading={save.isPending} disabled={!title.trim() || photos.length === 0}>
-          Save memory
+          {w.form.save}
         </Button>
         <Button type="button" variant="quiet" onClick={onDone}>
-          Cancel
+          {w.form.cancel}
         </Button>
       </div>
     </form>
@@ -180,17 +183,17 @@ function MemoryCard({ patient, memory }: { patient: Patient; memory: Memory }) {
           }}
           className="flex flex-col gap-2"
         >
-          <TextInput label="Title" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
+          <TextInput label={w.form.title} required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
           <label className="flex flex-col gap-1">
-            <span className="font-medium">The story</span>
+            <span className="font-medium">{w.card.story}</span>
             <textarea rows={4} maxLength={2000} value={story} onChange={(e) => setStory(e.target.value)} className="rounded-md border border-line-strong p-2" />
           </label>
           <div className="flex gap-2">
             <Button type="submit" size="sm" variant="primary" loading={edit.isPending}>
-              Save
+              {w.card.save}
             </Button>
             <Button type="button" size="sm" variant="quiet" onClick={() => setEditing(false)}>
-              Cancel
+              {w.card.cancel}
             </Button>
           </div>
         </form>
@@ -200,21 +203,21 @@ function MemoryCard({ patient, memory }: { patient: Patient; memory: Memory }) {
             <h3 id={`memory-${memory.id}`} className="text-lg font-semibold">
               {memory.title}
             </h3>
-            {memory.story ? <p className="whitespace-pre-wrap text-ink-soft">{memory.story}</p> : <p className="text-ink-muted">No story yet.</p>}
+            {memory.story ? <p className="whitespace-pre-wrap text-ink-soft">{memory.story}</p> : <p className="text-ink-muted">{w.card.noStory}</p>}
           </div>
           <Button size="sm" variant="quiet" icon={<Pencil />} onClick={() => setEditing(true)}>
-            Edit
+            {w.card.edit}
           </Button>
         </div>
       )}
 
-      <ul className="flex flex-wrap gap-2" aria-label="Photos">
+      <ul className="flex flex-wrap gap-2" aria-label={w.card.photos}>
         {memory.photos.map((p, i) => (
           <li key={p.id} className="relative">
-            <AuthedImage src={p.url} alt={`Photo ${i + 1} of ${memory.title}`} className="size-24 rounded-md object-cover" />
+            <AuthedImage src={p.url} alt={w.card.photoAlt(i + 1, memory.title)} className="size-24 rounded-md object-cover" />
             <button
               type="button"
-              aria-label={`Remove photo ${i + 1}`}
+              aria-label={w.card.removePhoto(i + 1)}
               onClick={() => dropPhoto.mutate(p.id)}
               className="absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full border border-line bg-surface hover:bg-danger-soft"
             >
@@ -226,7 +229,7 @@ function MemoryCard({ patient, memory }: { patient: Patient; memory: Memory }) {
           <li>
             <label className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line-strong text-sm text-ink-soft hover:bg-sunken">
               <ImagePlus aria-hidden="true" className="size-5" />
-              {addPhoto.isPending ? "Adding…" : "Add photo"}
+              {addPhoto.isPending ? w.card.adding : w.card.addPhoto}
               <input
                 type="file"
                 accept="image/jpeg,image/png"
@@ -241,39 +244,39 @@ function MemoryCard({ patient, memory }: { patient: Patient; memory: Memory }) {
           </li>
         )}
       </ul>
-      {memory.photos.length === 0 && <p className="text-sm text-accent-strong">Add a photo: {patient.name} sees a memory only once it has one.</p>}
+      {memory.photos.length === 0 && <p className="text-sm text-accent-strong">{w.card.needsPhoto(patient.name)}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
         {memory.voice_url ? (
           <>
             <VoicePlayer url={memory.voice_url} ms={memory.voice_ms} />
             <Button size="sm" variant="quiet" icon={<Trash2 />} loading={dropVoice.isPending} onClick={() => dropVoice.mutate()}>
-              Remove voice note
+              {w.card.removeVoice}
             </Button>
           </>
         ) : patient.voice_task_enabled ? (
-          voice.isPending ? <span className="text-ink-muted">Saving the voice note…</span> : <VoiceNoteRecorder onRecorded={(r) => voice.mutate(r)} />
+          voice.isPending ? <span className="text-ink-muted">{w.card.savingVoice}</span> : <VoiceNoteRecorder onRecorded={(r) => voice.mutate(r)} />
         ) : null}
       </div>
 
       {confirmDelete ? (
-        <div role="alertdialog" aria-label="Delete this memory" className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
-          <p className="min-w-0 flex-1">This deletes the memory with its photos and voice note. It cannot be undone.</p>
+        <div role="alertdialog" aria-label={w.card.deleteDialog} className="flex flex-wrap items-center gap-3 rounded-md border border-danger bg-danger-soft p-3">
+          <p className="min-w-0 flex-1">{w.card.deleteWarning}</p>
           <Button size="sm" variant="danger" loading={remove.isPending} onClick={() => remove.mutate()}>
-            Delete memory
+            {w.card.deleteConfirm}
           </Button>
           <Button size="sm" variant="quiet" onClick={() => setConfirmDelete(false)}>
-            Keep it
+            {w.card.keep}
           </Button>
         </div>
       ) : (
         <Button size="sm" variant="quiet" icon={<Trash2 />} className="self-start" onClick={() => setConfirmDelete(true)}>
-          Delete memory…
+          {w.card.delete}
         </Button>
       )}
       {error && (
         <p role="alert" className="text-danger">
-          {errorDetail(error) ?? "That didn't work. Try again."}
+          {errorDetail(error) ?? w.card.failed}
         </p>
       )}
     </article>
@@ -289,38 +292,37 @@ export function MemoryBook() {
   const [adding, setAdding] = useState(false);
 
   return (
-    <CaregiverLayout title={patient ? `Memory book · ${patient.name}` : "Memory book"}>
+    <CaregiverLayout title={w.page.title(patient?.name ?? null)}>
       <Link to={`/caregiver/patients/${patientId}`} className="mb-4 inline-flex items-center gap-1 rounded text-brand-dark underline underline-offset-2">
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Back to their page
+        {w.page.back}
       </Link>
-      {patients.isError && <LoadError message="Could not load this person." onRetry={() => void patients.refetch()} />}
+      {patients.isError && <LoadError message={w.page.personFailed} onRetry={() => void patients.refetch()} />}
       {patient && !patient.photos_enabled && (
         <div className="rounded-lg border border-line bg-surface p-4">
-          <p className="mb-2">The memory book uses photos, so it needs the family photos opt-in for {patient.name}.</p>
+          <p className="mb-2">{w.page.needsPhotos(patient.name)}</p>
           <Link to={`/caregiver/patients/${patientId}#privacy`} className="text-brand-dark underline underline-offset-2">
-            Turn on family photos
+            {w.page.turnOnPhotos}
           </Link>
         </div>
       )}
       {patient && patient.photos_enabled && (
         <div className="flex max-w-3xl flex-col gap-4">
           <p className="text-ink-soft">
-            Old photos with a short story, for {patient.name} to look through under “Who is this?” → Memories. The story is read aloud, or
-            your recorded voice is played. Only the people linked to {patient.name} can see them.
+            {w.page.intro(patient.name)}
           </p>
           {adding ? (
             <NewMemory patient={patient} onDone={() => setAdding(false)} />
           ) : (
             <Button variant="primary" icon={<Plus />} className="self-start" onClick={() => setAdding(true)}>
-              Add a memory
+              {w.page.add}
             </Button>
           )}
           {memories.isPending && <Skeleton className="h-40 w-full" />}
-          {memories.isError && <LoadError message="Could not load the memory book." onRetry={() => void memories.refetch()} />}
+          {memories.isError && <LoadError message={w.page.loadFailed} onRetry={() => void memories.refetch()} />}
           {memories.isSuccess && memories.data.length === 0 && !adding && (
-            <EmptyState icon={<BookHeart />} title="No memories yet">
-              Start with one favourite photo and a few sentences about it.
+            <EmptyState icon={<BookHeart />} title={w.page.emptyTitle}>
+              {w.page.emptyBody}
             </EmptyState>
           )}
           {memories.data?.map((m) => (

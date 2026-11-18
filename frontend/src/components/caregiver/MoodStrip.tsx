@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Frown, Meh, Minus, Smile, type LucideIcon } from "lucide-react";
 import { getMoodHistory, type Mood, type MoodDay } from "../../api/client";
 import { Skeleton } from "../../ui/Skeleton";
+import { LOCALE, t } from "../../t";
 
 export const MOOD_LOOK: Record<Mood | "skipped" | "none", { label: string; icon: LucideIcon; className: string }> = {
-  good: { label: "Good", icon: Smile, className: "text-success" },
-  okay: { label: "Okay", icon: Meh, className: "text-ink-soft" },
-  not_so_good: { label: "Not so good", icon: Frown, className: "text-accent-strong" },
-  skipped: { label: "Skipped", icon: Minus, className: "text-ink-muted" },
-  none: { label: "Not asked (no visit)", icon: Minus, className: "text-line-strong" },
+  good: { label: t.common.mood.good, icon: Smile, className: "text-success" },
+  okay: { label: t.common.mood.okay, icon: Meh, className: "text-ink-soft" },
+  not_so_good: { label: t.common.mood.not_so_good, icon: Frown, className: "text-accent-strong" },
+  skipped: { label: t.common.mood.skipped, icon: Minus, className: "text-ink-muted" },
+  none: { label: t.elderPage.mood.notAsked, icon: Minus, className: "text-line-strong" },
 };
 
 const DAYS = 30;
@@ -26,7 +27,7 @@ export function moodDays(history: readonly MoodDay[], today: Date, days = DAYS):
   return out;
 }
 
-const dayLabel = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+const dayLabel = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
 
 /**
  * Daily mood next to the score charts (Round 2 batch 4): an icon per day with its word in the
@@ -39,11 +40,11 @@ export function MoodStrip({ patientId }: { patientId: number }) {
   const days = moodDays(q.data, new Date());
   const count = (look: keyof typeof MOOD_LOOK) => days.filter((d) => d.look === look).length;
   return (
-    <figure aria-label="Mood, last 30 days" className="rounded-lg border border-line bg-surface p-3">
+    <figure aria-label={t.elderPage.mood.title} className="rounded-lg border border-line bg-surface p-3">
       <figcaption className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
-        <span className="font-medium">Mood, last 30 days</span>
+        <span className="font-medium">{t.elderPage.mood.title}</span>
         <span className="text-sm text-ink-muted">
-          {count("good")} good · {count("okay")} okay · {count("not_so_good")} not so good · {count("skipped")} skipped
+          {t.elderPage.mood.counts(count("good"), count("okay"), count("not_so_good"), count("skipped"))}
         </span>
       </figcaption>
       <ol className="grid grid-cols-[repeat(30,minmax(0,1fr))] gap-px">
@@ -58,9 +59,9 @@ export function MoodStrip({ patientId }: { patientId: number }) {
       </ol>
       <p className="mt-1 flex justify-between text-xs text-ink-muted" aria-hidden="true">
         <span>{dayLabel(days[0]!.date)}</span>
-        <span>Today</span>
+        <span>{t.elderPage.mood.today}</span>
       </p>
-      <p className="mt-1 text-sm text-ink-muted">Answered on Home once a day, if they like. Mood doesn't change any alert.</p>
+      <p className="mt-1 text-sm text-ink-muted">{t.elderPage.mood.note}</p>
     </figure>
   );
 }

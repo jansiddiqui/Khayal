@@ -1,5 +1,6 @@
 import { useLocation } from "react-router";
 import { copy } from "../copy";
+import { t } from "../t";
 import { Busy, Skeleton, SkeletonLines } from "./Skeleton";
 import { Spinner } from "./Spinner";
 
@@ -22,7 +23,7 @@ export function PatientSkeleton() {
 /** The caregiver screen's shape: the header bar, a title and a few cards. */
 export function CaregiverSkeleton() {
   return (
-    <Busy label="Loading" className="caregiver min-h-screen bg-desk text-sm">
+    <Busy label={t.family.ui.loading} className="caregiver min-h-screen bg-desk text-sm">
       <div className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
           <Skeleton className="h-6 w-44" />

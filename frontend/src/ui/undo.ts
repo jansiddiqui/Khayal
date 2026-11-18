@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useToast } from "./Toast";
+import { t } from "../t";
 
 export interface UndoableAction {
   /** What the toast says, e.g. "Reminder deleted". */
@@ -33,7 +34,7 @@ export function useUndoable(): (action: UndoableAction) => void {
           if (settled) return;
           settled = true;
           action.revert();
-          toast.show({ message: "Undone. It's back.", tone: "info" });
+          toast.show({ message: t.common.actions.undone, tone: "info" });
         },
         onExpire: () => {
           if (settled) return;

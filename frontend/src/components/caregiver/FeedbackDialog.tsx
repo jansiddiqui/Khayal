@@ -4,11 +4,14 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router";
 import { errorStatus, sendFeedback, type FeedbackKind } from "../../api/client";
 import { Button } from "../../ui/Button";
+import { t } from "../../t";
+
+const F = t.dashboard.feedback;
 
 const KINDS: { value: FeedbackKind; label: string }[] = [
-  { value: "hard", label: "Something was hard" },
-  { value: "liked", label: "I liked this" },
-  { value: "other", label: "Something else" },
+  { value: "hard", label: F.kinds.hard },
+  { value: "liked", label: F.kinds.liked },
+  { value: "other", label: F.kinds.other },
 ];
 
 /** "Send feedback" in the caregiver header (Round 2 batch 3): a kind, a few words, Send. */
@@ -49,7 +52,7 @@ export function FeedbackButton() {
   return (
     <>
       <Button size="sm" variant="quiet" icon={<MessageSquare />} onClick={() => setOpen(true)}>
-        Send feedback
+        {F.button}
       </Button>
       <dialog
         ref={ref}
@@ -63,16 +66,16 @@ export function FeedbackButton() {
         {open && (
           <form onSubmit={onSubmit} className="flex flex-col gap-3 p-4">
             <h2 id="feedback-dialog-title" className="text-lg font-semibold">
-              Send feedback
+              {F.title}
             </h2>
             {send.isSuccess ? (
               <p role="status" className="text-calm">
-                Thank you. The Khayal team reads every message.
+                {F.thanks}
               </p>
             ) : (
               <>
                 <fieldset className="flex flex-wrap gap-x-4 gap-y-1">
-                  <legend className="mb-1 text-ink-soft">What is it about?</legend>
+                  <legend className="mb-1 text-ink-soft">{F.kindLegend}</legend>
                   {KINDS.map((k) => (
                     <label key={k.value} className="flex items-center gap-1.5">
                       <input type="radio" name="feedback-kind" checked={kind === k.value} onChange={() => setKind(k.value)} className="accent-brand" />
@@ -81,7 +84,7 @@ export function FeedbackButton() {
                   ))}
                 </fieldset>
                 <label className="flex flex-col gap-1">
-                  <span className="text-ink-soft">Your message</span>
+                  <span className="text-ink-soft">{F.message}</span>
                   <textarea
                     required
                     rows={4}
@@ -91,21 +94,21 @@ export function FeedbackButton() {
                     className="rounded-md border border-line-strong p-2"
                   />
                 </label>
-                <p className="text-sm text-ink-muted">Please leave out health details. We see your name and email so we can reply.</p>
+                <p className="text-sm text-ink-muted">{F.privacy}</p>
                 {send.isError && (
                   <p role="alert" className="text-danger">
-                    {errorStatus(send.error) === 429 ? "We have several messages from you; please try again later." : "Could not send. Try again."}
+                    {errorStatus(send.error) === 429 ? F.tooMany : F.failed}
                   </p>
                 )}
               </>
             )}
             <div className="flex justify-end gap-2">
               <Button type="button" size="sm" variant="quiet" onClick={close}>
-                {send.isSuccess ? "Close" : "Cancel"}
+                {send.isSuccess ? F.close : F.cancel}
               </Button>
               {!send.isSuccess && (
                 <Button type="submit" size="sm" variant="primary" loading={send.isPending}>
-                  Send
+                  {F.send}
                 </Button>
               )}
             </div>

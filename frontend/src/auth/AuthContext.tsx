@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { LANGUAGE } from "../copy";
 import { isLanguage, saveLanguage, type Language } from "../i18n/language";
+import { isCgLanguage, saveCgLanguage } from "../i18n/caregiverLanguage";
+import { CG_LANGUAGE } from "../t";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as apiClient from "../api/client";
 import type { DemoStart, RegisterInput, TokenResponse, User } from "../api/client";
@@ -43,14 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [state.status]);
 
-  // The patient app shows the language the family chose for this elder; caregiver screens stay
-  // English (Hindi for caregivers is batch 5b). A different language is saved and the app reloads,
-  // so every screen switches together (src/copy.ts).
+  // The patient app shows the language the family chose for this elder (src/copy.ts); caregiver
+  // screens show the caregiver's own choice from Account (batch 5b, src/t.ts). A different
+  // language is saved and the app reloads, so every screen switches together.
   useEffect(() => {
     if (state.status !== "authenticated") return;
     const user = state.user;
-    const wanted: Language = user.role === "patient" && isLanguage(user.language) ? user.language : "en";
-    if (saveLanguage(wanted, LANGUAGE)) window.location.reload();
+    const patient = user.role === "patient";
+    const wanted: Language = patient && isLanguage(user.language) ? user.language : "en";
+    const patientChanged = saveLanguage(wanted, LANGUAGE);
+    const caregiverChanged = !patient && saveCgLanguage(isCgLanguage(user.language) ? user.language : "en", CG_LANGUAGE);
+    if (patientChanged || caregiverChanged) window.location.reload();
   }, [state]);
 
   // A change the family makes reaches the elder's phone the next time the app comes to the front.

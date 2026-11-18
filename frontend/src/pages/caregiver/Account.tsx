@@ -1,12 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, KeyRound, Trash2 } from "lucide-react";
+import { Download, KeyRound, Languages, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { changePassword, deleteMyAccount, errorStatus, exportMyData, myConsents, PASSWORD_MIN } from "../../api/client";
+import { changePassword, deleteMyAccount, errorStatus, exportMyData, myConsents, PASSWORD_MIN, setMyLanguage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { Button } from "../../ui/Button";
 import { serverDate } from "../../api/client";
+import { CG_LANGUAGES, saveCgLanguage, type CgLanguage } from "../../i18n/caregiverLanguage";
+import { CG_LANGUAGE, t } from "../../t";
 
 const input = "rounded-md border border-line-strong bg-surface px-3 py-2";
 const card = "flex flex-col gap-3 rounded-lg border border-line bg-surface p-4";
@@ -160,16 +162,57 @@ function DeleteAccount() {
   );
 }
 
+/** The caregiver's own screen language (batch 5b), saved on their account; the app reloads in it. */
+export function ScreenLanguage() {
+  const [chosen, setChosen] = useState<CgLanguage>(CG_LANGUAGE);
+  const save = useMutation({
+    mutationFn: setMyLanguage,
+    onSuccess: (user) => {
+      const next = user.language === "hi" ? "hi" : "en";
+      if (saveCgLanguage(next, CG_LANGUAGE)) window.location.reload();
+    },
+  });
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    save.mutate(chosen);
+  }
+  return (
+    <form onSubmit={onSubmit} className={card} aria-labelledby="lang-title">
+      <h2 id="lang-title" className="flex items-center gap-2 text-lg font-semibold">
+        <Languages aria-hidden="true" className="size-5 text-brand" />
+        {t.account.language.title}
+      </h2>
+      <p className="text-ink-soft">{t.account.language.hint}</p>
+      <fieldset className="flex flex-wrap gap-4">
+        <legend className="sr-only">{t.account.language.legend}</legend>
+        {CG_LANGUAGES.map((lang) => (
+          <label key={lang} lang={lang} className="flex items-center gap-2">
+            <input type="radio" name="cg-language" value={lang} checked={chosen === lang} onChange={() => setChosen(lang)} />
+            {t.common.languages[lang]}
+          </label>
+        ))}
+      </fieldset>
+      {save.isError && <p role="alert" className="text-danger">{t.account.language.failed}</p>}
+      <div>
+        <Button type="submit" disabled={save.isPending || chosen === CG_LANGUAGE}>
+          {save.isPending ? t.account.language.changing : t.account.language.save}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function CaregiverAccount() {
   const { state } = useAuth();
   return (
-    <CaregiverLayout title="Account">
+    <CaregiverLayout title={t.common.layout.account}>
       {state.status === "authenticated" && (
         <p className="mb-4 text-ink-soft">
           Signed in as {state.user.name} ({state.user.email})
         </p>
       )}
       <div className="grid gap-6 lg:grid-cols-2">
+        <ScreenLanguage />
         <ChangePassword />
         <ExportData />
         <Consents />
