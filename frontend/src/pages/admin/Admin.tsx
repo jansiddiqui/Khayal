@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
-import { Download } from "lucide-react";
-import { admin, errorStatus, linkUrl, type SecretLink } from "../../api/client";
+import { useEffect, useState, type FormEvent } from "react";
+import { Download, FlaskConical, Search } from "lucide-react";
+import { admin, errorStatus, linkUrl, type AdminUserFilter, type SecretLink } from "../../api/client";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CopyLink } from "../../components/caregiver/PrivacyPanel";
+import { useLocation, useNavigate } from "react-router";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
 import { liftOnHover, pressable } from "../../ui/motion";
 import { serverDate } from "../../api/client";
 import { Skeleton } from "../../ui/Skeleton";
+import { ActivityLog, FeedbackInbox } from "./Inbox";
+import { HealthCard, PilotOverviewCard } from "./Overview";
 
 const card = "flex flex-col gap-3 rounded-lg border border-line bg-surface p-4";
 // Same states as the shared Button (src/ui/Button.tsx): hover lift and shade, press, focus ring.
@@ -137,8 +140,22 @@ function Invites({ onLink }: { onLink: (made: Made) => void }) {
   );
 }
 
+/** The search box waits until typing pauses before asking the server. */
+function useDebounced<T>(value: T, ms = 300): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return settled;
+}
+
 function Users({ onLink }: { onLink: (made: Made) => void }) {
-  const users = useQuery({ queryKey: ["admin", "users"], queryFn: admin.users });
+  const [q, setQ] = useState("");
+  const [role, setRole] = useState<AdminUserFilter["role"] | "">("");
+  const [kind, setKind] = useState<AdminUserFilter["kind"] | "">("");
+  const filter: AdminUserFilter = { q: useDebounced(q), role: role || undefined, kind: kind || undefined };
+  const users = useQuery({ queryKey: ["admin", "users", filter], queryFn: () => admin.users(filter) });
   const reset = useMutation({
     mutationFn: (id: number) => admin.resetLink(id),
     onSuccess: (link, id) => {
@@ -149,7 +166,34 @@ function Users({ onLink }: { onLink: (made: Made) => void }) {
   return (
     <section className={card} aria-labelledby="users-title">
       <h2 id="users-title" className="text-lg font-semibold">Users</h2>
-      {users.isSuccess && (
+      <div className="flex flex-wrap items-end gap-2" role="search">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-ink-soft">Search name or email</span>
+          <span className="flex items-center gap-2 rounded-md border border-line-strong px-2">
+            <Search aria-hidden="true" className="size-4 text-ink-muted" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={100} className="min-w-0 flex-1 py-1.5 outline-none" />
+          </span>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-ink-soft">Role</span>
+          <select value={role} onChange={(e) => setRole(e.target.value as AdminUserFilter["role"] | "")} className="rounded-md border border-line-strong bg-surface px-2 py-1.5">
+            <option value="">Everyone</option>
+            <option value="caregiver">Family</option>
+            <option value="patient">Elders</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-ink-soft">Accounts</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value as AdminUserFilter["kind"] | "")} className="rounded-md border border-line-strong bg-surface px-2 py-1.5">
+            <option value="">Real and demo</option>
+            <option value="real">Real only</option>
+            <option value="demo">Demo only</option>
+          </select>
+        </label>
+      </div>
+      {users.isError && <LoadError message="Could not load the users." onRetry={() => void users.refetch()} />}
+      {users.isSuccess && users.data.length === 0 && <p className="text-ink-muted">Nobody matches.</p>}
+      {users.isSuccess && users.data.length > 0 && (
         <table className="w-full text-left">
           <thead className="border-b border-line text-ink-muted">
             <tr>
@@ -263,22 +307,115 @@ function Backup() {
   );
 }
 
-/** The pilot's admin page (KHAYAL_ADMIN_EMAILS): requests, invites, users, demo clean-up, backups. */
+/** Anonymised research CSVs for families who said yes to research (Round 2 batch 3). */
+function ResearchExport() {
+  const download = useMutation({
+    mutationFn: admin.researchExport,
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+  return (
+    <section className={card} aria-labelledby="research-title">
+      <h2 id="research-title" className="flex items-center gap-2 text-lg font-semibold">
+        <FlaskConical className="size-5 text-brand" aria-hidden="true" />
+        Research export
+      </h2>
+      <p className="text-ink-muted">
+        Game sessions and reminder ticks of the families who turned on “research” for their elder, as CSV files in a zip. No names,
+        emails, cities, photos, recordings, reminder titles or dates: each elder gets a random ID that is new in every export, and days
+        are counted from their first record. Each download is logged.
+      </p>
+      <button type="button" className={primary + " self-start"} disabled={download.isPending} onClick={() => download.mutate()}>
+        {download.isPending ? "Preparing…" : "Download research export"}
+      </button>
+      {download.isSuccess && <p className="text-calm">Saved as {download.data.fileName}.</p>}
+      {download.isError && <p role="alert" className="text-danger">Could not make the export. Try again later.</p>}
+    </section>
+  );
+}
+
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "feedback", label: "Feedback" },
+  { id: "people", label: "People and invites" },
+  { id: "data", label: "Data" },
+  { id: "log", label: "Activity log" },
+] as const;
+type Tab = (typeof TABS)[number]["id"];
+
+
+/** The pilot's admin page (KHAYAL_ADMIN_EMAILS): overview and health, feedback, people and invites, data, activity log. */
 export function AdminPage() {
   const [made, setMade] = useState<Made>(null);
+  // The open tab lives in the address (#feedback), so it survives a reload and can be linked to.
+  const { hash } = useLocation();
+  const navigate = useNavigate();
+  const tab: Tab = TABS.find((t) => `#${t.id}` === hash)?.id ?? "overview";
+  const choose = (next: Tab) => void navigate({ hash: next }, { replace: true });
   return (
     <CaregiverLayout title="Admin">
+      <div role="tablist" aria-label="Admin sections" className="mb-5 flex flex-wrap gap-1 border-b border-line">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            id={`tab-${t.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            onClick={() => choose(t.id)}
+            className={`-mb-px rounded-t-md border-b-2 px-3 py-2 transition-colors duration-150 ease-calm ${
+              tab === t.id ? "border-brand font-semibold text-ink" : "border-transparent text-ink-soft hover:bg-brand-soft hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
       {made && (
         <div className="mb-6">
           <CopyLink label={made.label} url={made.url} />
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Requests onLink={setMade} />
-        <Invites onLink={setMade} />
-        <Users onLink={setMade} />
-        <DemoAccounts />
-        <Backup />
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0">
+        {tab === "overview" && (
+          <>
+            <PilotOverviewCard />
+            <HealthCard />
+          </>
+        )}
+        {tab === "feedback" && (
+          <div className="lg:col-span-2">
+            <FeedbackInbox />
+          </div>
+        )}
+        {tab === "people" && (
+          <>
+            <Requests onLink={setMade} />
+            <Invites onLink={setMade} />
+            <div className="lg:col-span-2">
+              <Users onLink={setMade} />
+            </div>
+          </>
+        )}
+        {tab === "data" && (
+          <>
+            <Backup />
+            <ResearchExport />
+            <DemoAccounts />
+          </>
+        )}
+        {tab === "log" && (
+          <div className="lg:col-span-2">
+            <ActivityLog />
+          </div>
+        )}
       </div>
     </CaregiverLayout>
   );

@@ -326,7 +326,7 @@ export async function deleteElderPhoto(patientId: number): Promise<Patient> {
 
 export interface ConsentRecord {
   id: number;
-  kind: "processing" | "elder_on_behalf" | "photos" | "voice";
+  kind: "processing" | "elder_on_behalf" | "photos" | "voice" | "research";
   basis: string | null;
   policy_version: string;
   granted_at: string;
@@ -339,8 +339,9 @@ export async function listElderConsents(patientId: number): Promise<ConsentRecor
   return data;
 }
 
-/** Opt in to, or withdraw, family photos or voice recordings. Withdrawing deletes that data. */
-export async function setElderConsent(patientId: number, kind: "photos" | "voice", granted: boolean): Promise<{ patient: Patient; deleted: number }> {
+/** Opt in to, or withdraw, family photos, voice recordings or research use. Withdrawing photos or
+ * voice deletes that data; withdrawing research leaves the elder out of later research exports. */
+export async function setElderConsent(patientId: number, kind: "photos" | "voice" | "research", granted: boolean): Promise<{ patient: Patient; deleted: number }> {
   const { data } = await api.post<{ patient: Patient; deleted: number }>(`/patients/${patientId}/consents`, { kind, granted });
   return data;
 }
@@ -452,7 +453,13 @@ export const admin = {
   revokeInvite: async (id: number) => {
     await api.post(`/admin/invites/${id}/revoke`);
   },
-  users: async () => (await api.get<AdminUser[]>("/admin/users")).data,
+  users: async (filter: AdminUserFilter = {}) => {
+    const params: Record<string, string> = {};
+    if (filter.q?.trim()) params.q = filter.q.trim();
+    if (filter.role) params.role = filter.role;
+    if (filter.kind) params.kind = filter.kind;
+    return (await api.get<AdminUser[]>("/admin/users", { params })).data;
+  },
   resetLink: async (userId: number) => (await api.post<SecretLink>(`/admin/users/${userId}/reset-link`)).data,
   demoCount: async () => (await api.get<{ count: number }>("/admin/demo-accounts")).data.count,
   removeDemo: async (confirmCount: number) =>
@@ -464,7 +471,92 @@ export const admin = {
     const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `khayal-backup-${new Date().toISOString().slice(0, 10)}.zip`;
     return { blob: response.data, fileName };
   },
+  overview: async () => (await api.get<PilotOverview>("/admin/overview")).data,
+  health: async () => (await api.get<SystemHealth>("/admin/health")).data,
+  feedback: async (status?: FeedbackStatus) =>
+    (await api.get<AdminFeedback[]>("/admin/feedback", { params: status ? { status } : {} })).data,
+  setFeedbackStatus: async (id: number, status: FeedbackStatus) =>
+    (await api.post<AdminFeedback>(`/admin/feedback/${id}/status`, { status })).data,
+  feedbackVoiceUrl: async (id: number) => {
+    const { data } = await api.get<Blob>(`/admin/feedback/${id}/voice`, { responseType: "blob" });
+    return URL.createObjectURL(data);
+  },
+  log: async (action?: string) => (await api.get<AdminLogEntry[]>("/admin/log", { params: action ? { action } : {} })).data,
+  /** Anonymised research export (zip): families with an active research consent only. */
+  researchExport: async (): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await api.get<Blob>("/admin/research-export", { responseType: "blob" });
+    const disposition = String(response.headers["content-disposition"] ?? "");
+    const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "khayal-research.zip";
+    return { blob: response.data, fileName };
+  },
 };
+
+export interface AdminUserFilter {
+  q?: string;
+  role?: Role;
+  kind?: "real" | "demo";
+}
+
+export interface PilotOverview {
+  families: number;
+  active_7: number;
+  active_30: number;
+  caregivers: number;
+  sessions_per_day: { date: string; count: number }[];
+  funnel: { requested: number; approved: number; invited: number; signed_up: number; paired: number; active: number };
+  retention_7: { days: number; eligible: number; retained: number };
+  retention_30: { days: number; eligible: number; retained: number };
+}
+
+export interface SystemHealth {
+  started_at: string;
+  uptime_seconds: number;
+  last_start_at: string | null;
+  last_tick_at: string | null;
+  last_housekeeping_at: string | null;
+  database: string;
+  db_bytes: number | null;
+  db_limit_bytes: number;
+  db_warning: boolean;
+  last_backup_at: string | null;
+  last_backup_by: string | null;
+  days_since_backup: number | null;
+  backup_warning: boolean;
+}
+
+export type FeedbackKind = "hard" | "liked" | "other";
+export type FeedbackStatus = "new" | "read" | "resolved";
+
+export interface AdminFeedback {
+  id: number;
+  role: Role;
+  kind: FeedbackKind;
+  text: string | null;
+  page: string | null;
+  has_voice: boolean;
+  status: FeedbackStatus;
+  created_at: string;
+  sender: string | null;
+}
+
+export interface AdminLogEntry {
+  id: number;
+  admin_email: string;
+  at: string;
+  action: string;
+  detail: string;
+}
+
+/** "Send feedback" (caregivers from the header, patients from the Settings sheet). Returns its id. */
+export async function sendFeedback(kind: FeedbackKind, text?: string, page?: string): Promise<number> {
+  const { data } = await api.post<{ id: number }>("/feedback", { kind, text: text || undefined, page });
+  return data.id;
+}
+
+/** A patient's voice note for feedback they just sent (needs the voice opt-in). */
+export async function sendFeedbackVoice(id: number, audio: Blob): Promise<void> {
+  await api.post(`/feedback/${id}/voice`, audio, { headers: { "Content-Type": audio.type.split(";")[0] || "audio/webm" } });
+}
 
 export type GameType = "memory_match" | "sequence_recall" | "word_recall" | "daily_orientation" | "reaction_tap"
   | "colour_trails"

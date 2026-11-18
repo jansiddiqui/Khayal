@@ -327,6 +327,22 @@ ml/.venv/Scripts/python -m pytest ml/dl
 - **Migration:** settings changes are stored in `patient_events` (migration 0013). Back up `data/khayal.db`, then run `alembic upgrade head` from `backend/`.
 - **Screenshots:** in `docs/caregiver/screens/`, with a sample report PDF made from demo data.
 
+## Admin: pilot overview, health, feedback, research export (Round 2 batch 3)
+
+Admins (`KHAYAL_ADMIN_EMAILS`) see five tabs on `/admin`:
+
+- **Overview:** real families, active families over 7 and 30 days, games per day, the invite funnel, and "still playing after 7/30 days".
+- **System health:** server uptime and last wake, last cron tick, database size against the 1 GB free limit, and days since the last full backup (warns after 7 days).
+- **Feedback:** messages from "Send feedback" (caregiver header) and "Tell us something" (patient Settings sheet; voice notes need the voice opt-in). Mark each read or resolved.
+- **People and invites:** invite requests, invite links, and user search by name, email, role or real/demo.
+- **Data:**
+  - Full backup.
+  - Demo accounts.
+  - **Research export:** an anonymised zip of game sessions and reminder ticks, only for elders whose family ticked "Research" in the elder's privacy section. Each elder gets a random ID that is new every time, and dates become day numbers.
+- **Activity log:** every admin action, with who and when.
+
+Migration 0014 adds the `system_state`, `feedback` and `admin_log` tables. Back up `data/khayal.db`, then run `alembic upgrade head`.
+
 ## Voice task (Milestone 8)
 
 The weekly picture description (rules in CLAUDE.md section 7):

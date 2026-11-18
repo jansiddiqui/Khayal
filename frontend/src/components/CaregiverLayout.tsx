@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import { Button } from "../ui/Button";
+import { FeedbackButton } from "./caregiver/FeedbackDialog";
 import { calm, DURATION, useLessMotion } from "../ui/motion";
 
 const navLink = ({ isActive }: { isActive: boolean }) =>
@@ -44,6 +45,7 @@ export function CaregiverLayout({ title, meta, children }: { title: string; meta
             </NavLink>
           )}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            <FeedbackButton />
             {state.status === "authenticated" && <span className="whitespace-nowrap text-ink-soft">{state.user.name}</span>}
             <Button size="sm" onClick={logout}>
               Sign out
