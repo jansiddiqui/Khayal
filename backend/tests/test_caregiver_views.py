@@ -43,7 +43,7 @@ def test_next_action_priorities(client: TestClient, register: Register, clock: C
     s = Setup(client, register)
     card = glance(s)
     assert card["name"] == "Kamala"
-    assert card["next_action"] == {"kind": "pair", "text": "Pair Kamala's phone or tablet"}
+    assert {k: card["next_action"][k] for k in ("kind", "text")} == {"kind": "pair", "text": "Pair Kamala's phone or tablet"}
 
     pair_device(db, s.pid, clock.now)
     assert glance(s)["next_action"]["kind"] == "add_reminders"
@@ -60,7 +60,7 @@ def test_next_action_priorities(client: TestClient, register: Register, clock: C
     assert card["medicines"]["unsure"] == 1
     assert card["alerts_open"] == 1
     # The dose they weren't sure about comes before the alert it raised.
-    assert card["next_action"] == {"kind": "check_dose", "text": "Check the 9:00 AM Blood pressure tablet with Kamala"}
+    assert {k: card["next_action"][k] for k in ("kind", "text")} == {"kind": "check_dose", "text": "Check the 9:00 AM Blood pressure tablet with Kamala"}
 
     assert client.post(f"/api/patients/{s.pid}/alerts/ack", json={}, headers=s.cg).status_code == 200
     answer(s, rid, "done")

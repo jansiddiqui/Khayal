@@ -30,9 +30,10 @@ from app.models import (
     SpeechSample,
     User,
 )
-from app.services import decline, devices, mood, reminders, today_games
+from app.services import decline, devices, messages, mood, reminders, today_games
 from app.services.clock import as_utc, local, local_day_start
 from app.services.game_names import GAME_NAMES
+from app.services.messages import Msg, msg, render_en
 
 Tone = Literal["good", "neutral", "attention"]
 ActionKind = Literal["check_dose", "missed_dose", "alerts", "pair", "add_reminders", "inactive", "all_good"]
@@ -45,10 +46,6 @@ TIMELINE_LIMIT = 500
 
 def first_name(patient: User) -> str:
     return patient.name.split()[0] if patient.name.strip() else patient.name
-
-
-def _day_text(d: date) -> str:
-    return d.strftime("%A")
 
 
 # --- today at a glance ------------------------------------------------------------------
@@ -66,6 +63,12 @@ class DoseCounts:
 class NextAction:
     kind: ActionKind
     text: str
+    # The same text as message keys with values, for caregiver screens in Hindi (batch 5b).
+    text_i18n: list[Msg] = field(default_factory=list)
+
+
+def _action(kind: ActionKind, m: Msg) -> NextAction:
+    return NextAction(kind, render_en([m]), [m])
 
 
 @dataclass(frozen=True)
@@ -123,23 +126,25 @@ def next_action(
     unsure = [t for t in todays if t.status == "unsure" and t.reminder.type == ReminderType.medicine]
     if unsure:
         t = unsure[0]
-        return NextAction("check_dose", f"Check the {reminders.clock_label(t.reminder.time_of_day)} {t.reminder.title} with {name}")
+        return _action(
+            "check_dose", msg("next.check_dose", time=t.reminder.time_of_day.strftime("%H:%M"), title=t.reminder.title, name=name)
+        )
     missed = [t for t in todays if t.status == "missed" and t.reminder.type == ReminderType.medicine]
     if missed:
         n = len(missed)
-        return NextAction("missed_dose", f"{n} medicine {'dose' if n == 1 else 'doses'} missed today: check with {name}")
+        return _action("missed_dose", msg("next.missed_dose", n=n, name=name))
     urgent = [a for a in open_alerts if a.severity != Severity.info]
     if open_alerts:
         n = len(urgent) or len(open_alerts)
-        return NextAction("alerts", f"Look at {n} new {'alert' if n == 1 else 'alerts'}")
+        return _action("alerts", msg("next.alerts", n=n))
     if not any(d.revoked_at is None for d in devices.for_patient(db, patient.id)):
-        return NextAction("pair", f"Pair {name}'s phone or tablet")
+        return _action("pair", msg("next.pair", name=name))
     if not db.scalar(select(Reminder.id).where(Reminder.patient_id == patient.id, Reminder.active.is_(True)).limit(1)):
-        return NextAction("add_reminders", f"Add {name}'s medicines and meals as reminders")
+        return _action("add_reminders", msg("next.add_reminders", name=name))
     last = _last_session_at(db, patient.id)
     if last is not None and now - last >= timedelta(days=INACTIVE_DAYS):
-        return NextAction("inactive", f"{name} hasn't played since {_day_text(local(last).date())}. A gentle word may help.")
-    return NextAction("all_good", "Nothing needs you today")
+        return _action("inactive", msg("next.inactive", name=name, day=local(last).date().isoformat()))
+    return _action("all_good", msg("next.all_good"))
 
 
 # --- insights ---------------------------------------------------------------------------
@@ -154,15 +159,23 @@ MEMORY_GAMES = frozenset(
         GameType.sequence_recall,
     }
 )
-GROUP_TITLES = {"memory": "Memory games", "thinking": "Thinking and everyday games", "orientation": "About Today"}
-
-
 @dataclass(frozen=True)
 class Insight:
     key: str
     tone: Tone
     text: str
     detail: str
+    text_i18n: list[Msg] = field(default_factory=list)
+    detail_i18n: list[Msg] = field(default_factory=list)
+
+
+def _insight(key: str, tone: Tone, text: Sequence[Msg], detail: Sequence[Msg]) -> Insight:
+    return Insight(key, tone, render_en(text), render_en(detail), list(text), list(detail))
+
+
+def _items(msgs: list[Msg], last: str) -> list[Msg]:
+    """Items of a list sentence: ";" after each, `last` after the final one."""
+    return [Msg(m.key, {**m.params, "sep": ";" if i < len(msgs) - 1 else last}) for i, m in enumerate(msgs)]
 
 
 def _group_of(game: GameType) -> str:
@@ -177,40 +190,46 @@ def _z_text(z: float) -> str:
 
 def game_insights(overview: decline.Overview, patient: User) -> list[Insight]:
     out: list[Insight] = []
-    learning: list[str] = []
+    learning: list[Msg] = []
     groups: dict[str, list[tuple[GameType, float, float | None]]] = {}
     for game, result in overview.games.items():
         if game not in overview.tracked or result.sessions == 0:
             continue
         if result.z is None:
-            learning.append(f"{GAME_NAMES[game]} {result.sessions}/{result.sessions_needed} sessions")
+            learning.append(
+                msg("insight.learning_item", game=game.value, sessions=result.sessions, needed=result.sessions_needed)
+            )
             continue
         groups.setdefault(_group_of(game), []).append((game, result.z, result.score))
     for group in ("memory", "thinking", "orientation"):
         members = groups.get(group)
         if not members:
             continue
-        detail = "; ".join(
-            f"{GAME_NAMES[g]}: z = {_z_text(z)}" + (f", recent average {score:.2f}" if score is not None else "")
+        items = [
+            msg("insight.z_item_score", game=g.value, z=_z_text(z), score=f"{score:.2f}")
+            if score is not None
+            else msg("insight.z_item", game=g.value, z=_z_text(z))
             for g, z, score in sorted(members, key=lambda m: m[1])
-        )
-        detail += ". z compares the last 5 sessions with their own normal; below −0.5 is Watch, below −1.5 Declining."
+        ]
+        detail = [*_items(items, "."), msg("insight.z_note")]
         worst_game, worst_z, _ = min(members, key=lambda m: m[1])
-        title = GROUP_TITLES[group]
         if worst_z >= -0.5:
-            out.append(Insight(f"games_{group}", "good", f"{title} steady this month", detail))
+            out.append(_insight(f"games_{group}", "good", [msg(f"insight.steady.{group}")], detail))
             continue
-        lower = "lower" if worst_z < -1.5 else "a little lower"
-        subject = GAME_NAMES[worst_game] if len([m for m in members if m[1] < -0.5]) == 1 else title
-        out.append(Insight(f"games_{group}", "attention", f"{subject} {lower} this month", detail))
+        lower = "lower" if worst_z < -1.5 else "little_lower"
+        if len([m for m in members if m[1] < -0.5]) == 1:
+            title = msg(f"insight.game_{lower}", game=worst_game.value)
+        else:
+            title = msg(f"insight.{lower}.{group}")
+        out.append(_insight(f"games_{group}", "attention", [title], detail))
     if learning:
         n = len(learning)
         out.append(
-            Insight(
+            _insight(
                 "games_learning",
                 "neutral",
-                f"Still learning {first_name(patient)}'s normal for {n} {'game' if n == 1 else 'games'}",
-                "Each game needs 15 finished sessions before it is compared: " + "; ".join(learning) + ".",
+                [msg("insight.learning", name=first_name(patient), n=n)],
+                [msg("insight.learning_intro"), *_items(learning, ".")],
             )
         )
     return out
@@ -247,16 +266,16 @@ def dose_insight(db: Session, patient_id: int, today: date) -> Insight | None:
     w = dose_counts(db, patient_id, today - timedelta(days=6), today)
     if w.taken + w.missed + w.unsure == 0:
         return None
-    detail = (
-        f"Last 7 days, medicine reminders only: taken {w.taken}"
-        + (f" ({w.taken_late} confirmed later)" if w.taken_late else "")
-        + f", missed {w.missed}, not sure {w.unsure}."
-    )
+    detail = [
+        msg("insight.doses_detail_late", taken=w.taken, late=w.taken_late, missed=w.missed, unsure=w.unsure)
+        if w.taken_late
+        else msg("insight.doses_detail", taken=w.taken, missed=w.missed, unsure=w.unsure)
+    ]
     if w.unsure:
-        return Insight("doses", "attention", f"{w.unsure} {'dose' if w.unsure == 1 else 'doses'} unsure this week", detail)
+        return _insight("doses", "attention", [msg("insight.doses_unsure", n=w.unsure)], detail)
     if w.missed:
-        return Insight("doses", "attention", f"{w.missed} {'dose' if w.missed == 1 else 'doses'} missed this week", detail)
-    return Insight("doses", "good", f"All {w.taken} {'dose' if w.taken == 1 else 'doses'} taken this week", detail)
+        return _insight("doses", "attention", [msg("insight.doses_missed", n=w.missed)], detail)
+    return _insight("doses", "good", [msg("insight.doses_taken", n=w.taken)], detail)
 
 
 def _days_played(db: Session, patient_id: int, start: datetime, end: datetime) -> set[date]:
@@ -274,9 +293,10 @@ def activity_insight(db: Session, patient: User, now: datetime) -> Insight:
     played = _days_played(db, patient.id, start, now + timedelta(seconds=1))
     n = len(played)
     tone: Tone = "good" if n >= 4 else ("neutral" if n else "attention")
-    text = f"Played on {n} of the last 7 days" if n else f"{first_name(patient)} didn't play this week"
-    days = ", ".join(_day_text(d) for d in sorted(played)) or "none"
-    return Insight("activity", tone, text, f"Days with at least one game: {days}.")
+    text = msg("insight.played", n=n) if n else msg("insight.not_played", name=first_name(patient))
+    days = [d.isoformat() for d in sorted(played)]
+    detail = msg("insight.played_days", days=days) if days else msg("insight.played_none")
+    return _insight("activity", tone, [text], [detail])
 
 
 def insights(db: Session, patient: User, now: datetime) -> list[Insight]:
@@ -371,41 +391,68 @@ class TimelineEvent:
     detail: str = ""
     tone: Tone = "neutral"
     game_type: GameType | None = None
+    title_i18n: list[Msg] | None = None
+    detail_i18n: list[Msg] | None = None
+
+
+def _event(
+    at: datetime,
+    kind: EventKind,
+    title: Msg,
+    detail: Msg | None = None,
+    tone: Tone = "neutral",
+    game_type: GameType | None = None,
+    detail_text: str = "",
+) -> TimelineEvent:
+    """A timeline line made from messages; `detail_text` is a detail with no message (a device name)."""
+    return TimelineEvent(
+        at,
+        kind,
+        render_en([title]),
+        render_en([detail]) if detail else detail_text,
+        tone,
+        game_type,
+        [title],
+        [detail] if detail else None,
+    )
 
 
 def _session_event(s: GameSession) -> TimelineEvent:
-    name = GAME_NAMES[s.game_type]
+    game = s.game_type.value
+    at = as_utc(s.started_at)
     if not s.completed:
-        return TimelineEvent(as_utc(s.started_at), "session", f"{name}: stopped early",
-                             f"{s.rounds_correct} of {s.rounds_played} right before stopping", "neutral", s.game_type)
-    level = "" if s.level_start == s.level_end else f", level {s.level_start} → {s.level_end}"
-    return TimelineEvent(as_utc(s.started_at), "session", f"{name}: {s.rounds_correct} of {s.rounds_played} right",
-                         f"Level {s.level_start}{level}" if level else f"Level {s.level_start}", "neutral", s.game_type)
+        detail = msg("tl.stopped_detail", right=s.rounds_correct, played=s.rounds_played)
+        return _event(at, "session", msg("tl.stopped", game=game), detail, "neutral", s.game_type)
+    level = (
+        msg("tl.level", level=s.level_start)
+        if s.level_start == s.level_end
+        else msg("tl.level_change", level=s.level_start, level_end=s.level_end)
+    )
+    title = msg("tl.session", game=game, right=s.rounds_correct, played=s.rounds_played)
+    return _event(at, "session", title, level, "neutral", s.game_type)
 
 
 def _reminder_event(log: ReminderLog) -> TimelineEvent:
     r = log.reminder
-    when = reminders.clock_label(r.time_of_day)
+    when = r.time_of_day.strftime("%H:%M")
     # When it was marked; a log written on another day (a backfill, the missed-sweep after midnight)
     # sits at the reminder's own time on its day instead.
     at = as_utc(log.logged_at)
     if local(at).date() != log.date:
         at = reminders.occurrence(r, log.date)
     if log.status == ReminderStatus.done:
-        how = "confirmed later" if log.late else "done"
-        who = " (marked by family)" if log.marked_by is not None and log.marked_by.value == "caregiver" else ""
-        return TimelineEvent(at, "reminder", f"{r.title} ({when}): {how}{who}", "", "good")
+        how = "late" if log.late else "done"
+        who = "_family" if log.marked_by is not None and log.marked_by.value == "caregiver" else ""
+        return _event(at, "reminder", msg(f"tl.reminder_{how}{who}", title=r.title, time=when), tone="good")
     if log.status == ReminderStatus.unsure:
-        return TimelineEvent(at, "reminder", f"{r.title} ({when}): not sure", "They were asked to check with family.",
-                             "attention")
-    return TimelineEvent(at, "reminder", f"{r.title} ({when}): missed", "", "attention")
+        title = msg("tl.reminder_unsure", title=r.title, time=when)
+        return _event(at, "reminder", title, msg("tl.reminder_unsure_detail"), "attention")
+    return _event(at, "reminder", msg("tl.reminder_missed", title=r.title, time=when), tone="attention")
 
 
 def _label(d: DeviceSession) -> str:
     return "" if d.device_label in ("", "Device") else d.device_label
 
-
-MOOD_WORD = {Mood.good: "Good", Mood.okay: "Okay", Mood.not_so_good: "Not so good"}
 
 SEVERITY_TONE: dict[Severity, Tone] = {Severity.info: "neutral", Severity.warning: "attention", Severity.critical: "attention"}
 
@@ -432,37 +479,41 @@ def timeline(
         out += [e for e in (_reminder_event(log) for log in logs) if e.at >= since]
     if "alert" in wanted:
         for a in db.scalars(select(Alert).where(Alert.patient_id == patient_id, Alert.created_at >= since)):
-            out.append(TimelineEvent(as_utc(a.created_at), "alert", f"Alert ({a.severity.value})", a.message,
-                                     SEVERITY_TONE[a.severity]))
+            title = msg("tl.alert", severity=a.severity.value)
+            out.append(
+                TimelineEvent(
+                    as_utc(a.created_at), "alert", render_en([title]), a.message, SEVERITY_TONE[a.severity], None,
+                    [title], messages.parse_alert(a.message),
+                )
+            )
     if "recording" in wanted:
         for r in db.scalars(
             select(SpeechSample).where(SpeechSample.patient_id == patient_id, SpeechSample.recorded_at >= since)
         ):
             minutes, seconds = divmod(round(r.duration_ms / 1000), 60)
-            out.append(TimelineEvent(as_utc(r.recorded_at), "recording", "Voice task recorded",
-                                     f"Length {minutes}:{seconds:02d}", "good"))
+            detail = msg("tl.recording_detail", length=f"{minutes}:{seconds:02d}")
+            out.append(_event(as_utc(r.recorded_at), "recording", msg("tl.recording"), detail, "good"))
     if "settings" in wanted:
         for e in db.scalars(select(PatientEvent).where(PatientEvent.patient_id == patient_id, PatientEvent.at >= since)):
-            out.append(TimelineEvent(as_utc(e.at), "settings", e.summary))
-        consent_names = {"photos": "Family photos", "voice": "Voice task", "elder_on_behalf": "Using Khayal"}
+            out.append(TimelineEvent(as_utc(e.at), "settings", e.summary, title_i18n=messages.parse_event(e.summary)))
         for c in db.scalars(select(Consent).where(Consent.patient_id == patient_id)):
-            label = consent_names.get(c.kind.value, c.kind.value)
+            kind = c.kind.value
             if as_utc(c.granted_at) >= since:
-                out.append(TimelineEvent(as_utc(c.granted_at), "settings", f"Consent given: {label}"))
+                out.append(_event(as_utc(c.granted_at), "settings", msg("tl.consent_given", consent=kind)))
             if c.withdrawn_at is not None and as_utc(c.withdrawn_at) >= since:
-                out.append(TimelineEvent(as_utc(c.withdrawn_at), "settings", f"Consent withdrawn: {label}"))
+                out.append(_event(as_utc(c.withdrawn_at), "settings", msg("tl.consent_withdrawn", consent=kind)))
         for d in db.scalars(select(DeviceSession).where(DeviceSession.patient_id == patient_id)):
             if as_utc(d.created_at) >= since:
-                out.append(TimelineEvent(as_utc(d.created_at), "settings", "Device paired", _label(d)))
+                out.append(_event(as_utc(d.created_at), "settings", msg("tl.device_paired"), detail_text=_label(d)))
             if d.revoked_at is not None and as_utc(d.revoked_at) >= since:
-                out.append(TimelineEvent(as_utc(d.revoked_at), "settings", "Device signed out", _label(d)))
+                out.append(_event(as_utc(d.revoked_at), "settings", msg("tl.device_signed_out"), detail_text=_label(d)))
     if "mood" in wanted:
         for m in db.scalars(select(MoodCheckin).where(MoodCheckin.patient_id == patient_id, MoodCheckin.answered_at >= since)):
             if m.mood is None:
-                out.append(TimelineEvent(as_utc(m.answered_at), "mood", "Mood question skipped"))
+                out.append(_event(as_utc(m.answered_at), "mood", msg("tl.mood_skipped")))
             else:
                 tone: Tone = "good" if m.mood == Mood.good else "neutral"
-                out.append(TimelineEvent(as_utc(m.answered_at), "mood", f"Feeling: {MOOD_WORD[m.mood]}", "", tone))
+                out.append(_event(as_utc(m.answered_at), "mood", msg("tl.mood", mood=m.mood.value), tone=tone))
     out.sort(key=lambda e: e.at, reverse=True)
     return out[:TIMELINE_LIMIT]
 

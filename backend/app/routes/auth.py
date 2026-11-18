@@ -10,6 +10,7 @@ from app.deps import CurrentCaregiver, CurrentUser, DbSession, Now, client_addre
 from app.models import ConsentKind, Role, User
 from app.presenters import user_out
 from app.schemas import (
+    MyLanguageIn,
     ChangePasswordIn,
     InviteCheckOut,
     LoginIn,
@@ -130,3 +131,12 @@ def pair(
 @router.get("/me", response_model=UserOut)
 def me(user: CurrentUser) -> UserOut:
     return user_out(user)
+
+
+@router.patch("/me", response_model=UserOut)
+def set_my_language(body: MyLanguageIn, caregiver: CurrentCaregiver, db: DbSession) -> UserOut:
+    """A caregiver's own screen language (batch 5b): English or Hindi, stored as their `language`.
+    The elders' app languages are set per elder (PATCH /patients/{id})."""
+    caregiver.language = body.language
+    db.commit()
+    return user_out(caregiver)
