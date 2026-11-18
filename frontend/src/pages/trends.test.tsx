@@ -113,9 +113,13 @@ it("patient page shows the index, game trends with explanations, and secondary s
   expect(word.getByText("This game:", { selector: "span.text-ink-muted", exact: false }).parentElement).toHaveTextContent("This game: Watch");
   expect(word.getByText(/steadier than the overall status \(Declining\)/)).toBeInTheDocument();
 
-  // Games on Watch or Declining open by default; the others start collapsed.
+  // Only Declining charts open by default; Watch and Stable cards stay closed (status still shown).
   expect(screen.getByRole("group", { name: "Memory Match trend" })).toHaveAttribute("open");
-  expect(screen.getByRole("group", { name: "Word Recall trend" })).toHaveAttribute("open");
+  expect(screen.getByRole("group", { name: "Word Recall trend" })).not.toHaveAttribute("open");
+  // Sections needing attention are open, with their status in the heading.
+  expect(screen.getByText("Overall: Declining")).toBeInTheDocument();
+  expect(screen.getByText("Overall trend and signals").closest("details")).toHaveAttribute("open");
+  expect(screen.getByText("Levels and session history").closest("details")).not.toHaveAttribute("open");
   expect(screen.getByRole("group", { name: "Reaction Tap trend" })).not.toHaveAttribute("open");
 
   // Summary card at the top: overall status, latest alert, adherence, last played.

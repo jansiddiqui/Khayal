@@ -14,6 +14,7 @@ import {
   type GameSession,
   type Alert,
   type GameTrend,
+  type IndexStatus,
   type GameType,
   type Signals,
   type Trend,
@@ -104,6 +105,13 @@ const SEVERITY_STYLE = {
 } as const;
 
 const ALERTS_SHOWN = 3;
+
+const STATUS_WORD: Record<IndexStatus, string> = { stable: "Stable", watch: "Watch", declining: "Declining", insufficient: "Learning" };
+
+function gamesHint(attention: number): string {
+  if (attention === 0) return "No game needs attention; Declining games open by themselves.";
+  return `${attention} ${attention === 1 ? "game needs" : "games need"} attention; Declining charts are open.`;
+}
 /** How long a chart stays highlighted after an alert links to it. */
 export const HIGHLIGHT_MS = 2000;
 
@@ -440,6 +448,9 @@ export function PatientDetail() {
       return { type, level: latest?.level_end ?? START_LEVEL, played: latest !== undefined, core: core.includes(type) };
     })
     .filter((l) => l.core || l.played);
+  // Sections open only when something needs attention (Watch or Declining); the rest stay closed.
+  const overallStatus = trend.data?.cognitive_status;
+  const needsAttention = (s: IndexStatus | undefined) => s === "watch" || s === "declining";
   const tracked = (g: GameTrend) => g.game_type === "daily_orientation" || core.includes(g.game_type);
   const trackedTrends = trend.data?.games.filter(tracked) ?? [];
   const moreTrends = trend.data?.games.filter((g) => !tracked(g) && g.sessions > 0) ?? [];
@@ -498,7 +509,11 @@ export function PatientDetail() {
       {/* Alerts are always shown, never collapsed. */}
       <AlertsPanel patientId={patientId} onShowGame={showGame} />
 
-      <Section title="Overall trend and signals" defaultOpen>
+      <Section
+        title="Overall trend and signals"
+        hint={overallStatus ? `Overall: ${STATUS_WORD[overallStatus]}` : undefined}
+        defaultOpen={needsAttention(overallStatus)}
+      >
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           {trend.isSuccess && <IndexChart trend={trend.data} />}
           {trend.isPending && (
@@ -526,7 +541,11 @@ export function PatientDetail() {
         </div>
       )}
       {trend.isSuccess && (
-        <Section title="Games" hint="Games on Watch or Declining are open; tap a game to open or close it." defaultOpen>
+        <Section
+          title="Games"
+          hint={gamesHint(trackedTrends.filter((g) => needsAttention(g.trend_status)).length)}
+          defaultOpen={trackedTrends.some((g) => needsAttention(g.trend_status))}
+        >
           <p className="mb-3 text-sm text-ink-muted">
             Bold line: the average of the last 5 sessions, which is what alerts use. Dots: single sessions. Dashed line and
             shaded band: this patient's usual range (sessions 6–15, ±1.5 standard deviations).
