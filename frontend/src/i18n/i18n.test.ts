@@ -18,7 +18,7 @@ function leaves(value: unknown, prefix = ""): [string, unknown][] {
 
 const ENGLISH_ON_PURPOSE = /^(demo|pair|login|register)\./;
 /** Not text: the direction, and the "Other" relation (no words added for it). */
-const NOT_TEXT = new Set(["dir", "speechLang", "whoIsThis.relations.other"]);
+const NOT_TEXT = new Set(["dir", "speechLang", "whoIsThis.relationNames.other"]);
 
 describe.each([
   ["Hindi", hi],
@@ -110,7 +110,7 @@ describe("review file (docs/i18n/review.md)", () => {
   it("lists every translated string for Jan to review", () => {
     const missing = leaves(en)
       .map(([key]) => key)
-      .filter((key) => !ENGLISH_ON_PURPOSE.test(key) && !["speechLang", "dir"].includes(key) && !key.startsWith("whoIsThis.relations."))
+      .filter((key) => !ENGLISH_ON_PURPOSE.test(key) && !["speechLang", "dir"].includes(key) && key !== "whoIsThis.relationNames.other")
       .filter((key) => !review.includes(`\`${key}\``));
     expect(missing, "run npm run i18n:review").toEqual([]);
     expect(review).toContain("draft — needs native-speaker review");

@@ -48,7 +48,7 @@ def repeat_for(days: list[int]) -> ReminderRepeat:
 # Demo family for the first patient: (name, relation, note, card colour). Colours come from the
 # theme's palette (frontend/src/theme.css) and stay distinct in lightness as well as hue.
 DEMO_FAMILY = [
-    ("Rahul", "Grandson", "Lives in Pune, visits on Sundays.", (14, 94, 99)),  # teal-700
+    ("Rahul", "Grandson (son's son)", "Lives in Pune, visits on Sundays.", (14, 94, 99)),  # teal-700
     ("Meena", "Daughter", "Calls every evening after dinner.", (223, 150, 55)),  # saffron-500
     ("Anil", "Son", "Lives nearby in Andheri.", (89, 61, 27)),  # saffron-900
 ]

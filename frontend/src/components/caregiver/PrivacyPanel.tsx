@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   createShare,
   deleteElderPhoto,
-  errorDetail,
   fetchPhotoBlob,
   linkUrl,
   listDevices,
@@ -20,7 +19,7 @@ import {
 } from "../../api/client";
 import { LoadError } from "./LoadError";
 import { serverDate } from "../../api/client";
-import { dateTimeText, LOCALE, t } from "../../t";
+import { dateTimeText, LOCALE, serverDetail, t } from "../../t";
 
 const when = (iso: string) => dateTimeText(serverDate(iso));
 const day = (iso: string) => serverDate(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
@@ -91,7 +90,7 @@ function ElderPhoto({ patient }: { patient: Patient }) {
           </button>
         )}
         {!patient.photos_enabled && <p className="w-full text-ink-muted">{t.elderPanels.privacy.turnOnPhotos}</p>}
-        {upload.isError && <p role="alert" className="w-full text-danger">{errorDetail(upload.error) ?? t.elderPanels.privacy.uploadFailed}</p>}
+        {upload.isError && <p role="alert" className="w-full text-danger">{serverDetail(upload.error) ?? t.elderPanels.privacy.uploadFailed}</p>}
       </div>
     </div>
   );

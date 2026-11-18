@@ -92,7 +92,7 @@ const GROUPS: [string, string[]][] = [
 ];
 /** English on purpose: shown before the elder's language is known, or to family members. */
 const ENGLISH_ONLY = ["demo.", "pair.", "login.", "register."];
-const SKIP = ["speechLang", "dir", "whoIsThis.relations."];
+const SKIP = ["speechLang", "dir", "whoIsThis.relationNames.other"];
 
 const esc = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
 

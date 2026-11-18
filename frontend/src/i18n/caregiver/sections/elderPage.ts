@@ -137,7 +137,7 @@ export const en = {
     voiceOn: "Weekly picture description · on",
     voiceOff: "Weekly picture description · off",
     privacy: "Privacy, devices and family",
-    privacyHint: "Photo, photo and research consents, signed-in devices, share links",
+    privacyHint: "Photo, voice and research consents, signed-in devices, share links",
     settings: "Settings",
     settingsHint: "Pair a device, language, home city, core games, pinned games, hidden games, festivals, tutorials",
   },
