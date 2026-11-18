@@ -79,7 +79,7 @@ export function VoiceTask() {
               to={`/patient/games/${nextGame.type}`}
               label={copy.games.nextGame}
               note={nextGame.title}
-              icon={<ArrowRight />}
+              icon={<ArrowRight className="flip-rtl" />}
               size="compact"
             />
           ) : (

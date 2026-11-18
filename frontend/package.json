@@ -10,11 +10,14 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:review": "vite-node scripts/i18n-review.ts"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "5.2.8",
     "@fontsource/inter": "5.2.8",
+    "@fontsource/noto-nastaliq-urdu": "5.3.0",
+    "@fontsource/noto-sans-devanagari": "5.3.0",
     "@tanstack/react-query": "^5.62.0",
     "axios": "^1.7.9",
     "lucide-react": "^0.460.0",

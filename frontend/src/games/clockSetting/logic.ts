@@ -1,3 +1,4 @@
+import { copy } from "../../copy";
 import { shuffle, type Rng } from "../types";
 
 /**
@@ -73,21 +74,9 @@ export function addMinutes(t: Time, minutes: number): Time {
   return { h: h === 0 ? 12 : h, m: total % 60 };
 }
 
-const NUMBER_WORDS = [
-  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
-  "thirteen", "fourteen", "quarter", "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
-  "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five",
-];
-
-/** "10 past 11", "half past 3", "quarter to 4", "3 o'clock"; with `asWords`, "twenty to four". */
+/** The time in the patient's language: "10 past 11" / "11 बजकर 10 मिनट"; `asWords` spells the numbers (level 9). */
 export function timeWords(t: Time, asWords = false): string {
-  const n = (x: number) => (asWords ? NUMBER_WORDS[x]! : String(x));
-  const next = t.h === 12 ? 1 : t.h + 1;
-  if (t.m === 0) return `${n(t.h)} o'clock`;
-  if (t.m === 30) return `half past ${n(t.h)}`;
-  if (t.m === 15) return `quarter past ${n(t.h)}`;
-  if (t.m === 45) return `quarter to ${n(next)}`;
-  return t.m < 30 ? `${n(t.m)} past ${n(t.h)}` : `${n(60 - t.m)} to ${n(next)}`;
+  return copy.clockTime(t.h, t.m, asWords);
 }
 
 /** "11:10" */

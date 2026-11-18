@@ -114,7 +114,7 @@ The caregiver UI can be a normal dense dashboard.
 
 ## 5. Data model
 
-- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable), core_games (nullable = default core set, section 7), festivals (nullable = festival question off)
+- **User**: id, name, email, password_hash, role (`patient` | `caregiver`), created_at; patients also: city, pinned_games, voice_task_enabled (default false), voice_consent_at (nullable), core_games (nullable = default core set, section 7), festivals (nullable = festival question off), language (`en` | `hi` | `ur`, Round 2 batch 5), voice_check (JSON, what read-aloud found on the elder's device)
 - **CareLink**: caregiver_id, patient_id (one caregiver can have many patients)
 - **GameSession**: id, patient_id, game_type, level_start, level_end, started_at, ended_at, rounds_played, rounds_correct, avg_reaction_ms, hints_used, emotion_summary (nullable JSON)
 - **GameRound**: id, session_id, level, correct (bool), reaction_ms, hint_used (bool), study_ms (nullable, see section 7), errors (nullable int, games v2 D1: wrong placements/taps, clock error bits, delayed-recall false alarms; not in the composite)
@@ -270,6 +270,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 **File uploads (decided):** photos and audio are sent as the raw request body, one file per request, with the file's own `Content-Type` (e.g. `image/jpeg`, `audio/webm`). No multipart forms, so no `python-multipart` dependency.
 - `GET /patients/{id}/alerts`, `POST /alerts/{id}/ack`
 - `POST /feedback`, `POST /feedback/{id}/voice`; admin: `GET /admin/overview`, `/admin/health`, `/admin/feedback?status=`, `POST /admin/feedback/{id}/status`, `GET /admin/feedback/{id}/voice`, `/admin/users?q=&role=&kind=`, `/admin/log?action=`, `/admin/research-export` (Round 2 batch 3)
+- `PATCH /patients/{id}` takes `language`; `POST /me/voice-check` (elder's device; Round 2 batch 5)
 - `GET /me/mood/today`, `POST /me/mood`, `GET /patients/{id}/mood?days=`; `GET/POST /patients/{id}/memories`, `PUT/DELETE /patients/{id}/memories/{mid}`, `POST/GET/DELETE …/memories/{mid}/photos[/{photo}]`, `POST/GET/DELETE …/memories/{mid}/voice` (Round 2 batch 4)
 - `GET /caregiver/glance`, `GET /patients/{id}/insights`, `GET /patients/{id}/weekly`, `GET /patients/{id}/timeline?days=&kinds=`, `GET /patients/{id}/report?days=` (caregiver views, Round 2 batch 2)
 
@@ -295,7 +296,7 @@ Build one at a time. Each one ends with: app runs, tests pass, README updated, g
 - Backend: routes are thin; logic goes in `services/` and `ml/`.
 - Never commit `data/`, `.env`, uploads or model weights.
 - Every model change ships with an Alembic migration (`backend/migrations/versions/`, autogenerate then review). Never wipe the dev database to change the schema.
-- Keep all user-facing patient text in one file (`frontend/src/copy.ts`) so it can be translated to Hindi later.
+- Keep all user-facing patient text in `frontend/src/i18n/en.ts`, with the same keys in `hi.ts` and `ur.ts` (read through `src/copy.ts`). After changing them, run `npm run i18n:review`.
 - Ask before adding a new dependency that is not listed in section 2.
 - When unsure about a product decision, stop and ask; don't guess.
 
@@ -453,3 +454,34 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
    - Urdu right-to-left with Noto Nastaliq Urdu, Hindi with Noto Sans Devanagari;
    - localised game content;
    - a translation review file at `docs/i18n/review.md`, marked "draft — needs native-speaker review".
+   - **Split (decided):** batch 5 is the patient app in Hindi and Urdu. Caregiver Hindi is **batch 5b**: every caregiver string goes through a `t()` lookup in the same way, before any further work.
+   - **Built** (batch 5; screenshots at 375 × 667 in `docs/i18n/screens/`):
+     - **Where the words live:**
+       - `frontend/src/i18n/en.ts` is the source (type `Copy`); `hi.ts` and `ur.ts` have the same shape, so a missing key fails the build.
+       - `src/copy.ts` picks the elder's language once, when the app starts, from the device (`khayal.lang`, `src/i18n/language.ts`).
+       - A change saves the new language and reloads the app, so every screen switches together.
+       - Pairing, the demo, sign-in and sign-up stay English: the elder's language isn't known yet when pairing, and the others are for family members.
+     - **Language setting:**
+       - The caregiver sets it per elder under Settings → Language (English / हिन्दी / اردو): `User.language`, migration 0016. The patient never has to find it.
+       - The elder's phone switches the next time the app comes to the front (it re-reads `/auth/me`).
+       - A language change shows on the timeline.
+     - **Words:**
+       - Everyday spoken Hindi and Urdu ("दवाई" / "دوائی", not "औषधि"; "दबाइए" for tap); digits stay 0–9. Lines that would need a noun's gender are written so they don't ("चाबी: किस ख़ाने में?").
+       - Game content is localised:
+         - Word Recall uses the common spoken word for each of the same 24 concrete things.
+         - Days, months, seasons, times of day, cities and festivals are translated.
+         - "Set the clock" says times the way people do (साढ़े / सवा / पौने, डेढ़ and ढाई; ساڑھے / سوا / پونے, ڈیڑھ, ڈھائی), and spells numbers out at level 9.
+         - Market day items keep their prices, and Urdu keeps "₹35" left to right inside the sentence.
+         - Family relations become "आपके पोते" / "آپ کے پوتے".
+     - **Urdu layout:**
+       - `dir="rtl"`, Noto Nastaliq Urdu (`@fontsource/noto-nastaliq-urdu`), line height about 2 (1.6 inside buttons), headings at the 32px minimum.
+       - Direction arrows flip (`.flip-rtl`). The English demo banner stays left to right.
+       - Hindi uses Noto Sans Devanagari after Atkinson Hyperlegible.
+     - **Short phones:** under 700px tall, the page padding, greeting size and Home card text shrink a little, and Urdu's line height drops to 1.75 (1.45 in buttons). Home's 3 buttons and a game's answers stay on screen at 375 × 667 in all three languages. Text stays ≥ 20px.
+     - **Read-aloud** (`src/readAloud/voices.ts`):
+       - Each language picks a matching voice (hi-IN; ur-IN or ur-PK).
+       - Urdu without an Urdu voice uses a Hindi voice that speaks the **Hindi twin** of each Urdu sentence (`src/i18n/speechTwin.ts`), because a Hindi voice can't read Urdu script. Names the family typed are spoken as written.
+       - With no voice for the language, Read aloud stays silent rather than reading the script with an English voice.
+       - The elder's phone reports what it found (`POST /me/voice-check`, stored in `User.voice_check`). The caregiver sees it under Settings → Language: "No Urdu voice, so Urdu is read aloud with a Hindi voice", or how to add a voice.
+       - Tested on this Windows 11 PC: Chrome lists only English voices (Microsoft David, Ravi, Heera, Mark, Zira). Hindi needs Windows' Hindi speech pack or Chrome's online Google हिन्दी voice. Android Chrome could not be tested here; the phone's own report covers it.
+     - **Review:** `docs/i18n/review.md` (`npm run i18n:review`) lists all 423 strings by screen as key | English | Hindi | Urdu | Hindi status | Urdu status. Rows are `draft` until Jan marks them; regenerating keeps the marks.

@@ -41,7 +41,7 @@ export function MoodCheckin() {
       <Layout title={m.thanks} spoken={answered === "not_so_good" ? `${m.thanks} ${m.gentle}` : m.thanks}>
         {answered === "not_so_good" && <p className="text-2xl">{m.gentle}</p>}
         <div className="mt-auto">
-          <BigButton label={m.continue} icon={<ArrowRight />} onClick={() => void queryClient.invalidateQueries({ queryKey: ["moodToday"] })} />
+          <BigButton label={m.continue} icon={<ArrowRight className="flip-rtl" />} onClick={() => void queryClient.invalidateQueries({ queryKey: ["moodToday"] })} />
         </div>
       </Layout>
     );
@@ -66,7 +66,7 @@ export function MoodCheckin() {
         ))}
       </div>
       <div className="pt-2">
-        <BigButton label={m.skip} icon={<ArrowRight />} variant="secondary" onClick={() => !save.isPending && save.mutate(null)} />
+        <BigButton label={m.skip} icon={<ArrowRight className="flip-rtl" />} variant="secondary" onClick={() => !save.isPending && save.mutate(null)} />
       </div>
     </Layout>
   );

@@ -12,6 +12,64 @@ body {
   line-height: 1.5;
 }
 
+/* Urdu patient app (Round 2 batch 5): Nastaliq first. Its letters reach far above and below the
+   line, so every line gets about twice its size, and headings keep to the 32px minimum (section 4)
+   so a question still fits on a phone. The page is right to left (dir="rtl" on <html>, src/copy.ts). */
+:root[lang="ur"] body {
+  font-family: var(--font-urdu), var(--font-patient);
+  line-height: 2.1;
+}
+/* Every element, including Tailwind's text-* sizes, which carry their own (tighter) line height. */
+:root[lang="ur"] body * {
+  line-height: 1.95;
+}
+:root[lang="ur"] .text-4xl,
+:root[lang="ur"] .text-3xl {
+  font-size: 1.6rem;
+}
+/* Single lines (buttons, links) can sit closer: there is no line above or below to collide with. */
+:root[lang="ur"] body button,
+:root[lang="ur"] body button *,
+:root[lang="ur"] body a,
+:root[lang="ur"] body a * {
+  line-height: 1.6;
+}
+
+/* Short phones (under 700px tall, e.g. 375 x 667): a little less air, so Home's three buttons and a
+   game's answers stay on screen in every language (Round 2 batch 5). Text stays at 20px or more. */
+@media (max-height: 700px) {
+  [data-patient-layout] {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  [data-patient-layout] h1 {
+    font-size: 1.6rem;
+  }
+  [data-home-card] p:last-child {
+    font-size: 1.1rem;
+  }
+  :root[lang="ur"] [data-patient-layout] * {
+    line-height: 1.75;
+  }
+  :root[lang="ur"] [data-patient-layout] button,
+  :root[lang="ur"] [data-patient-layout] button *,
+  :root[lang="ur"] [data-patient-layout] a,
+  :root[lang="ur"] [data-patient-layout] a * {
+    line-height: 1.45;
+  }
+}
+
+/* The top bar's words sit low in Nastaliq: a little room above the border. */
+:root[lang="ur"] [data-patient-layout] header a,
+:root[lang="ur"] [data-patient-layout] header button {
+  padding-bottom: 0.75rem;
+}
+
+/* Arrows point the way you read. */
+:root[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
 /* Headings wrap evenly; body text avoids a lone last word. */
 h1,
 h2,

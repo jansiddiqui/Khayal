@@ -97,9 +97,9 @@ function MemoryPage({ memory, index, total, onNext, onBack }: { memory: Memory; 
           <BigButton label={memory.voice_url ? m.listen : m.readStory} icon={<Volume2 />} variant="secondary" onClick={() => void listen.start()} />
         )}
         {total > 1 ? (
-          <BigButton label={m.nextMemory} icon={<ArrowRight />} note={m.memoryOf(index + 1, total)} onClick={onNext} />
+          <BigButton label={m.nextMemory} icon={<ArrowRight className="flip-rtl" />} note={m.memoryOf(index + 1, total)} onClick={onNext} />
         ) : (
-          <BigButton label={copy.whoIsThis.back} icon={<ArrowLeft />} onClick={onBack} />
+          <BigButton label={copy.whoIsThis.back} icon={<ArrowLeft className="flip-rtl" />} onClick={onBack} />
         )}
       </div>
     </Layout>
@@ -167,7 +167,7 @@ export function Memories() {
                   cue("tap");
                   setParams({ memory: String(memory.id) });
                 }}
-                className={`flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-left shadow-lift hover:border-brand-dark ${pressable}`}
+                className={`flex flex-col overflow-hidden rounded-2xl border-4 border-brand bg-surface text-start shadow-lift hover:border-brand-dark ${pressable}`}
               >
                 <AuthedImage src={memory.photos[0]!.url} alt="" className="aspect-[4/3] w-full object-cover" />
                 <span className="px-3 py-2 text-2xl font-bold leading-tight">{memory.title}</span>

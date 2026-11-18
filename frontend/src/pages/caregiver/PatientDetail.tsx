@@ -1,5 +1,6 @@
 import { InsightsList } from "../../components/caregiver/Insights";
 import { MoodStrip } from "../../components/caregiver/MoodStrip";
+import { LanguageForm } from "../../components/caregiver/LanguageForm";
 import { Timeline } from "../../components/caregiver/Timeline";
 import { WeeklySummary } from "../../components/caregiver/WeeklySummary";
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, FileText, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
@@ -733,9 +734,10 @@ export function PatientDetail() {
       )}
 
       {patient && (
-        <Section id="settings" title="Settings" hint="Pair a device, home city, core games, pinned games, festivals, tutorials">
+        <Section id="settings" title="Settings" hint="Pair a device, language, home city, core games, pinned games, festivals, tutorials">
           <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-4" aria-label="Settings">
             <PairDevicePanel patientId={patient.id} patientName={patient.name} />
+            <LanguageForm key={`lang-${patient.language ?? "en"}`} patient={patient} />
             <CityForm key={`city-${patient.city ?? ""}`} patientId={patient.id} city={patient.city} />
             <CoreGamesForm key={`core-${patient.core_games.join()}`} patient={patient} />
             <PinForm

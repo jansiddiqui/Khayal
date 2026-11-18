@@ -235,7 +235,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
             <Check aria-hidden="true" className="mt-1 size-9 shrink-0 text-calm" />
             <span>{copy.games.wordRecall.delayedThanks}</span>
           </p>
-          <BigButton label={copy.games.next} icon={<ArrowRight />} onClick={() => setPhase({ kind: "intro" })} />
+          <BigButton label={copy.games.next} icon={<ArrowRight className="flip-rtl" />} onClick={() => setPhase({ kind: "intro" })} />
         </Guarded>
       );
 
@@ -324,7 +324,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
             </p>
             <BigButton
               label={copy.games.next}
-              icon={<ArrowRight />}
+              icon={<ArrowRight className="flip-rtl" />}
               onClick={() => setPhase({ kind: "playing", round: phase.round + 1 })}
             />
           </motion.div>
@@ -383,7 +383,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
               to={nextGame.to}
               label={copy.games.nextGame}
               note={nextGame.title}
-              icon={<ArrowRight />}
+              icon={<ArrowRight className="flip-rtl" />}
             />
           ) : (
             <BigButton to="/patient" label={copy.games.backHome} icon={<House />} />

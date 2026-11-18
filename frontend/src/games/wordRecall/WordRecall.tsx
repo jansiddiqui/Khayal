@@ -123,7 +123,7 @@ export function WordRecallRound({ level, onComplete, rng = Math.random }: RoundP
             {copy.words[round.shown[step.index]!]}
           </motion.span>
         </p>
-        <BigButton label={copy.games.wordRecall.nextWord} icon={<ArrowRight />} size="compact" onClick={nextWord} />
+        <BigButton label={copy.games.wordRecall.nextWord} icon={<ArrowRight className="flip-rtl" />} size="compact" onClick={nextWord} />
       </div>
     );
   }

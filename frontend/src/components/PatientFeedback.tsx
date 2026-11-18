@@ -53,7 +53,7 @@ export function PatientFeedback({ onDone }: { onDone: () => void }) {
         <p className="text-2xl">{f.question}</p>
         <BigButton label={f.hard} icon={<CircleHelp />} variant="secondary" onClick={() => setKind("hard")} />
         <BigButton label={f.liked} icon={<Smile />} variant="secondary" onClick={() => setKind("liked")} />
-        <BigButton label={f.back} icon={<ArrowLeft />} variant="secondary" onClick={onDone} />
+        <BigButton label={f.back} icon={<ArrowLeft className="flip-rtl" />} variant="secondary" onClick={onDone} />
       </div>
     );
   }

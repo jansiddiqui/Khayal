@@ -186,7 +186,7 @@ export function ObjectLocationRound({ level, practice = false, onComplete, rng =
           className={`mt-auto flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border-4 border-brand bg-brand px-4 text-2xl font-bold text-white ${pressable}`}
         >
           {phase.index + 1 < total ? t.next : t.ready}
-          <ArrowRight aria-hidden="true" className="size-7" />
+          <ArrowRight aria-hidden="true" className="flip-rtl size-7" />
         </button>
       )}
       {phase.kind === "show" && (
@@ -200,7 +200,7 @@ export function ObjectLocationRound({ level, practice = false, onComplete, rng =
           className={`mt-auto flex min-h-[64px] w-full items-center justify-center gap-3 rounded-2xl border-4 border-brand bg-brand px-4 text-2xl font-bold text-white ${pressable}`}
         >
           {t.next}
-          <ArrowRight aria-hidden="true" className="size-7" />
+          <ArrowRight aria-hidden="true" className="flip-rtl size-7" />
         </button>
       )}
     </div>

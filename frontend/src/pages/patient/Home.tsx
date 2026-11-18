@@ -45,6 +45,7 @@ export function PatientHome() {
   return (
     <Layout title={copy.patientHome.greetingAt(firstName, new Date().getHours())} snug>
       <section
+        data-home-card
         aria-labelledby="next-reminder"
         className="flex items-start gap-3 rounded-2xl border-4 border-calm bg-calm-soft px-4 py-2.5"
       >
@@ -63,7 +64,7 @@ export function PatientHome() {
           )}
         </div>
       </section>
-      <nav aria-label="Main actions" className="flex flex-col gap-3">
+      <nav aria-label={copy.a11y.mainActions} className="flex flex-col gap-3">
         {/* Today's progress lives in the buttons it belongs to: words, plus a ring that fills. */}
         <BigButton
           to="/patient/games"

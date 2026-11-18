@@ -1,4 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { LANGUAGE } from "../copy";
+import { isLanguage, saveLanguage, type Language } from "../i18n/language";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as apiClient from "../api/client";
 import type { DemoStart, RegisterInput, TokenResponse, User } from "../api/client";
@@ -40,6 +42,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [state.status]);
+
+  // The patient app shows the language the family chose for this elder; caregiver screens stay
+  // English (Hindi for caregivers is batch 5b). A different language is saved and the app reloads,
+  // so every screen switches together (src/copy.ts).
+  useEffect(() => {
+    if (state.status !== "authenticated") return;
+    const user = state.user;
+    const wanted: Language = user.role === "patient" && isLanguage(user.language) ? user.language : "en";
+    if (saveLanguage(wanted, LANGUAGE)) window.location.reload();
+  }, [state]);
+
+  // A change the family makes reaches the elder's phone the next time the app comes to the front.
+  useEffect(() => {
+    if (state.status !== "authenticated" || state.user.role !== "patient") return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      apiClient
+        .getMe()
+        .then((user) => setState((prev) => (prev.status === "authenticated" && prev.user.language !== user.language ? { status: "authenticated", user } : prev)))
+        .catch(() => undefined);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [state]);
 
   const accept = useCallback((response: TokenResponse): User => {
     apiClient.tokenStore.set(response.access_token);

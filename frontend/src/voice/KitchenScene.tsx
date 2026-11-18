@@ -1,3 +1,4 @@
+import { copy } from "../copy";
 /**
  * The voice-task picture: an original flat illustration of a busy Indian home kitchen with
  * several things happening at once, so there is a lot to describe. A mother cooks at the
@@ -14,7 +15,7 @@ const MILK = "#fffdf6";
 
 export function KitchenScene({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 480 360" className={className} role="img" aria-label="A picture of a busy kitchen">
+    <svg viewBox="0 0 480 360" className={className} role="img" aria-label={copy.a11y.kitchenPicture}>
       {/* Wall and tiled floor */}
       <rect x="0" y="0" width="480" height="292" fill="#f3e3c3" />
       <rect x="0" y="290" width="480" height="70" fill="#d08a5c" />
