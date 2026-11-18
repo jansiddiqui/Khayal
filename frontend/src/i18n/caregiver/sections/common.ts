@@ -76,7 +76,38 @@ export const en = {
   errors: {
     loadFailed: "This didn't load. Check the connection and try again.",
     saveFailed: "That didn't save. Please try again.",
+    /** "Error 413: Photos must be 5 MB or smaller." */
+    withStatus: (status: number, reason: string) => `Error ${status}: ${reason}`,
+    noAnswer: (reason: string) => `No answer from the server (${reason}).`,
+    timeout: (seconds: number) => `No answer from the server after ${seconds} seconds.`,
+    unknown: "Something went wrong.",
   },
+  /** The server's own reasons (upload checks and not-found), by their English text; {n} is a
+   * number. A reason not listed here is shown in English. Kept in step with the backend by
+   * backend/tests/test_messages.py. */
+  serverErrors: {
+    "Photos must be {n} MB or smaller.": "Photos must be {n} MB or smaller.",
+    "Only JPG and PNG photos are allowed.": "Only JPG and PNG photos are allowed.",
+    "That file is not a photo we can open.": "That file is not a photo we can open.",
+    "In the demo, photos must be {n} MB or smaller after resizing.": "In the demo, photos must be {n} MB or smaller after resizing.",
+    "Each person can have up to {n} photos.": "Each person can have up to {n} photos.",
+    "A memory can have up to {n} photos.": "A memory can have up to {n} photos.",
+    "Turn on photos for this person first.": "Turn on photos for this person first.",
+    "Voice notes need the voice opt-in for this person.": "Voice notes need the voice opt-in for this person.",
+    "Voice notes must be WebM or Ogg audio.": "Voice notes must be WebM or Ogg audio.",
+    "Voice notes can be up to {n} minutes long.": "Voice notes can be up to {n} minutes long.",
+    "That file is not a recording we can open.": "That file is not a recording we can open.",
+    "Recordings must be WebM or Ogg audio.": "Recordings must be WebM or Ogg audio.",
+    "Recordings must be {n} MB or smaller.": "Recordings must be {n} MB or smaller.",
+    "The recording length is not valid.": "The recording length is not valid.",
+    "The voice task is not turned on.": "The voice task is not turned on.",
+    "Photo not found": "Photo not found",
+    "Memory not found": "Memory not found",
+    "Family member not found": "Family member not found",
+    "Recording not found": "Recording not found",
+    "No voice note": "No voice note",
+    "Patient not found": "Patient not found",
+  } as Record<string, string>,
   /** Index and per-game status on one scale (CLAUDE.md section 6). */
   status: {
     stable: "Stable",
@@ -89,9 +120,15 @@ export const en = {
   severity: { info: "Info", warning: "Warning", critical: "Critical" },
   /** Clinical game names on caregiver screens. */
   games,
+  /** Relations by their stored (English) value. Indian families tell a son's and a daughter's
+   * children apart; plain "Grandson" / "Granddaughter" stay for older records. */
   relations: {
     Son: "Son",
     Daughter: "Daughter",
+    "Grandson (son's son)": "Grandson (son's son)",
+    "Grandson (daughter's son)": "Grandson (daughter's son)",
+    "Granddaughter (son's daughter)": "Granddaughter (son's daughter)",
+    "Granddaughter (daughter's daughter)": "Granddaughter (daughter's daughter)",
     Grandson: "Grandson",
     Granddaughter: "Granddaughter",
     Wife: "Wife",
@@ -145,6 +182,33 @@ export const hi: typeof en = {
   errors: {
     loadFailed: "यह खुल नहीं पाया। इंटरनेट देखकर फिर से कोशिश करें।",
     saveFailed: "यह सेव नहीं हुआ। फिर से कोशिश करें।",
+    withStatus: (status: number, reason: string) => `गड़बड़ी ${status}: ${reason}`,
+    noAnswer: (reason: string) => `सर्वर से जवाब नहीं आया (${reason})।`,
+    timeout: (seconds: number) => `${seconds} सेकंड तक सर्वर से जवाब नहीं आया।`,
+    unknown: "कुछ गड़बड़ हो गई।",
+  },
+  serverErrors: {
+    "Photos must be {n} MB or smaller.": "फ़ोटो {n} MB या उससे छोटी होनी चाहिए।",
+    "Only JPG and PNG photos are allowed.": "सिर्फ़ JPG और PNG फ़ोटो ही चलती हैं।",
+    "That file is not a photo we can open.": "यह फ़ाइल ऐसी फ़ोटो नहीं है जिसे हम खोल सकें।",
+    "In the demo, photos must be {n} MB or smaller after resizing.": "डेमो में, छोटा करने के बाद फ़ोटो {n} MB या उससे छोटी होनी चाहिए।",
+    "Each person can have up to {n} photos.": "हर व्यक्ति की ज़्यादा से ज़्यादा {n} फ़ोटो हो सकती हैं।",
+    "A memory can have up to {n} photos.": "एक याद में ज़्यादा से ज़्यादा {n} फ़ोटो हो सकती हैं।",
+    "Turn on photos for this person first.": "पहले इनके लिए फ़ोटो चालू करें।",
+    "Voice notes need the voice opt-in for this person.": "आवाज़ वाले संदेश के लिए पहले इनकी आवाज़ की सहमति चालू करें।",
+    "Voice notes must be WebM or Ogg audio.": "आवाज़ वाला संदेश WebM या Ogg ऑडियो होना चाहिए।",
+    "Voice notes can be up to {n} minutes long.": "आवाज़ वाला संदेश ज़्यादा से ज़्यादा {n} मिनट का हो सकता है।",
+    "That file is not a recording we can open.": "यह फ़ाइल ऐसी रिकॉर्डिंग नहीं है जिसे हम खोल सकें।",
+    "Recordings must be WebM or Ogg audio.": "रिकॉर्डिंग WebM या Ogg ऑडियो होनी चाहिए।",
+    "Recordings must be {n} MB or smaller.": "रिकॉर्डिंग {n} MB या उससे छोटी होनी चाहिए।",
+    "The recording length is not valid.": "रिकॉर्डिंग की लंबाई सही नहीं है।",
+    "The voice task is not turned on.": "आवाज़ वाला काम चालू नहीं है।",
+    "Photo not found": "फ़ोटो नहीं मिली",
+    "Memory not found": "याद नहीं मिली",
+    "Family member not found": "परिवार का यह व्यक्ति नहीं मिला",
+    "Recording not found": "रिकॉर्डिंग नहीं मिली",
+    "No voice note": "कोई आवाज़ वाला संदेश नहीं है",
+    "Patient not found": "यह बुज़ुर्ग नहीं मिले",
   },
   status: {
     stable: "स्थिर",
@@ -171,8 +235,12 @@ export const hi: typeof en = {
   relations: {
     Son: "बेटा",
     Daughter: "बेटी",
-    Grandson: "पोता",
-    Granddaughter: "पोती",
+    "Grandson (son's son)": "पोता",
+    "Grandson (daughter's son)": "नाती",
+    "Granddaughter (son's daughter)": "पोती",
+    "Granddaughter (daughter's daughter)": "नातिन",
+    Grandson: "पोता या नाती",
+    Granddaughter: "पोती या नातिन",
     Wife: "पत्नी",
     Husband: "पति",
     Friend: "दोस्त",

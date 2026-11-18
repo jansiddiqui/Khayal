@@ -1,10 +1,14 @@
 // Hindi patient text (Round 2 batch 5). DRAFT: needs native-speaker review (docs/i18n/review.md).
 // Everyday spoken Hindi ("दवाई", not "औषधि"); digits stay 0-9. Same shape as ./en.ts.
-import { en, type Copy, type RelationId } from "./en";
+import { en, relationId, type Copy, type RelationId } from "./en";
 
 const RELATIONS: Record<RelationId, string> = {
   son: "आपके बेटे",
   daughter: "आपकी बेटी",
+  sons_son: "आपके पोते",
+  daughters_son: "आपके नाती",
+  sons_daughter: "आपकी पोती",
+  daughters_daughter: "आपकी नातिन",
   grandson: "आपके पोते",
   granddaughter: "आपकी पोती",
   wife: "आपकी पत्नी",
@@ -15,11 +19,25 @@ const RELATIONS: Record<RelationId, string> = {
 
 /** "ये राहुल हैं, आपके पोते।" (just "ये राहुल हैं।" for "Other"; a relation we don't know stays as typed). */
 function thisIs(name: string, relation: string): string {
-  const r = relation.trim().toLowerCase();
-  if (r === "other" || !r) return `ये ${name} हैं।`;
-  const word = RELATIONS[r as RelationId];
-  return word ? `ये ${name} हैं, ${word}।` : `ये ${name} हैं (${relation.trim()})।`;
+  const id = relationId(relation);
+  if (id === "other" || !relation.trim()) return `ये ${name} हैं।`;
+  return id ? `ये ${name} हैं, ${RELATIONS[id]}।` : `ये ${name} हैं (${relation.trim()})।`;
 }
+
+const NAMES: Record<RelationId, string> = {
+  son: "बेटा",
+  daughter: "बेटी",
+  sons_son: "पोता",
+  daughters_son: "नाती",
+  sons_daughter: "पोती",
+  daughters_daughter: "नातिन",
+  grandson: "पोता",
+  granddaughter: "पोती",
+  wife: "पत्नी",
+  husband: "पति",
+  friend: "दोस्त",
+  other: "",
+};
 
 const NUMBER_WORDS = [
   "शून्य", "एक", "दो", "तीन", "चार", "पाँच", "छह", "सात", "आठ", "नौ", "दस", "ग्यारह", "बारह",
@@ -465,7 +483,12 @@ export const hi: Copy = {
     photoOf: (name: string) => `${name} की तस्वीर`,
     spoken: (name: string, relation: string, note: string | null) => [thisIs(name, relation), note].filter(Boolean).join(" "),
     thisIs,
-    relations: RELATIONS,
+    /** The relation under a photo ("Grandson", "नाती"); one the family typed stays as typed. */
+    relationName: (relation: string) => {
+      const id = relationId(relation);
+      return id ? NAMES[id] : relation.trim();
+    },
+    relationNames: NAMES,
   },
   voiceTask: {
     title: "तस्वीर के बारे में बताइए",

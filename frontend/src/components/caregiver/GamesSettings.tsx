@@ -5,24 +5,29 @@ import { Button } from "../../ui/Button";
 import { Skeleton } from "../../ui/Skeleton";
 import { useToast } from "../../ui/Toast";
 import { GAME_NAMES } from "./TrendCharts";
-import { copy } from "../../copy";
-import { t } from "../../t";
+import { en as elderEn } from "../../i18n/en";
+import { hi as elderHi } from "../../i18n/hi";
+import { CG_LANGUAGE, t } from "../../t";
 import { FESTIVAL_IDS, type FestivalId } from "../../games/dailyOrientation/festivals";
 
 const CORE_SIZE = 4;
 
-/** What the patient sees each game called (copy.ts), next to the clinical name caregivers see. */
+/** The elder-app words in the caregiver's own language (batch 5b follow-up), not the language of
+ * whatever phone this page is open on: the game titles elders see, and festival names. */
+const words = CG_LANGUAGE === "hi" ? elderHi : elderEn;
+
+/** What the patient sees each game called, next to the clinical name caregivers see. */
 export const PATIENT_TITLES: Partial<Record<GameType, string>> = {
-  memory_match: copy.games.memoryMatch.title,
-  sequence_recall: copy.games.sequenceRecall.title,
-  word_recall: copy.games.wordRecall.title,
-  daily_orientation: copy.games.orientation.title,
-  reaction_tap: copy.games.reactionTap.title,
-  colour_trails: copy.games.colourTrails.title,
-  clock_setting: copy.games.clockSetting.title,
-  money_handling: copy.games.market.title,
-  spatial_span: copy.games.spatialSpan.title,
-  object_location: copy.games.objectLocation.title,
+  memory_match: words.games.memoryMatch.title,
+  sequence_recall: words.games.sequenceRecall.title,
+  word_recall: words.games.wordRecall.title,
+  daily_orientation: words.games.orientation.title,
+  reaction_tap: words.games.reactionTap.title,
+  colour_trails: words.games.colourTrails.title,
+  clock_setting: words.games.clockSetting.title,
+  money_handling: words.games.market.title,
+  spatial_span: words.games.spatialSpan.title,
+  object_location: words.games.objectLocation.title,
 };
 
 /** "Paired Associates (object location) — “Where did it go?”", plus " (domain)" when given. */
@@ -242,7 +247,7 @@ export function FestivalsForm({ patient }: { patient: Patient }) {
                   setChosen(next);
                 }}
               />
-              {copy.festivals[id]}
+              {words.festivals[id]}
             </label>
           ))}
         </div>

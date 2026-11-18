@@ -5,7 +5,8 @@
 //
 // Use: `t.dashboard.title`, `t.common.status.stable`, `t.reminders.dueAt(time)`; dates and times
 // with `LOCALE`; text written by the server with `serverText(text, text_i18n)`.
-import type { GameType, ServerMsg } from "./api/client";
+import axios from "axios";
+import { errorDetail, UploadTimeoutError, type GameType, type ServerMsg } from "./api/client";
 import { cgEn, cgHi, type CgCopy } from "./i18n/caregiver/en";
 import { storedCgLanguage, type CgLanguage } from "./i18n/caregiverLanguage";
 
@@ -97,3 +98,34 @@ export function serverText(text: string, msgs: readonly ServerMsg[] | null | und
   const parts = msgs.map(renderMsg);
   return parts.every((p): p is string => p !== null) ? parts.join(" ") : text;
 }
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A reason the server gave (`detail`), in the caregiver's language when it is a known one. */
+export function serverReason(reason: string): string {
+  for (const [english, shown] of Object.entries(t.common.serverErrors)) {
+    const found = new RegExp(`^${escape(english).replace(escape("{n}"), "(\\d+)")}$`).exec(reason);
+    if (found) return shown.replace("{n}", found[1] ?? "");
+  }
+  return reason;
+}
+
+/** The server's reason for a failed request, translated when known; undefined when it gave none. */
+export function serverDetail(error: unknown): string | undefined {
+  const detail = errorDetail(error);
+  return detail === undefined ? undefined : serverReason(detail);
+}
+
+/** What went wrong with a request, for people to read and report (the caregiver version of
+ * api/client describeRequestError): the status and the server's reason, a timeout, or no answer. */
+export function describeError(error: unknown): string {
+  if (error instanceof UploadTimeoutError) return t.common.errors.timeout(Math.round(error.ms / 1000));
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      return t.common.errors.withStatus(error.response.status, serverDetail(error) ?? (error.response.statusText || error.message));
+    }
+    return t.common.errors.noAnswer(error.message);
+  }
+  return error instanceof Error ? error.message : t.common.errors.unknown;
+}
+

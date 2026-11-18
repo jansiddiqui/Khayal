@@ -6,7 +6,6 @@ import { Link, useParams } from "react-router";
 import {
   createReminder,
   deleteReminder,
-  errorDetail,
   getAdherence,
   listPatients,
   listReminders,
@@ -19,7 +18,7 @@ import {
 import { useAppConfig } from "../../api/useAppConfig";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
-import { t, timeText } from "../../t";
+import { serverDetail, t, timeText } from "../../t";
 import { Button } from "../../ui/Button";
 import { CountUp } from "../../ui/CountUp";
 import { SelectInput, TextInput } from "../../ui/Field";
@@ -351,7 +350,7 @@ export function CaregiverReminders() {
     void queryClient.invalidateQueries({ queryKey: ["adherence", patientId] });
   };
   const msg = t.reminders.toasts;
-  const failed = (error: unknown) => toast.show({ tone: "error", message: msg.saveFailed(errorDetail(error) ?? msg.tryAgain) });
+  const failed = (error: unknown) => toast.show({ tone: "error", message: msg.saveFailed(serverDetail(error) ?? msg.tryAgain) });
 
   useEffect(() => {
     if (highlight === null) return;

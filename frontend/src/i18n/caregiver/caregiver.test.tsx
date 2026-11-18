@@ -62,7 +62,7 @@ describe("with Hindi chosen", () => {
       "मुख्य खेल बदले: शब्द याद करना और पैसों का हिसाब",
     );
     expect(serverText("x", [{ key: "event.family_added", params: { name: "Rahul", relation: "Grandson" } }])).toBe(
-      "परिवार में जोड़ा: Rahul (पोता)",
+      "परिवार में जोड़ा: Rahul (पोता या नाती)",
     );
     // Two decline sentences become two Hindi sentences.
     const two = serverText("x", [

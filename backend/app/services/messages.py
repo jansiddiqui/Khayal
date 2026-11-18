@@ -195,7 +195,8 @@ def _group_pattern(name: str) -> str:
         return _PATTERNS[name]
     if name.startswith("game") and name != "games":
         return _GAME_ALT
-    return ".+"
+    # Lazy, so "Rahul (Grandson (son's son))" reads as name "Rahul" and the whole relation.
+    return ".+?"
 
 
 def _regex(template: str) -> re.Pattern[str]:

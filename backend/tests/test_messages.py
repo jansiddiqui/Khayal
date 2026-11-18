@@ -49,6 +49,8 @@ def test_english_renders_values_by_name() -> None:
 
 STORED_EVENTS = [
     ("Family member added: Rahul (Grandson)", Msg("event.family_added", {"name": "Rahul", "relation": "Grandson"})),
+    ("Family member added: Ravi (Grandson (daughter's son))",
+     Msg("event.family_added", {"name": "Ravi", "relation": "Grandson (daughter's son)"})),
     ("Reminder added: Tea at the club at 4:30 PM", Msg("event.reminder_added", {"title": "Tea at the club", "time": "16:30"})),
     ("Reminder removed: Evening walk", Msg("event.reminder_removed", {"title": "Evening walk"})),
     ("Tutorial will show again: Paired Associates (object location)", Msg("event.tutorial", {"game": "object_location"})),
@@ -134,3 +136,25 @@ def test_api_text_and_messages_agree(client, register, clock) -> None:  # type: 
             checked += 1
     assert checked >= 8
     assert all(e["title_i18n"] for e in events), [e["title"] for e in events if not e["title_i18n"]]
+
+
+COMMON_TS = SERVER_TS.parent / "common.ts"
+UPLOAD_SOURCES = ["services/family.py", "services/memories.py", "services/speech.py", "routes/family.py", "routes/memories.py", "routes/speech.py"]
+
+
+def test_upload_reasons_have_hindi() -> None:
+    """Every reason the upload routes send (English, numbers as {n}) is in the caregiver dictionary."""
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    found: set[str] = set()
+    for name in UPLOAD_SOURCES:
+        text = (app_dir / name).read_text(encoding="utf-8")
+        found |= set(re.findall(r'(?:detail=|Error\()f?"([A-Z][^"{]*(?:\{[^}]+\}[^"{]*)*)"', text))
+    from app.services.speech import too_big_message
+
+    found.add(too_big_message())
+    reasons = {re.sub(r"\{[^}]+\}|\d+", "{n}", r) for r in found}
+    common = COMMON_TS.read_text(encoding="utf-8")
+    block = common[common.index("serverErrors: {"): common.index("} as Record<string, string>,")]
+    assert "Photos must be {n} MB or smaller." in reasons and "Photo not found" in reasons
+    assert reasons - set(re.findall(r'"([^"]+)":', block)) == set()
+

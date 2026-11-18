@@ -7,7 +7,6 @@ import {
   createFamilyMember,
   deleteFamilyMember,
   deleteFamilyPhoto,
-  describeRequestError,
   listFamily,
   listPatients,
   setElderConsent,
@@ -27,7 +26,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { EmptyState } from "../../ui/States";
 import { useToast } from "../../ui/Toast";
 import { useUndoable } from "../../ui/undo";
-import { t } from "../../t";
+import { describeError, t } from "../../t";
 
 const f = t.family;
 
@@ -36,7 +35,22 @@ function relationLabel(relation: string): string {
   return (t.common.relations as Record<string, string>)[relation] ?? relation;
 }
 
-export const RELATIONS = ["Son", "Daughter", "Grandson", "Granddaughter", "Wife", "Husband", "Friend", "Other"] as const;
+/** Stored in English; shown in the caregiver's language (t.common.relations). Indian families tell a
+ * son's and a daughter's children apart (पोता / नाती, पोती / नातिन). */
+export const RELATIONS = [
+  "Son",
+  "Daughter",
+  "Grandson (son's son)",
+  "Grandson (daughter's son)",
+  "Granddaughter (son's daughter)",
+  "Granddaughter (daughter's daughter)",
+  "Wife",
+  "Husband",
+  "Friend",
+  "Other",
+] as const;
+/** Older records may say just "Grandson" / "Granddaughter": still valid, offered when editing one. */
+const OLDER_RELATIONS = ["Grandson", "Granddaughter"];
 const OTHER = "Other";
 export const MAX_PHOTOS = 5;
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -189,7 +203,7 @@ function usePhotoUploads(patientId: number, onSaved: (count: number) => void) {
         saved += 1;
         void queryClient.invalidateQueries({ queryKey: ["family", patientId] });
       } catch (error) {
-        setProblem(f.photos.uploadFailed(files.length > 1 ? file.name : null, describeRequestError(error)));
+        setProblem(f.photos.uploadFailed(files.length > 1 ? file.name : null, describeError(error)));
         setFailed({ memberId, files: files.slice(i) });
         if (saved) onSaved(saved);
         return;
@@ -204,7 +218,7 @@ function usePhotoUploads(patientId: number, onSaved: (count: number) => void) {
   return { job, failed, problem, setProblem, uploadAll, busy: job !== null };
 }
 
-function MemberForm({
+export function MemberForm({
   initial,
   submitLabel,
   busy,
@@ -219,7 +233,10 @@ function MemberForm({
   onCancel?: () => void;
   children?: ReactNode;
 }) {
-  const known = (RELATIONS as readonly string[]).includes(initial.relation);
+  const options: readonly string[] = OLDER_RELATIONS.includes(initial.relation)
+    ? [...RELATIONS.slice(0, 2), initial.relation, ...RELATIONS.slice(2)]
+    : RELATIONS;
+  const known = options.includes(initial.relation);
   const [name, setName] = useState(initial.name);
   const [choice, setChoice] = useState<string>(known || !initial.relation ? initial.relation || "Son" : OTHER);
   const [custom, setCustom] = useState(known ? "" : initial.relation);
@@ -249,10 +266,10 @@ function MemberForm({
           wrapperClassName="w-56"
           autoComplete="off"
         />
-        <SelectInput label={f.form.relation} value={choice} onChange={(e) => setChoice(e.target.value)} wrapperClassName="w-44">
-          {RELATIONS.map((r) => (
+        <SelectInput label={f.form.relation} value={choice} onChange={(e) => setChoice(e.target.value)} wrapperClassName="w-64">
+          {options.map((r) => (
             <option key={r} value={r}>
-              {t.common.relations[r]}
+              {relationLabel(r)}
             </option>
           ))}
         </SelectInput>

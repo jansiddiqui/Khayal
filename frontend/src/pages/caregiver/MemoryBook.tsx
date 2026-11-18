@@ -6,7 +6,6 @@ import {
   addMemoryPhoto,
   createMemory,
   deleteMemory,
-  errorDetail,
   fetchPhotoBlob,
   listMemories,
   listPatients,
@@ -25,7 +24,7 @@ import { TextInput } from "../../ui/Field";
 import { Skeleton } from "../../ui/Skeleton";
 import { EmptyState } from "../../ui/States";
 import { useRecorder, type Recording } from "../../voice/useRecorder";
-import { t } from "../../t";
+import { serverDetail, t } from "../../t";
 
 const w = t.memoryBook;
 
@@ -143,7 +142,7 @@ function NewMemory({ patient, onDone }: { patient: Patient; onDone: () => void }
       )}
       {save.isError && (
         <p role="alert" className="text-danger">
-          {errorDetail(save.error) ?? w.form.saveFailed}
+          {serverDetail(save.error) ?? w.form.saveFailed}
         </p>
       )}
       <div className="flex gap-2">
@@ -276,7 +275,7 @@ function MemoryCard({ patient, memory }: { patient: Patient; memory: Memory }) {
       )}
       {error && (
         <p role="alert" className="text-danger">
-          {errorDetail(error) ?? w.card.failed}
+          {serverDetail(error) ?? w.card.failed}
         </p>
       )}
     </article>

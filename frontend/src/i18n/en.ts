@@ -2,12 +2,50 @@
 // ./hi.ts and ./ur.ts with the same shape (type Copy); src/copy.ts picks the elder's language.
 // Review file for translators: docs/i18n/review.md (python -m scripts.i18n_review writes it).
 
-/** The relations a caregiver can pick (pages/caregiver/Family.tsx RELATIONS), lower case. */
-export type RelationId = "son" | "daughter" | "grandson" | "granddaughter" | "wife" | "husband" | "friend" | "other";
+/** The relations a caregiver can pick (pages/caregiver/Family.tsx RELATIONS). A son's and a daughter's
+ * children are told apart (पोता / नाती); plain "grandson" / "granddaughter" are older records. */
+export type RelationId =
+  | "son"
+  | "daughter"
+  | "sons_son"
+  | "daughters_son"
+  | "sons_daughter"
+  | "daughters_daughter"
+  | "grandson"
+  | "granddaughter"
+  | "wife"
+  | "husband"
+  | "friend"
+  | "other";
+
+/** Stored relation (English, any case) -> its id. */
+const STORED: Record<string, RelationId> = {
+  son: "son",
+  daughter: "daughter",
+  "grandson (son's son)": "sons_son",
+  "grandson (daughter's son)": "daughters_son",
+  "granddaughter (son's daughter)": "sons_daughter",
+  "granddaughter (daughter's daughter)": "daughters_daughter",
+  grandson: "grandson",
+  granddaughter: "granddaughter",
+  wife: "wife",
+  husband: "husband",
+  friend: "friend",
+  other: "other",
+};
+
+/** The id of a stored relation; null for one the family typed themselves. */
+export function relationId(stored: string): RelationId | null {
+  return STORED[stored.trim().toLowerCase()] ?? null;
+}
 
 const RELATIONS: Record<RelationId, string> = {
   son: "son",
   daughter: "daughter",
+  sons_son: "grandson",
+  daughters_son: "grandson",
+  sons_daughter: "granddaughter",
+  daughters_daughter: "granddaughter",
   grandson: "grandson",
   granddaughter: "granddaughter",
   wife: "wife",
@@ -18,10 +56,26 @@ const RELATIONS: Record<RelationId, string> = {
 
 /** "This is Rahul, your grandson." (just "This is Rahul." when the relation is "Other"). */
 function thisIs(name: string, relation: string): string {
-  const r = relation.trim().toLowerCase();
-  const word = RELATIONS[r as RelationId] ?? r;
-  return r === "other" ? `This is ${name}.` : `This is ${name}, your ${word}.`;
+  const id = relationId(relation);
+  if (id === "other" || !relation.trim()) return `This is ${name}.`;
+  return `This is ${name}, your ${id ? RELATIONS[id] : relation.trim().toLowerCase()}.`;
 }
+
+/** Under a photo. */
+const NAMES: Record<RelationId, string> = {
+  son: "Son",
+  daughter: "Daughter",
+  sons_son: "Grandson",
+  daughters_son: "Grandson",
+  sons_daughter: "Granddaughter",
+  daughters_daughter: "Granddaughter",
+  grandson: "Grandson",
+  granddaughter: "Granddaughter",
+  wife: "Wife",
+  husband: "Husband",
+  friend: "Friend",
+  other: "",
+};
 
 const NUMBER_WORDS = [
   "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
@@ -515,7 +569,12 @@ export const en = {
     /** "This is Rahul, your grandson. Lives in Pune, visits on Sundays." */
     spoken: (name: string, relation: string, note: string | null) => [thisIs(name, relation), note].filter(Boolean).join(" "),
     thisIs,
-    relations: RELATIONS,
+    /** The relation under a photo ("Grandson", "नाती"); one the family typed stays as typed. */
+    relationName: (relation: string) => {
+      const id = relationId(relation);
+      return id ? NAMES[id] : relation.trim();
+    },
+    relationNames: NAMES,
   },
   voiceTask: {
     title: "Tell me about a picture",

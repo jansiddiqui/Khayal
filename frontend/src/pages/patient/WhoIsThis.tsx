@@ -101,7 +101,7 @@ export function WhoIsThis() {
               >
                 <AuthedImage src={tile.photo.url} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
                 <span className="px-3 pt-2 text-2xl font-bold">{tile.member.name}</span>
-                <span className="px-3 pb-3 text-xl">{tile.member.relation}</span>
+                <span className="px-3 pb-3 text-xl">{w.relationName(tile.member.relation)}</span>
               </button>
             ))}
           </div>

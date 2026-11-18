@@ -296,7 +296,7 @@ class FamilyMember(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     patient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(80))
-    # Son, Daughter, Grandson, ... or the caregiver's own word.
+    # Son, Daughter, "Grandson (son's son)", ... (plain "Grandson" on older records) or the caregiver's own word.
     relation: Mapped[str] = mapped_column(String(40))
     note: Mapped[str | None] = mapped_column(String(300), default=None)
     # File names under data/uploads/family/{patient_id}/, in display order.

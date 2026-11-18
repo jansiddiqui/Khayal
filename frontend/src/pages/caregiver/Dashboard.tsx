@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { addElder, errorDetail, getGlance, uploadElderPhoto, type AddElderInput, type Glance, type Patient } from "../../api/client";
+import { addElder, getGlance, uploadElderPhoto, type AddElderInput, type Glance, type Patient } from "../../api/client";
 import { Disclaimer } from "../../components/caregiver/Disclaimer";
 import { LoadError } from "../../components/caregiver/LoadError";
 import { CaregiverLayout } from "../../components/CaregiverLayout";
@@ -15,7 +15,7 @@ import { calm, DURATION, useLessMotion } from "../../ui/motion";
 import { Skeleton } from "../../ui/Skeleton";
 import { EmptyState } from "../../ui/States";
 import { useToast } from "../../ui/Toast";
-import { t } from "../../t";
+import { serverDetail, t } from "../../t";
 
 const D = t.dashboard;
 
@@ -141,7 +141,7 @@ function AddElderForm({ onAdded }: { onAdded?: () => void }) {
       )}
       {add.isError && (
         <p role="alert" className="text-danger">
-          {errorDetail(add.error) ?? D.addElder.addFailed}
+          {serverDetail(add.error) ?? D.addElder.addFailed}
         </p>
       )}
       {added && (

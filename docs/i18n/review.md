@@ -133,6 +133,18 @@ short note). Re-running the script keeps the status cells. Text in `{curly brack
 | `whoIsThis.photoOf` | Photo of {name} | {name} की तस्वीर | <span dir="rtl">{name} کی تصویر</span> | draft | draft |
 | `whoIsThis.spoken` | This is {name}, your grandson. {note} | ये {name} हैं, आपके पोते। {note} | <span dir="rtl">یہ {name} ہیں، آپ کے پوتے۔ {note}</span> | draft | draft |
 | `whoIsThis.thisIs` | This is {name}, your grandson. | ये {name} हैं, आपके पोते। | <span dir="rtl">یہ {name} ہیں، آپ کے پوتے۔</span> | draft | draft |
+| `whoIsThis.relationName` | Grandson | पोता | <span dir="rtl">پوتا</span> | draft | draft |
+| `whoIsThis.relationNames.son` | Son | बेटा | <span dir="rtl">بیٹا</span> | draft | draft |
+| `whoIsThis.relationNames.daughter` | Daughter | बेटी | <span dir="rtl">بیٹی</span> | draft | draft |
+| `whoIsThis.relationNames.sons_son` | Grandson | पोता | <span dir="rtl">پوتا</span> | draft | draft |
+| `whoIsThis.relationNames.daughters_son` | Grandson | नाती | <span dir="rtl">نواسا</span> | draft | draft |
+| `whoIsThis.relationNames.sons_daughter` | Granddaughter | पोती | <span dir="rtl">پوتی</span> | draft | draft |
+| `whoIsThis.relationNames.daughters_daughter` | Granddaughter | नातिन | <span dir="rtl">نواسی</span> | draft | draft |
+| `whoIsThis.relationNames.grandson` | Grandson | पोता | <span dir="rtl">پوتا</span> | draft | draft |
+| `whoIsThis.relationNames.granddaughter` | Granddaughter | पोती | <span dir="rtl">پوتی</span> | draft | draft |
+| `whoIsThis.relationNames.wife` | Wife | पत्नी | <span dir="rtl">بیوی</span> | draft | draft |
+| `whoIsThis.relationNames.husband` | Husband | पति | <span dir="rtl">شوہر</span> | draft | draft |
+| `whoIsThis.relationNames.friend` | Friend | दोस्त | <span dir="rtl">دوست</span> | draft | draft |
 
 ## Memories
 
@@ -569,6 +581,31 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.common.actions.hide` | Hide | छिपाएँ | draft |
 | `cg.common.errors.loadFailed` | This didn't load. Check the connection and try again. | यह खुल नहीं पाया। इंटरनेट देखकर फिर से कोशिश करें। | draft |
 | `cg.common.errors.saveFailed` | That didn't save. Please try again. | यह सेव नहीं हुआ। फिर से कोशिश करें। | draft |
+| `cg.common.errors.withStatus` | Error {status}: {reason} | गड़बड़ी {status}: {reason} | draft |
+| `cg.common.errors.noAnswer` | No answer from the server ({reason}). | सर्वर से जवाब नहीं आया ({reason})। | draft |
+| `cg.common.errors.timeout` | No answer from the server after {seconds} seconds. | {seconds} सेकंड तक सर्वर से जवाब नहीं आया। | draft |
+| `cg.common.errors.unknown` | Something went wrong. | कुछ गड़बड़ हो गई। | draft |
+| `cg.common.serverErrors.Photos must be {n} MB or smaller.` | Photos must be {n} MB or smaller. | फ़ोटो {n} MB या उससे छोटी होनी चाहिए। | draft |
+| `cg.common.serverErrors.Only JPG and PNG photos are allowed.` | Only JPG and PNG photos are allowed. | सिर्फ़ JPG और PNG फ़ोटो ही चलती हैं। | draft |
+| `cg.common.serverErrors.That file is not a photo we can open.` | That file is not a photo we can open. | यह फ़ाइल ऐसी फ़ोटो नहीं है जिसे हम खोल सकें। | draft |
+| `cg.common.serverErrors.In the demo, photos must be {n} MB or smaller after resizing.` | In the demo, photos must be {n} MB or smaller after resizing. | डेमो में, छोटा करने के बाद फ़ोटो {n} MB या उससे छोटी होनी चाहिए। | draft |
+| `cg.common.serverErrors.Each person can have up to {n} photos.` | Each person can have up to {n} photos. | हर व्यक्ति की ज़्यादा से ज़्यादा {n} फ़ोटो हो सकती हैं। | draft |
+| `cg.common.serverErrors.A memory can have up to {n} photos.` | A memory can have up to {n} photos. | एक याद में ज़्यादा से ज़्यादा {n} फ़ोटो हो सकती हैं। | draft |
+| `cg.common.serverErrors.Turn on photos for this person first.` | Turn on photos for this person first. | पहले इनके लिए फ़ोटो चालू करें। | draft |
+| `cg.common.serverErrors.Voice notes need the voice opt-in for this person.` | Voice notes need the voice opt-in for this person. | आवाज़ वाले संदेश के लिए पहले इनकी आवाज़ की सहमति चालू करें। | draft |
+| `cg.common.serverErrors.Voice notes must be WebM or Ogg audio.` | Voice notes must be WebM or Ogg audio. | आवाज़ वाला संदेश WebM या Ogg ऑडियो होना चाहिए। | draft |
+| `cg.common.serverErrors.Voice notes can be up to {n} minutes long.` | Voice notes can be up to {n} minutes long. | आवाज़ वाला संदेश ज़्यादा से ज़्यादा {n} मिनट का हो सकता है। | draft |
+| `cg.common.serverErrors.That file is not a recording we can open.` | That file is not a recording we can open. | यह फ़ाइल ऐसी रिकॉर्डिंग नहीं है जिसे हम खोल सकें। | draft |
+| `cg.common.serverErrors.Recordings must be WebM or Ogg audio.` | Recordings must be WebM or Ogg audio. | रिकॉर्डिंग WebM या Ogg ऑडियो होनी चाहिए। | draft |
+| `cg.common.serverErrors.Recordings must be {n} MB or smaller.` | Recordings must be {n} MB or smaller. | रिकॉर्डिंग {n} MB या उससे छोटी होनी चाहिए। | draft |
+| `cg.common.serverErrors.The recording length is not valid.` | The recording length is not valid. | रिकॉर्डिंग की लंबाई सही नहीं है। | draft |
+| `cg.common.serverErrors.The voice task is not turned on.` | The voice task is not turned on. | आवाज़ वाला काम चालू नहीं है। | draft |
+| `cg.common.serverErrors.Photo not found` | Photo not found | फ़ोटो नहीं मिली | draft |
+| `cg.common.serverErrors.Memory not found` | Memory not found | याद नहीं मिली | draft |
+| `cg.common.serverErrors.Family member not found` | Family member not found | परिवार का यह व्यक्ति नहीं मिला | draft |
+| `cg.common.serverErrors.Recording not found` | Recording not found | रिकॉर्डिंग नहीं मिली | draft |
+| `cg.common.serverErrors.No voice note` | No voice note | कोई आवाज़ वाला संदेश नहीं है | draft |
+| `cg.common.serverErrors.Patient not found` | Patient not found | यह बुज़ुर्ग नहीं मिले | draft |
 | `cg.common.status.stable` | Stable | स्थिर | draft |
 | `cg.common.status.watch` | Watch | नज़र रखें | draft |
 | `cg.common.status.declining` | Declining | गिरावट | draft |
@@ -591,8 +628,12 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.common.games.colour_trails` | Colour Trails | क्रम से जोड़ना | draft |
 | `cg.common.relations.Son` | Son | बेटा | draft |
 | `cg.common.relations.Daughter` | Daughter | बेटी | draft |
-| `cg.common.relations.Grandson` | Grandson | पोता | draft |
-| `cg.common.relations.Granddaughter` | Granddaughter | पोती | draft |
+| `cg.common.relations.Grandson (son's son)` | Grandson (son's son) | पोता | draft |
+| `cg.common.relations.Grandson (daughter's son)` | Grandson (daughter's son) | नाती | draft |
+| `cg.common.relations.Granddaughter (son's daughter)` | Granddaughter (son's daughter) | पोती | draft |
+| `cg.common.relations.Granddaughter (daughter's daughter)` | Granddaughter (daughter's daughter) | नातिन | draft |
+| `cg.common.relations.Grandson` | Grandson | पोता या नाती | draft |
+| `cg.common.relations.Granddaughter` | Granddaughter | पोती या नातिन | draft |
 | `cg.common.relations.Wife` | Wife | पत्नी | draft |
 | `cg.common.relations.Husband` | Husband | पति | draft |
 | `cg.common.relations.Friend` | Friend | दोस्त | draft |
@@ -794,7 +835,7 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.elderPage.page.voiceOn` | Weekly picture description · on | हफ़्ते में एक तस्वीर के बारे में बोलना · चालू | draft |
 | `cg.elderPage.page.voiceOff` | Weekly picture description · off | हफ़्ते में एक तस्वीर के बारे में बोलना · बंद | draft |
 | `cg.elderPage.page.privacy` | Privacy, devices and family | प्राइवेसी, फ़ोन और परिवार | draft |
-| `cg.elderPage.page.privacyHint` | Photo, photo and research consents, signed-in devices, share links | फ़ोटो, आवाज़ और रिसर्च की सहमति, जुड़े हुए फ़ोन, शेयर लिंक | draft |
+| `cg.elderPage.page.privacyHint` | Photo, voice and research consents, signed-in devices, share links | फ़ोटो, आवाज़ और रिसर्च की सहमति, जुड़े हुए फ़ोन, शेयर लिंक | draft |
 | `cg.elderPage.page.settings` | Settings | सेटिंग्स | draft |
 | `cg.elderPage.page.settingsHint` | Pair a device, language, home city, core games, pinned games, hidden games, festivals, tutorials | फ़ोन जोड़ें, भाषा, घर का शहर, मुख्य खेल, तय किए खेल, छिपाए खेल, त्योहार, खेल सिखाना | draft |
 | `cg.elderPage.table.date` | Date | तारीख़ | draft |
@@ -1370,4 +1411,4 @@ Account (apart from its language choice), admin and sign-in stay English for now
 Pairing a phone, the demo, sign-in and sign-up stay English: the elder's language isn't known yet on the pairing
 screen, and the others are for family members. Keys: `demo.*`, `pair.*`, `login.*`, `register.*`.
 
-426 patient strings and 779 caregiver strings to review.
+438 patient strings and 808 caregiver strings to review.
