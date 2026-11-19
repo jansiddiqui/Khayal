@@ -202,9 +202,12 @@ def more_games(db: Session, patient: User, today: date) -> list[TodayGame]:
 
 
 def all_more_games(db: Session, patient: User, today: date) -> list[TodayGame]:
-    """"See other games": every game outside the core set that isn't hidden: today's 3 first,
-    then the rest, least recently played first."""
-    candidates = more_candidates(patient)
+    """"See other games": every levelled game, core ones included (pin-fairness), so any game can
+    always be reached; only games the family hid are left out (core games can't be hidden).
+    Today's 3 More games first, then the rest, least recently played first. A core game played
+    from here counts toward its baseline like any other session."""
+    hidden = hidden_games(patient)
+    candidates = [g for g in LEVELLED_GAMES if g not in hidden]
     first = todays_more(db, patient, today)
     last = _last_played(db, patient, candidates, today)
     order = _seeded_order(candidates, today)

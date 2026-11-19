@@ -248,6 +248,10 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 - When the weekly voice task is due (from Milestone 8), it replaces slot 3.
 - Once a game is finished today (a completed session), its button shows "✓ Done today", but the patient can still play it again.
 - On the caregiver patient page, "Pin games" lets a caregiver fix slots 2–3 for that patient (two different levelled games). Unpinning returns to automatic.
+- **Pins and tracking (pin-fairness, decided after the pilot):** with 4 core games, pinning slots 2–3 means the other 2 core games never come up in Today's games (and they are not in More games), so their baselines stop building.
+  - Before saving, Pin games names them: "Join in order and Market day won't appear while these are pinned, so their tracking will pause", and says they can still be played from "See other games".
+  - The elder page's insights flag core games not played for 3 days or more while others were played ("Not played for 3 days or more: …"), with each one's last play and, when pins are the cause, how to fix it (`caregiver_views.core_idle_insight`). Nothing is flagged while nothing is played at all; the activity insight covers that.
+  - Pins don't expire on their own (recommendation in pin-fairness: a silent change would break the family's choice and the elder's predictable list; the flag above makes the cost visible instead).
 - "Today" uses the app's local clock (`KHAYAL_UTC_OFFSET_MINUTES`, IST by default).
 
 **Core set (decided for games v2, `docs/games/research.md` D7; built in `backend/app/services/core_games.py`):**
@@ -268,7 +272,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
     2. The remaining places go to the least recently played (never played first). Only plays before today count.
     3. Ties are broken by a shuffle seeded with the date.
     - Today's list is worked out once, stored with the offer history (`User.more_games_state`), and kept all day.
-  - **"See other games":** one quiet link under the 3 (section 4 quiet-link rule, here on a secondary screen). It opens the full list (`GET /me/games/more/all`): today's 3 first, then the rest, least recently played first.
+  - **"See other games":** one quiet link under the 3 (section 4 quiet-link rule, here on a secondary screen). It opens the full list (`GET /me/games/more/all`, title "All games"): today's 3 More games first, then every other levelled game, **core games included** (pin-fairness), least recently played first, so any game can always be reached. A core game played from there counts toward its baseline like any other session.
   - **"Hide these games":** a caregiver setting per elder (Settings, checkboxes; `User.hidden_games`, migration 0017).
     - Hidden games never appear in either list and leave the rotation.
     - Core games can't be hidden there. A hidden game that joins the core set is no longer hidden.

@@ -359,6 +359,10 @@ describe("caregiver", () => {
     expect(screen.getByRole("button", { name: "Pin these games" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Slot 3"), { target: { value: "word_recall" } });
+    // Before saving: the 2 core games left out are named, with what that means (pin-fairness).
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Find the Pairs and Follow the Colours won't appear while these are pinned, so their tracking will pause.",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Pin these games" }));
     await waitFor(() =>
       expect(api.updatePatient).toHaveBeenCalledWith(2, { pinned_games: ["reaction_tap", "word_recall"] }),

@@ -181,3 +181,28 @@ def test_report_and_access(client: TestClient, register: Register, clock: Clock)
         assert client.get(f"/api/patients/{s.pid}/{path}", headers=s.patient).status_code == 403
     assert client.get("/api/caregiver/glance", headers=s.patient).status_code == 403
     assert client.get("/api/caregiver/glance", headers=other).json() == []
+
+
+def test_core_games_left_out_by_pins_are_flagged(client: TestClient, register: Register, clock: Clock) -> None:
+    """With slots 2-3 pinned, the other core games go unplayed; after 3 days the elder page says so,
+    names the pins as the cause, and how to fix it (pin-fairness)."""
+    clock.now = at(10, 9)
+    s = Setup(client, register)
+    assert client.patch(f"/api/patients/{s.pid}", json={"pinned_games": ["word_recall", "object_location"]}, headers=s.cg).status_code == 200
+    play(s, at(10, 10), game="money_handling")
+    for day in (12, 13, 14):
+        play(s, at(day, 10), game="word_recall")
+    clock.now = at(14, 12)
+    insights = {i["key"]: i for i in client.get(f"/api/patients/{s.pid}/insights", headers=s.cg).json()}
+    idle = insights["core_idle"]
+    assert idle["tone"] == "attention"
+    assert idle["text"] == "Not played for 3 days or more: Paired Associates (object location), Colour Trails, Money Handling"
+    assert "Money Handling: last played 10 Nov." in idle["detail"]
+    assert "Colour Trails: not played yet;" in idle["detail"]
+    assert "pinned to Word Recall and Paired Associates (object location)" in idle["detail"]
+
+    # Nothing to flag while nothing is being played at all.
+    clock.now = at(25, 12)
+    keys = {i["key"] for i in client.get(f"/api/patients/{s.pid}/insights", headers=s.cg).json()}
+    assert "core_idle" not in keys
+

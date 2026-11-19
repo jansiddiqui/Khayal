@@ -72,12 +72,13 @@ def test_hidden_games_never_appear_and_core_games_cant_be_hidden(client: TestCli
     # The default core set: word_recall, object_location, colour_trails, money_handling.
     more = lambda path="": [g["game_type"] for g in client.get(f"/api/me/games/more{path}", headers=s.patient).json()]  # noqa: E731
     assert len(more()) == 3
-    assert set(more("/all")) == {"memory_match", "sequence_recall", "reaction_tap", "clock_setting", "spatial_span"}
+    # The full list has every game, core ones too (pin-fairness), today's 3 More games first.
+    assert set(more("/all")) == {"memory_match", "sequence_recall", "reaction_tap", "clock_setting", "spatial_span"} | {"word_recall", "object_location", "colour_trails", "money_handling"}
     assert more("/all")[:3] == more()
 
     hide = {"hidden_games": ["reaction_tap", "spatial_span"]}
     assert client.patch(f"/api/patients/{s.pid}", json=hide, headers=s.cg).status_code == 200
-    assert set(more("/all")) == {"memory_match", "sequence_recall", "clock_setting"}
+    assert set(more("/all")) == {"memory_match", "sequence_recall", "clock_setting"} | {"word_recall", "object_location", "colour_trails", "money_handling"}
     assert set(more()) == {"memory_match", "sequence_recall", "clock_setting"}
     assert client.patch(f"/api/patients/{s.pid}", json={"hidden_games": ["word_recall"]}, headers=s.cg).status_code == 422
     assert client.patch(f"/api/patients/{s.pid}", json={"hidden_games": ["word_recall_delayed"]}, headers=s.cg).status_code == 422
@@ -123,3 +124,26 @@ def test_played_games_go_to_the_back(client: TestClient, register: Register, clo
     assert client.post("/api/sessions", json=body, headers=s.patient).status_code == 201
     # Yesterday's game waits while never-played games are offered.
     assert "clock_setting" not in [g["game_type"] for g in client.get("/api/me/games/more", headers=s.patient).json()]
+
+
+def test_pinned_core_games_stay_reachable_and_count(client: TestClient, register: Register, clock: Clock) -> None:
+    """Pins take slots 2-3, so the other 2 core games never come up in Today's games or More games
+    (pin-fairness). They stay in the full list, and a play from there counts toward their baseline."""
+    clock.now = at(17, 9)
+    s = Setup(client, register)
+    pins = {"pinned_games": ["word_recall", "object_location"]}
+    assert client.patch(f"/api/patients/{s.pid}", json=pins, headers=s.cg).status_code == 200
+    today = [g["game_type"] for g in client.get("/api/me/games/today", headers=s.patient).json()["games"]]
+    assert "colour_trails" not in today and "money_handling" not in today
+    assert "colour_trails" not in [g["game_type"] for g in client.get("/api/me/games/more", headers=s.patient).json()]
+    full = [g["game_type"] for g in client.get("/api/me/games/more/all", headers=s.patient).json()]
+    assert {"colour_trails", "money_handling"} <= set(full)
+
+    body = session_body("11110", "colour_trails")
+    body["started_at"] = at(17, 10).isoformat()
+    body["ended_at"] = at(17, 11).isoformat()
+    assert client.post("/api/sessions", json=body, headers=s.patient).status_code == 201
+    clock.now = at(17, 12)
+    trend = client.get(f"/api/patients/{s.pid}/trend", headers=s.cg).json()
+    assert next(g for g in trend["games"] if g["game_type"] == "colour_trails")["sessions"] == 1
+

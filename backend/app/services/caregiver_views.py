@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from statistics import mean
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -30,7 +30,7 @@ from app.models import (
     SpeechSample,
     User,
 )
-from app.services import decline, devices, messages, mood, reminders, today_games
+from app.services import core_games, decline, devices, messages, mood, reminders, today_games
 from app.services.clock import as_utc, local, local_day_start
 from app.services.game_names import GAME_NAMES
 from app.services.messages import Msg, msg, render_en
@@ -299,12 +299,46 @@ def activity_insight(db: Session, patient: User, now: datetime) -> Insight:
     return _insight("activity", tone, [text], [detail])
 
 
+CORE_IDLE_DAYS = 3
+
+
+def core_idle_insight(db: Session, patient: User, now: datetime) -> Insight | None:
+    """Core games not played for 3 days or more, while others were (pin-fairness). Pins are the usual
+    cause: the 2 core games not pinned never come up in Today's games, so their tracking pauses.
+    Nothing when no core game was played lately (the activity insight already says so)."""
+    today = local(now).date()
+    core = list(core_games.core_games(patient))
+    rows = db.execute(
+        select(GameSession.game_type, func.max(GameSession.started_at))
+        .where(GameSession.patient_id == patient.id, GameSession.game_type.in_(core), GameSession.started_at <= now)
+        .group_by(GameSession.game_type)
+    ).all()
+    last = {GameType(g): local(as_utc(at)).date() for g, at in rows}
+    recent = [g for g in core if g in last and (today - last[g]).days < CORE_IDLE_DAYS]
+    idle = [g for g in core if g not in last or (today - last[g]).days >= CORE_IDLE_DAYS]
+    if not idle or not recent:
+        return None
+    idle.sort(key=lambda g: last.get(g, date.min))
+    items = [
+        msg("insight.core_idle_item", game=g.value, date=last[g].isoformat()) if g in last else msg("insight.core_idle_never", game=g.value)
+        for g in idle
+    ]
+    detail = _items(items, ".")
+    pins = today_games.pinned_games(patient)
+    if pins and any(g not in pins for g in idle):
+        detail.append(msg("insight.core_idle_pinned", game=pins[0].value, game2=pins[1].value))
+    return _insight("core_idle", "attention", [msg("insight.core_idle", games=[g.value for g in idle])], detail)
+
+
 def insights(db: Session, patient: User, now: datetime) -> list[Insight]:
     overview = decline.overview(db, patient.id, until=now)
     out = [activity_insight(db, patient, now)]
     dose = dose_insight(db, patient.id, local(now).date())
     if dose is not None:
         out.append(dose)
+    idle = core_idle_insight(db, patient, now)
+    if idle is not None:
+        out.append(idle)
     out += game_insights(overview, patient)
     # Things that need attention first, then good news, then the rest.
     order = {"attention": 0, "good": 1, "neutral": 2}
