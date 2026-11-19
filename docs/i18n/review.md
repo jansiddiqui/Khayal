@@ -209,8 +209,8 @@ short note). Re-running the script keeps the status cells. Text in `{curly brack
 | `games.moreIntro` | A few more games, if you'd like to play. | अगर मन हो, तो कुछ और खेल। | <span dir="rtl">اگر دل چاہے، تو کچھ اور کھیل۔</span> | draft | draft |
 | `games.moreEmpty` | That's all the games for now. Well played today. | अभी के लिए बस इतने ही खेल। आज बहुत अच्छा खेला। | <span dir="rtl">ابھی کے لیے بس اتنے ہی کھیل۔ آج بہت اچھا کھیلا۔</span> | draft | draft |
 | `games.seeOther` | See other games | दूसरे खेल देखें | <span dir="rtl">دوسرے کھیل دیکھیں</span> | draft | draft |
-| `games.otherTitle` | Other games | दूसरे खेल | <span dir="rtl">دوسرے کھیل</span> | draft | draft |
-| `games.otherIntro` | All the other games. Pick any one. | बाक़ी सारे खेल। कोई भी चुनिए। | <span dir="rtl">باقی سارے کھیل۔ کوئی بھی چنیے۔</span> | draft | draft |
+| `games.otherTitle` | All games | सारे खेल | <span dir="rtl">سارے کھیل</span> | draft | draft |
+| `games.otherIntro` | Every game, including today's. Pick any one. | सारे खेल, आज वाले भी। कोई भी चुनिए। | <span dir="rtl">سارے کھیل، آج والے بھی۔ کوئی بھی چنیے۔</span> | draft | draft |
 | `games.practiceDone` | That's how it works. Now let's play. | ऐसे खेलते हैं। अब खेलते हैं। | <span dir="rtl">ایسے کھیلتے ہیں۔ اب کھیلتے ہیں۔</span> | draft | draft |
 | `games.next` | Next one | अगला | <span dir="rtl">اگلا</span> | draft | draft |
 | `games.saving` | Just a moment… | बस एक पल… | <span dir="rtl">بس ایک پل…</span> | draft | draft |
@@ -802,6 +802,8 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.elderPage.pins.pin` | Pin these games | ये खेल तय करें | draft |
 | `cg.elderPage.pins.unpin` | Unpin (automatic) | हटाएँ (अपने-आप) | draft |
 | `cg.elderPage.pins.choose` | Choose games to pin | तय करने के लिए खेल चुनें | draft |
+| `cg.elderPage.pins.leftOut` | {games} won't appear while these are pinned, so their tracking will pause. | जब तक ये खेल तय हैं, {games} नहीं आएँगे, इसलिए उनकी ट्रैकिंग रुक जाएगी। | draft |
+| `cg.elderPage.pins.stillReachable` | They can still be played from “See other games” on the elder's phone, and those plays still count. | बुज़ुर्ग अपने फ़ोन पर “दूसरे खेल देखें” से इन्हें फिर भी खेल सकते हैं, और वे खेल भी गिने जाते हैं। | draft |
 | `cg.elderPage.pins.different` | Choose two different games. | दो अलग-अलग खेल चुनें। | draft |
 | `cg.elderPage.pins.failed` | Could not save the pinned games. | तय किए खेल सेव नहीं हो पाए। | draft |
 | `cg.elderPage.pins.savedPins` | Pinned: {a} and {b}. | तय किए: {a} और {b}। | draft |
@@ -1389,6 +1391,10 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.server.insight.not_played` | {name} didn't play this week | {name} ने इस हफ़्ते नहीं खेला | draft |
 | `cg.server.insight.played_days` | Days with at least one game: {days}. | जिन दिनों कम से कम एक खेल हुआ: {days}। | draft |
 | `cg.server.insight.played_none` | Days with at least one game: none. | जिन दिनों कम से कम एक खेल हुआ: कोई नहीं। | draft |
+| `cg.server.insight.core_idle` | Not played for 3 days or more: {games} | 3 या ज़्यादा दिन से नहीं खेले गए: {games} | draft |
+| `cg.server.insight.core_idle_item` | {game}: last played {date}{sep} | {game}: आख़िरी बार {date} को खेला{sep} | draft |
+| `cg.server.insight.core_idle_never` | {game}: not played yet{sep} | {game}: अभी तक नहीं खेला{sep} | draft |
+| `cg.server.insight.core_idle_pinned` | Today's games are pinned to {game} and {game2}, so the others don't come up and their tracking pauses. Unpin under Settings, or play them from See other games. | आज के खेल {game} और {game2} पर तय हैं, इसलिए बाक़ी खेल नहीं आते और उनकी ट्रैकिंग रुकी है। सेटिंग्स में तय करना हटाएँ, या इन्हें 'दूसरे खेल देखें' से खेलें। | draft |
 | `cg.server.tl.stopped` | {game}: stopped early | {game}: बीच में रोका | draft |
 | `cg.server.tl.stopped_detail` | {right} of {played} right before stopping | रोकने से पहले {played} में से {right} सही | draft |
 | `cg.server.tl.session` | {game}: {right} of {played} right | {game}: {played} में से {right} सही | draft |
@@ -1439,4 +1445,4 @@ Account (apart from its language choice), admin and sign-in stay English for now
 The demo, sign-in and sign-up stay English: they are for family members. Pairing is in the elder's language when it is opened
 from the family's link or QR code (?lang=), and English otherwise. Keys: `demo.*`, `login.*`, `register.*`.
 
-453 patient strings and 816 caregiver strings to review.
+453 patient strings and 822 caregiver strings to review.

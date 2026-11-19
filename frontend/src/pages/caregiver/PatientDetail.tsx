@@ -4,7 +4,7 @@ import { LanguageForm } from "../../components/caregiver/LanguageForm";
 import { Timeline } from "../../components/caregiver/Timeline";
 import { WeeklySummary } from "../../components/caregiver/WeeklySummary";
 import { ArrowLeft, ArrowRight, ChartLine, ChevronRight, FileText, Info, OctagonAlert, Smartphone, TriangleAlert } from "lucide-react";
-import { CoreGamesForm, FestivalsForm, gameLabel, HiddenGamesForm, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
+import { CoreGamesForm, FestivalsForm, gameLabel, HiddenGamesForm, PATIENT_TITLES, TutorialAgainForm } from "../../components/caregiver/GamesSettings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router";
@@ -389,6 +389,15 @@ function PinForm({ patientId, pinned, options }: { patientId: number; pinned: Ga
         <Button className="self-start" onClick={() => setChoosing(true)}>
           {t.elderPage.pins.choose}
         </Button>
+      )}
+      {(pinned || choosing) && first !== second && (
+        <div role="note" className="flex items-start gap-2 rounded-md border border-accent bg-accent-soft p-3">
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-strong" />
+          <p>
+            {t.elderPage.pins.leftOut(t.common.list(options.filter((g) => g !== first && g !== second).map((g) => PATIENT_TITLES[g] ?? gameName(g))))}{" "}
+            {t.elderPage.pins.stillReachable}
+          </p>
+        </div>
       )}
       {first === second && <p className="text-accent-strong">{t.elderPage.pins.different}</p>}
       {save.isError && (

@@ -69,6 +69,14 @@ TEMPLATES: dict[str, Template] = {
     "insight.not_played": "{name} didn't play this week",
     "insight.played_days": "Days with at least one game: {days}.",
     "insight.played_none": "Days with at least one game: none.",
+    # Core games left out for a while (pin-fairness): their tracking pauses.
+    "insight.core_idle": "Not played for 3 days or more: {games}",
+    "insight.core_idle_item": "{game}: last played {date}{sep}",
+    "insight.core_idle_never": "{game}: not played yet{sep}",
+    "insight.core_idle_pinned": (
+        "Today's games are pinned to {game} and {game2}, so the others don't come up and their tracking pauses. "
+        "Unpin under Settings, or play them from See other games."
+    ),
     # Timeline lines.
     "tl.stopped": "{game}: stopped early",
     "tl.stopped_detail": "{right} of {played} right before stopping",
@@ -146,6 +154,9 @@ def _one_en(name: str, value: str) -> str:
         return _clock_en(value)
     if name.startswith("day"):
         return date.fromisoformat(value).strftime("%A")
+    if name.startswith("date"):
+        d = date.fromisoformat(value)
+        return f"{d.day} {d.strftime('%b')}"
     if name == "consent":
         return CONSENT_NAMES.get(value, value)
     if name == "language":

@@ -46,6 +46,11 @@ export const en: Record<string, Template> = {
   "insight.not_played": "{name} didn't play this week",
   "insight.played_days": "Days with at least one game: {days}.",
   "insight.played_none": "Days with at least one game: none.",
+  "insight.core_idle": "Not played for 3 days or more: {games}",
+  "insight.core_idle_item": "{game}: last played {date}{sep}",
+  "insight.core_idle_never": "{game}: not played yet{sep}",
+  "insight.core_idle_pinned":
+    "Today's games are pinned to {game} and {game2}, so the others don't come up and their tracking pauses. Unpin under Settings, or play them from See other games.",
   // Timeline lines.
   "tl.stopped": "{game}: stopped early",
   "tl.stopped_detail": "{right} of {played} right before stopping",
@@ -130,6 +135,11 @@ export const hi: typeof en = {
   "insight.not_played": "{name} ने इस हफ़्ते नहीं खेला",
   "insight.played_days": "जिन दिनों कम से कम एक खेल हुआ: {days}।",
   "insight.played_none": "जिन दिनों कम से कम एक खेल हुआ: कोई नहीं।",
+  "insight.core_idle": "3 या ज़्यादा दिन से नहीं खेले गए: {games}",
+  "insight.core_idle_item": "{game}: आख़िरी बार {date} को खेला{sep}",
+  "insight.core_idle_never": "{game}: अभी तक नहीं खेला{sep}",
+  "insight.core_idle_pinned":
+    "आज के खेल {game} और {game2} पर तय हैं, इसलिए बाक़ी खेल नहीं आते और उनकी ट्रैकिंग रुकी है। सेटिंग्स में तय करना हटाएँ, या इन्हें 'दूसरे खेल देखें' से खेलें।",
   "tl.stopped": "{game}: बीच में रोका",
   "tl.stopped_detail": "रोकने से पहले {played} में से {right} सही",
   "tl.session": "{game}: {played} में से {right} सही",

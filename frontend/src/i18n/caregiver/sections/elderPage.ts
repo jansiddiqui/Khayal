@@ -76,6 +76,9 @@ export const en = {
     pin: "Pin these games",
     unpin: "Unpin (automatic)",
     choose: "Choose games to pin",
+    /** Before saving (pin-fairness): the core games pins leave out never come up in Today's games. */
+    leftOut: (games: string) => `${games} won't appear while these are pinned, so their tracking will pause.`,
+    stillReachable: "They can still be played from “See other games” on the elder's phone, and those plays still count.",
     different: "Choose two different games.",
     failed: "Could not save the pinned games.",
     savedPins: (a: string, b: string) => `Pinned: ${a} and ${b}.`,
@@ -238,6 +241,8 @@ export const hi: typeof en = {
     pin: "ये खेल तय करें",
     unpin: "हटाएँ (अपने-आप)",
     choose: "तय करने के लिए खेल चुनें",
+    leftOut: (games: string) => `जब तक ये खेल तय हैं, ${games} नहीं आएँगे, इसलिए उनकी ट्रैकिंग रुक जाएगी।`,
+    stillReachable: "बुज़ुर्ग अपने फ़ोन पर “दूसरे खेल देखें” से इन्हें फिर भी खेल सकते हैं, और वे खेल भी गिने जाते हैं।",
     different: "दो अलग-अलग खेल चुनें।",
     failed: "तय किए खेल सेव नहीं हो पाए।",
     savedPins: (a: string, b: string) => `तय किए: ${a} और ${b}।`,
