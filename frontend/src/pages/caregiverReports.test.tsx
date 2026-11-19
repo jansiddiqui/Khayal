@@ -92,7 +92,41 @@ it("timeline groups events by day and filters by kind", async () => {
 
   fireEvent.click(screen.getByRole("button", { name: "Games" }));
   expect(screen.getByRole("button", { name: "Games" })).toHaveAttribute("aria-pressed", "false");
-  await waitFor(() => expect(api.getTimeline).toHaveBeenLastCalledWith(2, 14, ["reminder", "alert", "recording", "mood", "settings"]));
+  // Today is the default range (game-header-timeline); a filter asks again for today's events.
+  await waitFor(() => expect(api.getTimeline).toHaveBeenLastCalledWith(2, 0, ["reminder", "alert", "recording", "mood", "settings"], undefined));
+});
+
+it("timeline: nothing yet today offers the last 7 days, and the choice is remembered on this device", async () => {
+  api.getTimeline.mockResolvedValue([]);
+  const first = renderWithProviders(<Timeline patientId={2} />);
+  expect(screen.getByRole("combobox", { name: "Period" })).toHaveValue("0");
+  expect(await screen.findByText("Nothing yet today.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Show last 7 days" }));
+  await waitFor(() => expect(api.getTimeline).toHaveBeenLastCalledWith(2, 7, expect.any(Array), undefined));
+  expect(await screen.findByText("Nothing in the last 7 days for these filters.")).toBeInTheDocument();
+  first.unmount();
+
+  // Next visit on this device opens on the last choice.
+  renderWithProviders(<Timeline patientId={2} />);
+  expect(screen.getByRole("combobox", { name: "Period" })).toHaveValue("7");
+});
+
+it("timeline: a long range loads one page, then Load more asks for the events before it", async () => {
+  const page = (start: number, n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      at: new Date(Date.UTC(2026, 10, 18, 12) - (start + i) * 60_000).toISOString(),
+      kind: "session" as const, title: `Game ${start + i}`, detail: "", tone: "neutral" as const, game_type: null,
+    }));
+  const full = page(0, 100);
+  api.getTimeline.mockResolvedValueOnce(full).mockResolvedValueOnce(page(100, 3));
+  localStorage.setItem("khayal.timelineRange", "90");
+  renderWithProviders(<Timeline patientId={2} />);
+  expect(await screen.findByText("Game 99")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  expect(await screen.findByText("Game 102")).toBeInTheDocument();
+  expect(api.getTimeline).toHaveBeenLastCalledWith(2, 90, expect.any(Array), full[99]!.at);
+  // A short page is the last one.
+  expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
 });
 
 it("weekly change words", () => {

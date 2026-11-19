@@ -1225,8 +1225,18 @@ export async function getWeekly(patientId: number): Promise<Weekly> {
   return data;
 }
 
-export async function getTimeline(patientId: number, days: number, kinds: readonly TimelineKind[]): Promise<TimelineEvent[]> {
-  const params = new URLSearchParams({ days: String(days) });
+/** One page of the timeline, newest first: `days` = 0 is today. For the next page pass `before` =
+ * the oldest event's time; a page shorter than `limit` is the last one. */
+export const TIMELINE_PAGE = 100;
+export async function getTimeline(
+  patientId: number,
+  days: number,
+  kinds: readonly TimelineKind[],
+  before?: string,
+  limit: number = TIMELINE_PAGE,
+): Promise<TimelineEvent[]> {
+  const params = new URLSearchParams({ days: String(days), limit: String(limit) });
+  if (before) params.set("before", before);
   for (const k of kinds) params.append("kinds", k);
   const { data } = await api.get<TimelineEvent[]>(`/patients/${patientId}/timeline?${params.toString()}`);
   return data;

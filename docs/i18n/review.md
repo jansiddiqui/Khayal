@@ -913,6 +913,10 @@ Account (apart from its language choice), admin and sign-in stay English for now
 | `cg.elderPanels.timeline.show` | Show | दिखाएँ | draft |
 | `cg.elderPanels.timeline.period` | Period | समय | draft |
 | `cg.elderPanels.timeline.lastDays` | Last {days} days | पिछले {days} दिन | draft |
+| `cg.elderPanels.timeline.today` | Today | आज | draft |
+| `cg.elderPanels.timeline.nothingToday` | Nothing yet today. | आज अभी तक कुछ नहीं हुआ। | draft |
+| `cg.elderPanels.timeline.showWeek` | Show last 7 days | पिछले 7 दिन दिखाएँ | draft |
+| `cg.elderPanels.timeline.loadMore` | Load more | और दिखाएँ | draft |
 | `cg.elderPanels.timeline.chooseKind` | Choose at least one kind of event to show. | दिखाने के लिए कम से कम एक तरह की घटना चुनें। | draft |
 | `cg.elderPanels.timeline.loading` | Loading the timeline | घटनाक्रम लोड हो रहा है | draft |
 | `cg.elderPanels.timeline.loadFailed` | Could not load the timeline. | घटनाक्रम खुल नहीं पाया। | draft |
@@ -1445,4 +1449,4 @@ Account (apart from its language choice), admin and sign-in stay English for now
 The demo, sign-in and sign-up stay English: they are for family members. Pairing is in the elder's language when it is opened
 from the family's link or QR code (?lang=), and English otherwise. Keys: `demo.*`, `login.*`, `register.*`.
 
-453 patient strings and 822 caregiver strings to review.
+453 patient strings and 826 caregiver strings to review.

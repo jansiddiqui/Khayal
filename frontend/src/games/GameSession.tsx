@@ -19,6 +19,7 @@ import { copy } from "../copy";
 import { useAuth } from "../auth/AuthContext";
 import { useReadAloud } from "../readAloud/ReadAloudContext";
 import { findGame } from ".";
+import { RoundSayItAgain, SayItAgainSlot } from "./QuestionRow";
 import type { GameDefinition, Rng } from "./types";
 import { commitDelayed, dueDelayed, type PendingRecall } from "./wordRecall/delayed";
 import { DelayedRecall } from "./wordRecall/DelayedRecall";
@@ -74,6 +75,8 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
   const { state: auth } = useAuth();
   /** Rounds in this session: 5, or 6 with About Today's festival question. */
   const [totalRounds, setTotalRounds] = useState(ROUNDS_PER_SESSION);
+  // What the round on screen says, for "Say it again" on the round row (game-header-timeline).
+  const [spokenNow, setSpokenNow] = useState("");
   const total = useRef(ROUNDS_PER_SESSION);
   /** Where in the praise list this session starts, so it varies between sessions too. */
   const praiseStart = useRef(0);
@@ -292,16 +295,25 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
 
     case "playing":
       return (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
-          <Guarded key={phase.round} className="flex min-h-0 flex-1 flex-col">
-            <game.Round
-              level={level.data.level}
-              roundIndex={phase.round - 1}
-              rng={rng}
-              onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
-            />
-          </Guarded>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          {/* "Round X of 5" with "Say it again" at the row's end (the left in Urdu). If both
+              don't fit, the button moves to its own row: text never shrinks. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+            <p className="text-lg text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
+            <div className="ms-auto">
+              <RoundSayItAgain text={spokenNow} />
+            </div>
+          </div>
+          <SayItAgainSlot.Provider value={setSpokenNow}>
+            <Guarded key={phase.round} className="flex min-h-0 flex-1 flex-col">
+              <game.Round
+                level={level.data.level}
+                roundIndex={phase.round - 1}
+                rng={rng}
+                onComplete={(result, feedback) => onRoundComplete(phase.round, result, feedback)}
+              />
+            </Guarded>
+          </SayItAgainSlot.Provider>
         </div>
       );
 
@@ -309,7 +321,7 @@ export function GameSession({ game, rng, onPlayingChange }: GameSessionProps) {
       return (
         <Guarded key={`between-${phase.round}`} className="flex flex-col gap-3">
           {/* The place in the session stays where it was during the round. */}
-          <p className="text-xl text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
+          <p className="text-lg text-ink-soft">{copy.games.roundOf(phase.round, totalRounds)}</p>
           <motion.div
             initial={less ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
