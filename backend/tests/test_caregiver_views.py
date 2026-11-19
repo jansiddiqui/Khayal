@@ -206,3 +206,24 @@ def test_core_games_left_out_by_pins_are_flagged(client: TestClient, register: R
     keys = {i["key"] for i in client.get(f"/api/patients/{s.pid}/insights", headers=s.cg).json()}
     assert "core_idle" not in keys
 
+
+
+def test_timeline_today_and_load_more(client: TestClient, register: Register, clock: Clock) -> None:
+    """days=0 is today only (since local midnight); `limit` and `before` page through a long range
+    (game-header-timeline)."""
+    clock.now = at(14, 9)
+    s = Setup(client, register)
+    for day, hour in ((13, 20), (14, 7), (14, 8)):
+        play(s, at(day, hour))
+    clock.now = at(14, 12)
+    url = f"/api/patients/{s.pid}/timeline?kinds=session"
+    today = client.get(f"{url}&days=0", headers=s.cg).json()
+    assert [e["at"][:13] for e in today] == [at(14, 8).isoformat()[:13], at(14, 7).isoformat()[:13]]
+    week = client.get(f"{url}&days=7", headers=s.cg).json()
+    assert len(week) == 3
+
+    first = client.get(f"{url}&days=7&limit=2", headers=s.cg).json()
+    assert len(first) == 2
+    rest = client.get(f"{url}&days=7&limit=2", params={"before": first[-1]["at"]}, headers=s.cg).json()
+    assert [e["at"] for e in rest] == [week[2]["at"]]
+    assert client.get(f"{url}&days=0&limit=0", headers=s.cg).status_code == 422

@@ -238,6 +238,7 @@ Games v2 (`docs/games/research.md`; all levelled 1–10, 5 rounds, the same adap
 - **Read aloud in games:** when on, each question is spoken with its answer choices, and the kind reply after answering.
 - **First-time tutorial (games v2, research.md 3.4):** the first time a patient opens a game, a short spoken demo (spoken even when Read aloud is off, words also on screen, a hand showing one move), then one practice round at level 1 or easier, never stored. Patients who already played a game skip it. The caregiver can ask for it again per game.
 - **Between rounds:** "Round X of 5" stays on the reply card, and the praise after a right answer varies from round to round.
+- **"Say it again" on the round row (decided, branch `game-header-timeline`):** during a round, "Say it again" (when Read aloud is on) sits on the same row as "Round X of 5", at the row's end (the left in Urdu, `ms-auto`). It is a real button: 64px tall, icon beside the word, 20px text. If the row can't fit both, the button moves to its own row; text never shrinks. The round's question hands its spoken text up to the session (`SayItAgainSlot` in `games/QuestionRow.tsx`); outside a session (the practice round, the delayed word check) the button stays beside the question. "Round X of 5" is 22.5px on both the round and the reply card.
 - **Sequence Recall:** after a wrong tap, the game gently replays the right order ("Here's how it went") before moving on.
 - Each round records how long the patient looked before playing as `study_ms` on `GameRound` (nullable: Memory Match preview time, Word Recall total word-viewing time; empty for the other games). It is stored for the decline analysis but is not part of the composite score yet.
 
@@ -417,7 +418,7 @@ Five batches, built one at a time, each on its own branch. Each batch ends with:
        - medicine doses taken, and doses missed or not sure;
        - reminders done, alerts and recordings.
      - **Timeline** (`GET /patients/{id}/timeline?days=&kinds=`): a closed section on the elder page with day headings.
-       - Filter chips: games, reminders, alerts, recordings, settings changes. Periods: 7, 14, 30 or 90 days.
+       - Filter chips: games, reminders, alerts, recordings, settings changes. Periods (changed in `game-header-timeline`): **Today** (the default, `days=0`, since local midnight), 7, 30 or 90 days. The server returns only the chosen range, 100 events a page; "Load more" asks for the events before the oldest one shown (`before=`). With nothing today: "Nothing yet today" and a "Show last 7 days" button. The caregiver's last choice is remembered on that device (`khayal.timelineRange`).
        - Settings changes come from a new `PatientEvent` table (migration 0013): city, core games, pins, festivals, reminders added/changed/removed, family members added/removed, tutorial reset.
        - Consents and device pairing/sign-out come from their own tables.
        - A reminder log written on another day is shown at the reminder's own time.

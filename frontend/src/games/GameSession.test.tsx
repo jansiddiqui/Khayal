@@ -6,6 +6,7 @@ import type { SessionResult } from "../api/client";
 import { copy } from "../copy";
 import { renderWithProviders } from "../test/renderWithProviders";
 import { GameSession, ROUNDS_PER_SESSION } from "./GameSession";
+import { QuestionRow } from "./QuestionRow";
 import type { GameDefinition, RoundProps } from "./types";
 
 vi.mock("../api/client", async (importOriginal) => {
@@ -89,6 +90,49 @@ beforeEach(() => {
   api.getLevel.mockResolvedValue({ level: 3, tutorial: false });
   api.markTutorialSeen.mockResolvedValue();
   api.getTodaysGames.mockResolvedValue({ games: [], pinned: false });
+});
+
+/** A stand-in round with a question, so "Say it again" has something to say. */
+function AskingRound({ onComplete }: RoundProps) {
+  return (
+    <QuestionRow spoken="Which day is it today?">
+      <p>Which day is it today?</p>
+      <button type="button" onClick={() => onComplete({ correct: true, reaction_ms: 900, hint_used: false })}>
+        Finish round
+      </button>
+    </QuestionRow>
+  );
+}
+
+describe("Say it again on the round row (game-header-timeline)", () => {
+  it("sits on the same row as Round X of 5 and repeats the question", async () => {
+    const spoken: string[] = [];
+    localStorage.setItem("khayal.readAloud", "on");
+    vi.stubGlobal("SpeechSynthesisUtterance", class { lang = ""; rate = 1; constructor(public text: string) {} });
+    vi.stubGlobal("speechSynthesis", { cancel: vi.fn(), speak: (u: { text: string }) => spoken.push(u.text) });
+    renderWithProviders(<GameSession game={{ ...fakeGame, Round: AskingRound }} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+
+    const say = screen.getAllByRole("button", { name: copy.nav.sayItAgain });
+    expect(say).toHaveLength(1);
+    const row = screen.getByText(copy.games.roundOf(1, ROUNDS_PER_SESSION)).parentElement!;
+    expect(row).toContainElement(say[0]!);
+    // At least 64px tall, icon and word (section 4).
+    expect(say[0]!.className).toMatch(/min-h-\[64px\]/);
+    expect(say[0]!.querySelector("svg")).not.toBeNull();
+    spoken.length = 0;
+    fireEvent.click(say[0]!);
+    expect(spoken).toEqual(["Which day is it today?"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("is not shown when Read aloud is off", async () => {
+    localStorage.setItem("khayal.readAloud", "off");
+    renderWithProviders(<GameSession game={{ ...fakeGame, Round: AskingRound }} />);
+    fireEvent.click(await screen.findByRole("button", { name: copy.games.start }));
+    expect(screen.getByText("Which day is it today?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: copy.nav.sayItAgain })).toBeNull();
+  });
 });
 
 describe("GameSession", () => {

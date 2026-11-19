@@ -41,6 +41,8 @@ EventKind = Literal["session", "reminder", "alert", "recording", "settings", "mo
 EVENT_KINDS: tuple[EventKind, ...] = ("session", "reminder", "alert", "recording", "settings", "mood")
 
 INACTIVE_DAYS = 3
+# One page of the timeline; "Load more" asks for the next page (events before the last one shown).
+TIMELINE_PAGE = 100
 TIMELINE_LIMIT = 500
 
 
@@ -492,10 +494,18 @@ SEVERITY_TONE: dict[Severity, Tone] = {Severity.info: "neutral", Severity.warnin
 
 
 def timeline(
-    db: Session, patient_id: int, now: datetime, days: int = 14, kinds: Iterable[EventKind] = EVENT_KINDS
+    db: Session,
+    patient_id: int,
+    now: datetime,
+    days: int = 14,
+    kinds: Iterable[EventKind] = EVENT_KINDS,
+    before: datetime | None = None,
+    limit: int = TIMELINE_LIMIT,
 ) -> list[TimelineEvent]:
+    """Events in the chosen range, newest first: `days` = 0 is today (since local midnight),
+    otherwise the last `days` days. `before` and `limit` page through a long range."""
     wanted = set(kinds)
-    since = now - timedelta(days=days)
+    since = local_day_start(local(now).date()) if days == 0 else now - timedelta(days=days)
     out: list[TimelineEvent] = []
     if "session" in wanted:
         out += [
@@ -549,7 +559,9 @@ def timeline(
                 tone: Tone = "good" if m.mood == Mood.good else "neutral"
                 out.append(_event(as_utc(m.answered_at), "mood", msg("tl.mood", mood=m.mood.value), tone=tone))
     out.sort(key=lambda e: e.at, reverse=True)
-    return out[:TIMELINE_LIMIT]
+    if before is not None:
+        out = [e for e in out if e.at < as_utc(before)]
+    return out[: min(limit, TIMELINE_LIMIT)]
 
 
 # --- doctor report ----------------------------------------------------------------------

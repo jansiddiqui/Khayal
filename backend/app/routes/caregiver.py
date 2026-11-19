@@ -2,6 +2,7 @@
 the doctor report. Caregivers only; each route checks the care link."""
 
 from dataclasses import asdict
+from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -85,12 +86,18 @@ def get_timeline(
     caregiver: CurrentCaregiver,
     db: DbSession,
     now: Now,
-    days: Annotated[int, Query(ge=1, le=365)] = 14,
+    days: Annotated[int, Query(ge=0, le=365)] = 14,
     kinds: Annotated[list[EventKind] | None, Query()] = None,
+    before: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=caregiver_views.TIMELINE_LIMIT)] = caregiver_views.TIMELINE_PAGE,
 ) -> list[TimelineEventOut]:
-    """Newest first, at most 500 events. `kinds` filters (repeat the parameter)."""
+    """Newest first. `days` = 0 is today (game-header-timeline), otherwise the last `days` days.
+    One page of `limit` events (100 by default); for the next page pass `before` = the oldest
+    event's time. `kinds` filters (repeat the parameter)."""
     _patient(db, caregiver, patient_id)
-    events = caregiver_views.timeline(db, patient_id, now, days, kinds or caregiver_views.EVENT_KINDS)
+    events = caregiver_views.timeline(
+        db, patient_id, now, days, kinds or caregiver_views.EVENT_KINDS, before=before, limit=limit
+    )
     return [TimelineEventOut(**asdict(e)) for e in events]
 
 
