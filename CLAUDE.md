@@ -327,6 +327,7 @@ Build one at a time. Each one ends with: app runs, tests pass, README updated, g
 - Never commit `data/`, `.env`, uploads or model weights.
 - Every model change ships with an Alembic migration (`backend/migrations/versions/`, autogenerate then review). Never wipe the dev database to change the schema.
 - Keep all user-facing patient text in `frontend/src/i18n/en.ts`, with the same keys in `hi.ts` and `ur.ts` (read through `src/copy.ts`). Caregiver text lives in `frontend/src/i18n/caregiver/sections/*.ts` (English `en` and Hindi `hi` in each file, read through `t` from `src/t.ts`); text the server writes for caregivers also goes out as message keys (`backend/app/services/messages.py`, templates in `sections/server.ts`). After changing any of them, run `npm run i18n:review`.
+- Frontend tests (`src/test/setup.ts`, decided in `test-stability`): no real network. Read-only panels (mood, weekly card, timeline, insights, devices, consents, share links, game catalog, glance) answer with empty data from the shared test adapter; any other request a test didn't mock fails that test. The caregiver and admin pages are loaded once per test file before its tests, and `findBy`/`waitFor` wait up to 8 s (per-test limit 20 s).
 - Ask before adding a new dependency that is not listed in section 2.
 - When unsure about a product decision, stop and ask; don't guess.
 

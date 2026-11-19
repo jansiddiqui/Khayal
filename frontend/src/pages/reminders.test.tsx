@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import * as apiClient from "../api/client";
 import type { GameType } from "../api/client";
 import type { Alert, Reminder, TodayReminder, User } from "../api/client";
 import { App } from "../App";
 import { copy } from "../copy";
-import { EMPTY_SIGNALS, EMPTY_TREND } from "../test/fixtures";
+import { EMPTY_SIGNALS, EMPTY_TREND, EMPTY_WEEK } from "../test/fixtures";
 import { renderWithProviders } from "../test/renderWithProviders";
 import { todayLabel } from "./caregiver/Reminders";
 
@@ -63,18 +63,6 @@ const today = (
   due,
   phase: phase ?? (status === "done" ? "done" : status === "unsure" ? "unsure" : !due ? "upcoming" : status === "missed" ? "overdue" : "due"),
 });
-
-const EMPTY_WEEK = {
-  start: "2026-11-01", end: "2026-11-07", days_played: 0, sessions: 0, completed: 0, accuracy: null,
-  doses: { taken: 0, taken_late: 0, missed: 0, unsure: 0 }, reminders_done: 0, reminders_total: 0, alerts: 0, recordings: 0,
-  mood: { good: 0, okay: 0, not_so_good: 0, skipped: 0 },
-};
-
-// Load the caregiver patient page once up front: its first lazy import (charts included) is the
-// slow part on a busy machine, and it used to eat the alert test's waiting time.
-beforeAll(async () => {
-  await import("./caregiver/PatientDetail");
-}, 30_000);
 
 beforeEach(() => {
   vi.resetAllMocks();
